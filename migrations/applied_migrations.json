@@ -1,4 +1,9 @@
 {
-  "applied": [],
-  "last_updated": "2025-07-15T14:09:23.131803"
+  "applied": [
+    "001_initial_schema.sql",
+    "002_add_character_development_agent.sql",
+    "003_normalize_target_audience_and_genre_tables.sql", 
+    "004_reverse_author_plot_relationship.sql"
+  ],
+  "last_updated": "2025-07-15T22:00:00.000000"
 }

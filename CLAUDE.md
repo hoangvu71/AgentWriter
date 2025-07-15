@@ -235,12 +235,72 @@ The system includes a comprehensive library interface for viewing and managing g
 - **Modal System**: CSS3 animations, click-outside-to-close, responsive design
 - **Normalized Schema**: Foreign key lookups populate readable metadata names
 - **Real-time Updates**: Interface updates automatically when new content is generated
+- **Author-Plot Relationships**: Plots reference authors (multiple plots per author)
 
 #### Accessing the Library
 - Main interface: `http://localhost:8000/library`
 - Or click "View Library" from main page: `http://localhost:8000`
 
-### 12. Communication & Clarity
+### 12. Author-Plot Relationship System
+The system implements a **one-to-many relationship** where one author can have multiple plots:
+
+#### Database Schema
+- **Authors Table**: Independent entities (no foreign keys to plots)
+- **Plots Table**: Contains `author_id` foreign key referencing authors
+- **Relationship**: `plots.author_id → authors.id` (multiple plots per author)
+
+#### Workflow Logic
+**Author-First Approach** (Recommended):
+1. User requests: *"Create a fantasy author and plot"*
+2. System creates author first
+3. System creates plot assigned to that author
+4. Result: Author can have additional plots created later
+
+**Standalone Creation**:
+- **Authors**: Can be created without plots (author profiles)
+- **Plots**: Can be created without authors (unassigned plots)
+- **Assignment**: Plots can be manually assigned to authors later
+
+#### Multi-Agent Coordination
+**Sequential Workflow**:
+```
+User Request → Orchestrator → Author Agent → Plot Agent
+                                ↓              ↓
+                           Save Author → Save Plot (with author_id)
+```
+
+**Context Passing**:
+- Author context included in plot generation message
+- Ensures plot matches author's style and background
+- Maintains consistency across author's works
+
+#### API Endpoints
+- **`GET /api/authors`**: List all authors with plot counts
+- **`GET /api/plots`**: List all plots with author information  
+- **`GET /data/plot/{plot_id}`**: Get specific plot with author details
+- **`POST /save_plot`**: Create plot with optional author assignment
+
+#### Library Interface Features
+**Author Modals**:
+- Show all plots by that author
+- Display plot count and relationships
+- Author biography and writing style
+- Scrollable plot list with metadata
+
+**Plot Modals**:
+- Show assigned author information
+- Author biography snippet
+- Link to author's other works
+- Complete plot and author metadata
+
+#### Database Migration Applied
+**Migration 004**: `reverse_author_plot_relationship.sql`
+- Added `plots.author_id` column
+- Migrated existing `authors.plot_id` relationships
+- Removed old `authors.plot_id` column
+- Updated indexes for optimal performance
+
+### 13. Communication & Clarity
 - Explain complex implementations clearly
 - Provide multiple solutions when trade-offs exist
 - Highlight potential issues or limitations

@@ -21,8 +21,9 @@ This directory contains all database schema changes for the Multi-Agent Book Wri
 ## Migration Files
 
 - `001_initial_schema.sql` - Base schema with all core tables
-- `002_xxx.sql` - Your first addition
-- etc.
+- `002_add_character_development_agent.sql` - Character profiles for character development
+- `003_normalize_target_audience_and_genre_tables.sql` - Normalize metadata into foreign key tables
+- `004_reverse_author_plot_relationship.sql` - Fix relationship: multiple plots per author
 
 ## Example: Adding a Writing Style Agent
 

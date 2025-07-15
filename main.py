@@ -1211,6 +1211,20 @@ async def library_page():
                         </div>
                     </div>
                     
+                    ${plot.author_id ? (() => {
+                        const author = allAuthors.find(a => a.id === plot.author_id);
+                        return author ? `
+                            <div class="modal-section">
+                                <h3>Author</h3>
+                                <div style="border: 1px solid #007bff; border-radius: 5px; padding: 15px; background-color: #f8f9ff;">
+                                    <div style="font-weight: bold; color: #007bff; margin-bottom: 5px;">${author.author_name}</div>
+                                    ${author.pen_name ? `<div style="font-style: italic; color: #666; margin-bottom: 8px;">Pen Name: ${author.pen_name}</div>` : ''}
+                                    <div style="color: #555; font-size: 14px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${author.biography}</div>
+                                </div>
+                            </div>
+                        ` : '';
+                    })() : ''}
+                    
                     <div class="modal-section">
                         <h3>Details</h3>
                         <div class="modal-meta-grid">
@@ -1222,6 +1236,12 @@ async def library_page():
                                 <div class="modal-meta-label">Plot ID</div>
                                 <div class="modal-meta-value">${plot.id}</div>
                             </div>
+                            ${plot.author_id ? `
+                                <div class="modal-meta-item">
+                                    <div class="modal-meta-label">Author ID</div>
+                                    <div class="modal-meta-value">${plot.author_id}</div>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
@@ -1237,6 +1257,9 @@ async def library_page():
                 
                 title.textContent = author.author_name;
                 
+                // Find all plots by this author
+                const authorPlots = allPlots.filter(plot => plot.author_id === author.id);
+                
                 body.innerHTML = `
                     <div class="modal-section">
                         <h3>Author Information</h3>
@@ -1251,6 +1274,10 @@ async def library_page():
                                     <div class="modal-meta-value">${author.pen_name}</div>
                                 </div>
                             ` : ''}
+                            <div class="modal-meta-item">
+                                <div class="modal-meta-label">Number of Plots</div>
+                                <div class="modal-meta-value">${authorPlots.length}</div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1264,6 +1291,25 @@ async def library_page():
                         <p>${author.writing_style}</p>
                     </div>
                     
+                    ${authorPlots.length > 0 ? `
+                        <div class="modal-section">
+                            <h3>Plots by this Author</h3>
+                            <div style="max-height: 300px; overflow-y: auto;">
+                                ${authorPlots.map(plot => `
+                                    <div style="border: 1px solid #eee; border-radius: 5px; padding: 15px; margin-bottom: 10px; background-color: #f9f9f9;">
+                                        <div style="font-weight: bold; color: #007bff; margin-bottom: 5px;">${plot.title}</div>
+                                        <div style="color: #666; font-size: 14px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${plot.plot_summary}</div>
+                                        <div style="margin-top: 8px; display: flex; gap: 5px; flex-wrap: wrap;">
+                                            ${plot.genre_name ? `<span style="background: #007bff; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">${plot.genre_name}</span>` : ''}
+                                            ${plot.subgenre_name ? `<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">${plot.subgenre_name}</span>` : ''}
+                                            ${plot.tone_name ? `<span style="background: #6c757d; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">${plot.tone_name}</span>` : ''}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
                     <div class="modal-section">
                         <h3>Details</h3>
                         <div class="modal-meta-grid">
@@ -1275,12 +1321,6 @@ async def library_page():
                                 <div class="modal-meta-label">Author ID</div>
                                 <div class="modal-meta-value">${author.id}</div>
                             </div>
-                            ${author.plot_id ? `
-                                <div class="modal-meta-item">
-                                    <div class="modal-meta-label">Associated Plot</div>
-                                    <div class="modal-meta-value">${author.plot_id}</div>
-                                </div>
-                            ` : ''}
                         </div>
                     </div>
                 `;

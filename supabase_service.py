@@ -98,7 +98,7 @@ class SupabaseService:
             print(f"Error saving orchestrator decision: {e}")
             raise
     
-    async def save_plot(self, session_id: str, user_id: str, plot_data: Dict[str, Any], orchestrator_params: Dict[str, Any] = None) -> Dict[str, Any]:
+    async def save_plot(self, session_id: str, user_id: str, plot_data: Dict[str, Any], orchestrator_params: Dict[str, Any] = None, author_id: str = None) -> Dict[str, Any]:
         """Save plot to database"""
         try:
             # Get user and session UUIDs
@@ -120,6 +120,7 @@ class SupabaseService:
                 "trope": params.get("trope"),
                 "tone": params.get("tone"),
                 "target_audience": target_audience,
+                "author_id": author_id,  # New: assign plot to author
                 "created_at": datetime.utcnow().isoformat()
             }
             
@@ -130,7 +131,7 @@ class SupabaseService:
             print(f"Error saving plot: {e}")
             raise
     
-    async def save_author(self, session_id: str, user_id: str, author_data: Dict[str, Any], plot_id: str = None) -> Dict[str, Any]:
+    async def save_author(self, session_id: str, user_id: str, author_data: Dict[str, Any]) -> Dict[str, Any]:
         """Save author to database"""
         try:
             # Get user and session UUIDs
@@ -140,7 +141,6 @@ class SupabaseService:
             author_record = {
                 "session_id": session_data["id"],
                 "user_id": user_data["id"],
-                "plot_id": plot_id,
                 "author_name": author_data.get("author_name"),
                 "pen_name": author_data.get("pen_name"),
                 "biography": author_data.get("biography"),
@@ -220,13 +220,17 @@ class SupabaseService:
                 return {"plot": None, "author": None}
             
             plot_data = plot_response.data[0]
+            author_data = None
             
-            # Get associated author
-            author_response = self.client.table("authors").select("*").eq("plot_id", plot_id).execute()
+            # Get associated author if plot has author_id
+            if plot_data.get("author_id"):
+                author_response = self.client.table("authors").select("*").eq("id", plot_data["author_id"]).execute()
+                if author_response.data:
+                    author_data = author_response.data[0]
             
             return {
                 "plot": plot_data,
-                "author": author_response.data[0] if author_response.data else None
+                "author": author_data
             }
             
         except Exception as e:
@@ -370,6 +374,26 @@ class SupabaseService:
             
         except Exception as e:
             print(f"Error getting all authors: {e}")
+            raise
+    
+    async def get_plots_by_author(self, author_id: str) -> List[Dict[str, Any]]:
+        """Get all plots by a specific author"""
+        try:
+            response = self.client.table("plots").select("*").eq("author_id", author_id).order("created_at", desc=True).execute()
+            return response.data
+            
+        except Exception as e:
+            print(f"Error getting plots by author: {e}")
+            raise
+    
+    def get_plots_by_author_sync(self, author_id: str) -> List[Dict[str, Any]]:
+        """Get all plots by a specific author (synchronous)"""
+        try:
+            response = self.client.table("plots").select("*").eq("author_id", author_id).order("created_at", desc=True).execute()
+            return response.data
+            
+        except Exception as e:
+            print(f"Error getting plots by author: {e}")
             raise
 
 # Global Supabase service instance
