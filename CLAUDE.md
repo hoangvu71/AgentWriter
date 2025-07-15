@@ -134,7 +134,113 @@
 - Format agent responses for optimal user experience
 - Test agent coordination and sequential workflows thoroughly
 
-### 10. Communication & Clarity
+### 10. Database Schema Evolution and Migration Workflow
+When making changes to database schema (adding tables, normalizing data, etc.), follow this proven workflow:
+
+#### Phase 1: Planning & Migration Creation
+1. **Create Migration File**
+   ```bash
+   python create_migration.py "description of changes"
+   ```
+2. **Design New Schema** 
+   - Use proper normalization (foreign keys instead of VARCHAR/JSONB)
+   - Add appropriate indexes for performance
+   - Include sample data for immediate testing
+   - Use `IF NOT EXISTS` for idempotent operations
+
+#### Phase 2: Schema Application
+3. **Apply New Schema**
+   ```bash
+   # Use direct database connection with password
+   python apply_migration_direct.py
+   ```
+4. **Verify Schema Creation**
+   - Check all tables created successfully
+   - Verify foreign key relationships
+   - Confirm indexes are in place
+   - Test with sample data
+
+#### Phase 3: Data Migration (Critical!)
+5. **Migrate Existing Data**
+   ```bash
+   python migrate_existing_data.py
+   ```
+   - Extract data from old VARCHAR/JSONB columns
+   - Create missing lookup table entries (genres, etc.)
+   - Populate new foreign key columns
+   - Preserve original data during migration
+   
+6. **Verify Data Migration**
+   ```bash
+   python verify_migration.py
+   ```
+   - Confirm all data transferred correctly
+   - Check foreign key relationships work
+   - Verify no data loss occurred
+
+#### Phase 4: Cleanup
+7. **Remove Old Columns** (After verification)
+   ```bash
+   python cleanup_old_columns.py
+   ```
+   - Remove redundant VARCHAR/JSONB columns
+   - Keep only normalized foreign key structure
+   - Verify final table structure
+
+#### Phase 5: Code Updates
+8. **Update Service Layer**
+   - Modify `supabase_service.py` to use new schema
+   - Update all CRUD operations
+   - Test database operations
+   - Update agent code if needed
+
+#### Documentation Requirements
+- Update `DATABASE_DOCUMENTATION.md` with new schema
+- Document migration in `migrations/README.md`
+- Add new tables to entity relationship documentation
+- Update API documentation if schema affects endpoints
+
+#### Critical Rules
+- **NEVER skip data migration** - new foreign keys must be populated
+- **ALWAYS verify before cleanup** - ensure no data loss
+- **Test thoroughly** - run full system tests after migration
+- **Document everything** - migrations should be self-explanatory
+- **Use transactions** - ensure atomicity of migration operations
+
+### 11. Library Interface and User Experience
+The system includes a comprehensive library interface for viewing and managing generated content:
+
+#### Library Features
+- **Card-based Layout**: All plots and authors displayed in responsive card grid
+- **Detailed Modal Views**: Click any card to see full details in a professional modal
+- **Search & Filter**: Real-time search with genre and audience filtering
+- **Responsive Design**: Works on desktop and mobile devices
+- **Normalized Metadata Display**: Shows readable names instead of UUID foreign keys
+
+#### Modal Functionality
+**Plot Modals Include:**
+- Complete plot summary (no character truncation)
+- Organized metadata sections: Genre, Subgenre, Microgenre, Trope, Tone, Target Audience
+- Creation timestamps and system IDs
+- Professional layout with organized grid display
+
+**Author Modals Include:**
+- Full biography and writing style descriptions
+- Author information: full name, pen name
+- Associated plot relationships
+- Creation details and system metadata
+
+#### Technical Implementation
+- **API Endpoints**: `/api/plots` and `/api/authors` with normalized metadata
+- **Modal System**: CSS3 animations, click-outside-to-close, responsive design
+- **Normalized Schema**: Foreign key lookups populate readable metadata names
+- **Real-time Updates**: Interface updates automatically when new content is generated
+
+#### Accessing the Library
+- Main interface: `http://localhost:8000/library`
+- Or click "View Library" from main page: `http://localhost:8000`
+
+### 12. Communication & Clarity
 - Explain complex implementations clearly
 - Provide multiple solutions when trade-offs exist
 - Highlight potential issues or limitations
