@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest test_agent_integration.py::TestADKAgentIntegration::test_agent_initialization -v)",
+      "Bash(python:*)",
+      "Bash(venv\\Scripts\\activate:*)",
+      "Bash(pip install:*)",
+      "Bash(cmd /c:*)",
+      "Bash(venv\\\\Scripts\\\\pip.exe install:*)",
+      "Bash(set GOOGLE_APPLICATION_CREDENTIALS=service-account-key.json)",
+      "Bash(set GOOGLE_GENAI_USE_VERTEXAI=true)",
+      "Bash(set GOOGLE_CLOUD_PROJECT=writing-book-457206)",
+      "Bash(set GOOGLE_CLOUD_LOCATION=us-central1)",
+      "Bash(sed:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}
