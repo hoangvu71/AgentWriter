@@ -162,7 +162,10 @@ async def get_home():
                     <h1>📚 Multi-Agent Book Writer System</h1>
                     <p>Advanced AI system with orchestrator, plot generator, and author generator agents.</p>
                 </div>
-                <a href="/library" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">📖 View Library</a>
+                <div style="display: flex; gap: 10px;">
+                    <a href="/admin" style="background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">⚙️ Admin</a>
+                    <a href="/library" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">📖 View Library</a>
+                </div>
             </div>
             
             <div class="model-selector">
@@ -173,10 +176,43 @@ async def get_home():
                 <span id="modelInfo"></span>
             </div>
             
+            <!-- Content Parameters Selection -->
+            <div class="parameters-section" style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #dee2e6;">
+                <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 10px;">
+                    <h3 style="margin: 0; color: #495057;">📋 Content Parameters</h3>
+                    <button id="toggleParams" onclick="toggleParameters()" style="background: none; border: none; font-size: 18px; cursor: pointer;">▼</button>
+                </div>
+                
+                <div id="parametersContent" style="display: none;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Genre</label>
+                            <select id="genreSelect" onchange="updateContext()">
+                                <option value="">Select Genre...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Target Audience</label>
+                            <select id="audienceSelect" onchange="updateContext()">
+                                <option value="">Select Audience...</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="selectedParams" style="margin-bottom: 10px; padding: 10px; background-color: white; border-radius: 5px; border: 1px solid #ddd; min-height: 20px;">
+                        <em style="color: #6c757d;">No parameters selected. Use "specified genres and audience params" in your message to include selected parameters.</em>
+                    </div>
+                    
+                    <div style="font-size: 12px; color: #6c757d;">
+                        💡 <strong>Tip:</strong> Select parameters above, then use phrases like "Create a plot based on the specified genres and audience params" in your messages.
+                    </div>
+                </div>
+            </div>
+            
             <div class="chat-container" id="chat"></div>
             
             <div class="input-container">
-                <input type="text" id="messageInput" placeholder="Try: 'Create a fantasy novel, LitRPG, Zombie Apocalypse, survive and family, dark/humour/realistic, Male/Heterosexual/Young Adults. Create author too.'" />
+                <input type="text" id="messageInput" placeholder="Try: 'Create a plot and author based on the specified genres and audience params' or just describe what you want!" />
                 <button onclick="sendMessage()">Send</button>
             </div>
             
@@ -371,10 +407,175 @@ async def get_home():
                     .catch(error => console.error('Error switching model:', error));
             }
             
+            // Parameter management
+            let selectedGenre = null;
+            let selectedAudience = null;
+            
+            function toggleParameters() {
+                const content = document.getElementById('parametersContent');
+                const button = document.getElementById('toggleParams');
+                
+                if (content.style.display === 'none') {
+                    content.style.display = 'block';
+                    button.textContent = '▲';
+                } else {
+                    content.style.display = 'none';
+                    button.textContent = '▼';
+                }
+            }
+            
+            async function loadParameters() {
+                try {
+                    // Load genres
+                    const genresResponse = await fetch('/api/genres');
+                    if (genresResponse.ok) {
+                        const genresData = await genresResponse.json();
+                        const genreSelect = document.getElementById('genreSelect');
+                        genreSelect.innerHTML = '<option value="">Select Genre...</option>';
+                        
+                        if (genresData.success && genresData.genres) {
+                            genresData.genres.forEach(genre => {
+                                const option = document.createElement('option');
+                                option.value = JSON.stringify(genre);
+                                option.textContent = genre.name;
+                                genreSelect.appendChild(option);
+                            });
+                        }
+                    }
+                    
+                    // Load audiences
+                    const audiencesResponse = await fetch('/api/target-audiences');
+                    if (audiencesResponse.ok) {
+                        const audiencesData = await audiencesResponse.json();
+                        const audienceSelect = document.getElementById('audienceSelect');
+                        audienceSelect.innerHTML = '<option value="">Select Audience...</option>';
+                        
+                        if (audiencesData.success && audiencesData.audiences) {
+                            audiencesData.audiences.forEach(audience => {
+                                const option = document.createElement('option');
+                                option.value = JSON.stringify(audience);
+                                option.textContent = `${audience.age_group} - ${audience.gender} - ${audience.sexual_orientation}`;
+                                audienceSelect.appendChild(option);
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading parameters:', error);
+                }
+            }
+            
+            function updateContext() {
+                const genreSelect = document.getElementById('genreSelect');
+                const audienceSelect = document.getElementById('audienceSelect');
+                const selectedParamsDiv = document.getElementById('selectedParams');
+                
+                selectedGenre = genreSelect.value ? JSON.parse(genreSelect.value) : null;
+                selectedAudience = audienceSelect.value ? JSON.parse(audienceSelect.value) : null;
+                
+                let paramsText = '';
+                
+                if (selectedGenre || selectedAudience) {
+                    paramsText = '<strong>Selected Parameters:</strong><br>';
+                    
+                    if (selectedGenre) {
+                        paramsText += `<span style="background: #007bff; color: white; padding: 2px 6px; border-radius: 3px; margin-right: 5px; font-size: 12px;">Genre: ${selectedGenre.name}</span>`;
+                        if (selectedGenre.description) {
+                            paramsText += `<br><em style="font-size: 12px; color: #6c757d;">Genre: ${selectedGenre.description}</em>`;
+                        }
+                    }
+                    
+                    if (selectedAudience) {
+                        paramsText += `<br><span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; margin-right: 5px; font-size: 12px;">Audience: ${selectedAudience.age_group} - ${selectedAudience.gender} - ${selectedAudience.sexual_orientation}</span>`;
+                        if (selectedAudience.description) {
+                            paramsText += `<br><em style="font-size: 12px; color: #6c757d;">Audience: ${selectedAudience.description}</em>`;
+                        }
+                        if (selectedAudience.interests && selectedAudience.interests.length > 0) {
+                            paramsText += `<br><em style="font-size: 12px; color: #6c757d;">Interests: ${selectedAudience.interests.join(', ')}</em>`;
+                        }
+                    }
+                } else {
+                    paramsText = '<em style="color: #6c757d;">No parameters selected. Use "specified genres and audience params" in your message to include selected parameters.</em>';
+                }
+                
+                selectedParamsDiv.innerHTML = paramsText;
+            }
+            
+            function injectParametersIntoMessage(message) {
+                // Check if user wants to reference parameters
+                const parameterKeywords = [
+                    'specified genres and audience params',
+                    'specified genre and audience',
+                    'selected parameters',
+                    'chosen parameters',
+                    'the genre and audience params',
+                    'based on the specified',
+                    'using the specified'
+                ];
+                
+                const shouldInject = parameterKeywords.some(keyword => 
+                    message.toLowerCase().includes(keyword.toLowerCase())
+                );
+                
+                if (!shouldInject || (!selectedGenre && !selectedAudience)) {
+                    return message;
+                }
+                
+                let contextText = '\n\nCONTEXT - Use these specifications:';
+                
+                if (selectedGenre) {
+                    contextText += `\nGENRE: ${selectedGenre.name}`;
+                    if (selectedGenre.description) {
+                        contextText += ` - ${selectedGenre.description}`;
+                    }
+                }
+                
+                if (selectedAudience) {
+                    contextText += `\nTARGET AUDIENCE: Age Group: ${selectedAudience.age_group}, Gender: ${selectedAudience.gender}, Sexual Orientation: ${selectedAudience.sexual_orientation}`;
+                    if (selectedAudience.description) {
+                        contextText += ` - ${selectedAudience.description}`;
+                    }
+                    if (selectedAudience.interests && selectedAudience.interests.length > 0) {
+                        contextText += `\nAudience Interests: ${selectedAudience.interests.join(', ')}`;
+                    }
+                }
+                
+                return message + contextText;
+            }
+            
+            // Override the sendMessage function to inject parameters
+            const originalSendMessage = sendMessage;
+            sendMessage = function() {
+                const input = document.getElementById('messageInput');
+                let message = input.value.trim();
+                
+                if (message) {
+                    // Inject parameters if referenced
+                    message = injectParametersIntoMessage(message);
+                    
+                    // Display user message
+                    const chatContainer = document.getElementById('chat');
+                    const userMessage = document.createElement('div');
+                    userMessage.className = 'message user-message';
+                    userMessage.textContent = input.value; // Show original message to user
+                    chatContainer.appendChild(userMessage);
+                    
+                    // Send enhanced message to server
+                    ws.send(JSON.stringify({
+                        type: 'message',
+                        content: message, // Send enhanced message with parameters
+                        user_id: userId
+                    }));
+                    
+                    input.value = '';
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                }
+            }
+
             // Connect on page load
             window.onload = function() {
                 connect();
                 loadModels();
+                loadParameters();
             };
         </script>
     </body>
@@ -617,6 +818,406 @@ async def get_analytics(user_id: str = None):
         return {"success": True, "analytics": analytics}
     except Exception as e:
         return {"error": str(e)}
+
+@app.get("/admin")
+async def admin_page():
+    """Admin interface for managing genres and target audiences"""
+    return HTMLResponse(content="""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Admin - Manage Content Parameters</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #f5f5f5;
+            }
+            .header {
+                background-color: white;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                margin-bottom: 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .nav-buttons {
+                display: flex;
+                gap: 10px;
+            }
+            .nav-button {
+                padding: 10px 20px;
+                background-color: #007bff;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                border: none;
+                cursor: pointer;
+            }
+            .nav-button:hover {
+                background-color: #0056b3;
+            }
+            .content {
+                background-color: white;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+            .section {
+                margin-bottom: 40px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                padding: 20px;
+            }
+            .section h2 {
+                margin-top: 0;
+                color: #333;
+                border-bottom: 2px solid #007bff;
+                padding-bottom: 10px;
+            }
+            .form-group {
+                margin-bottom: 15px;
+            }
+            .form-group label {
+                display: block;
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: #555;
+            }
+            .form-group input, .form-group textarea, .form-group select {
+                width: 100%;
+                padding: 8px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-size: 14px;
+            }
+            .form-group textarea {
+                height: 80px;
+                resize: vertical;
+            }
+            .btn {
+                background-color: #28a745;
+                color: white;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+            }
+            .btn:hover {
+                background-color: #218838;
+            }
+            .btn-danger {
+                background-color: #dc3545;
+            }
+            .btn-danger:hover {
+                background-color: #c82333;
+            }
+            .items-list {
+                margin-top: 20px;
+            }
+            .item-card {
+                border: 1px solid #eee;
+                border-radius: 5px;
+                padding: 15px;
+                margin-bottom: 10px;
+                background-color: #f9f9f9;
+            }
+            .item-header {
+                font-weight: bold;
+                color: #007bff;
+                margin-bottom: 5px;
+            }
+            .item-description {
+                color: #666;
+                font-size: 14px;
+            }
+            .loading {
+                text-align: center;
+                padding: 20px;
+                color: #666;
+            }
+            .success {
+                background-color: #d4edda;
+                color: #155724;
+                padding: 10px;
+                border-radius: 4px;
+                margin-bottom: 15px;
+            }
+            .error {
+                background-color: #f8d7da;
+                color: #721c24;
+                padding: 10px;
+                border-radius: 4px;
+                margin-bottom: 15px;
+            }
+            .two-column {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 30px;
+            }
+            @media (max-width: 768px) {
+                .two-column {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Admin - Content Parameters</h1>
+            <div class="nav-buttons">
+                <a href="/" class="nav-button">Home</a>
+                <a href="/library" class="nav-button">Library</a>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="two-column">
+                <!-- Genres Section -->
+                <div class="section">
+                    <h2>Genres Management</h2>
+                    
+                    <div id="genreMessage"></div>
+                    
+                    <div class="form-group">
+                        <label>Genre Name</label>
+                        <input type="text" id="genreName" placeholder="e.g., Fantasy, Science Fiction">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="genreDescription" placeholder="Describe this genre..."></textarea>
+                    </div>
+                    
+                    <button class="btn" onclick="createGenre()">Add Genre</button>
+                    
+                    <div class="items-list">
+                        <h3>Existing Genres</h3>
+                        <div id="genresList" class="loading">Loading genres...</div>
+                    </div>
+                </div>
+
+                <!-- Target Audiences Section -->
+                <div class="section">
+                    <h2>Target Audiences Management</h2>
+                    
+                    <div id="audienceMessage"></div>
+                    
+                    <div class="form-group">
+                        <label>Age Group</label>
+                        <select id="audienceAgeGroup">
+                            <option value="Children">Children (5-12)</option>
+                            <option value="Middle Grade">Middle Grade (8-12)</option>
+                            <option value="Young Adult">Young Adult (13-17)</option>
+                            <option value="New Adult">New Adult (18-25)</option>
+                            <option value="Adult">Adult (25+)</option>
+                            <option value="Senior">Senior (65+)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <select id="audienceGender">
+                            <option value="All">All Genders</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Non-binary">Non-binary</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Sexual Orientation</label>
+                        <select id="audienceOrientation">
+                            <option value="All">All Orientations</option>
+                            <option value="Heterosexual">Heterosexual</option>
+                            <option value="LGBTQ+">LGBTQ+</option>
+                            <option value="Gay">Gay</option>
+                            <option value="Lesbian">Lesbian</option>
+                            <option value="Bisexual">Bisexual</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Interests (comma-separated)</label>
+                        <input type="text" id="audienceInterests" placeholder="e.g., Adventure, Romance, Action">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="audienceDescription" placeholder="Describe this target audience..."></textarea>
+                    </div>
+                    
+                    <button class="btn" onclick="createAudience()">Add Target Audience</button>
+                    
+                    <div class="items-list">
+                        <h3>Existing Target Audiences</h3>
+                        <div id="audiencesList" class="loading">Loading audiences...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Load data when page loads
+            loadGenres();
+            loadAudiences();
+
+            async function loadGenres() {
+                try {
+                    const response = await fetch('/api/genres');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        displayGenres(data.genres);
+                    } else {
+                        document.getElementById('genresList').innerHTML = '<div class="error">Error loading genres</div>';
+                    }
+                } catch (error) {
+                    document.getElementById('genresList').innerHTML = '<div class="error">Error loading genres</div>';
+                }
+            }
+
+            async function loadAudiences() {
+                try {
+                    const response = await fetch('/api/target-audiences');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        displayAudiences(data.audiences);
+                    } else {
+                        document.getElementById('audiencesList').innerHTML = '<div class="error">Error loading audiences</div>';
+                    }
+                } catch (error) {
+                    document.getElementById('audiencesList').innerHTML = '<div class="error">Error loading audiences</div>';
+                }
+            }
+
+            function displayGenres(genres) {
+                const container = document.getElementById('genresList');
+                
+                if (genres.length === 0) {
+                    container.innerHTML = '<div class="item-card">No genres found</div>';
+                    return;
+                }
+                
+                container.innerHTML = genres.map(genre => `
+                    <div class="item-card">
+                        <div class="item-header">${genre.name}</div>
+                        <div class="item-description">${genre.description || 'No description'}</div>
+                    </div>
+                `).join('');
+            }
+
+            function displayAudiences(audiences) {
+                const container = document.getElementById('audiencesList');
+                
+                if (audiences.length === 0) {
+                    container.innerHTML = '<div class="item-card">No target audiences found</div>';
+                    return;
+                }
+                
+                container.innerHTML = audiences.map(audience => `
+                    <div class="item-card">
+                        <div class="item-header">${audience.age_group} - ${audience.gender} - ${audience.sexual_orientation}</div>
+                        <div class="item-description">${audience.description || 'No description'}</div>
+                        ${audience.interests && audience.interests.length > 0 ? 
+                            `<div style="margin-top: 5px;"><strong>Interests:</strong> ${audience.interests.join(', ')}</div>` : ''
+                        }
+                    </div>
+                `).join('');
+            }
+
+            async function createGenre() {
+                const name = document.getElementById('genreName').value.trim();
+                const description = document.getElementById('genreDescription').value.trim();
+                
+                if (!name) {
+                    showMessage('genreMessage', 'Genre name is required', 'error');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/api/genres', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            name: name,
+                            description: description
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showMessage('genreMessage', 'Genre created successfully!', 'success');
+                        document.getElementById('genreName').value = '';
+                        document.getElementById('genreDescription').value = '';
+                        loadGenres();
+                    } else {
+                        showMessage('genreMessage', data.error || 'Failed to create genre', 'error');
+                    }
+                } catch (error) {
+                    showMessage('genreMessage', 'Error creating genre', 'error');
+                }
+            }
+
+            async function createAudience() {
+                const ageGroup = document.getElementById('audienceAgeGroup').value;
+                const gender = document.getElementById('audienceGender').value;
+                const orientation = document.getElementById('audienceOrientation').value;
+                const interests = document.getElementById('audienceInterests').value.trim();
+                const description = document.getElementById('audienceDescription').value.trim();
+                
+                const interestsArray = interests ? interests.split(',').map(i => i.trim()).filter(i => i.length > 0) : [];
+                
+                try {
+                    const response = await fetch('/api/target-audiences', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            age_group: ageGroup,
+                            gender: gender,
+                            sexual_orientation: orientation,
+                            interests: interestsArray,
+                            description: description
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showMessage('audienceMessage', 'Target audience created successfully!', 'success');
+                        document.getElementById('audienceInterests').value = '';
+                        document.getElementById('audienceDescription').value = '';
+                        loadAudiences();
+                    } else {
+                        showMessage('audienceMessage', data.error || 'Failed to create target audience', 'error');
+                    }
+                } catch (error) {
+                    showMessage('audienceMessage', 'Error creating target audience', 'error');
+                }
+            }
+
+            function showMessage(elementId, message, type) {
+                const element = document.getElementById(elementId);
+                element.innerHTML = `<div class="${type}">${message}</div>`;
+                setTimeout(() => {
+                    element.innerHTML = '';
+                }, 5000);
+            }
+        </script>
+    </body>
+    </html>
+    """)
 
 @app.get("/library")
 async def library_page():
@@ -1368,6 +1969,74 @@ async def get_all_authors():
     try:
         authors = await supabase_service.get_all_authors()
         return {"success": True, "authors": authors}
+    except Exception as e:
+        return {"error": str(e)}
+
+# Genre management endpoints
+@app.get("/api/genres")
+async def get_all_genres():
+    """Get all genres with their subgenres and microgenres"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        genres = supabase_service.client.table("genres").select("*").order("name").execute()
+        subgenres = supabase_service.client.table("subgenres").select("*").order("name").execute()
+        microgenres = supabase_service.client.table("microgenres").select("*").order("name").execute()
+        
+        return {
+            "success": True,
+            "genres": genres.data,
+            "subgenres": subgenres.data,
+            "microgenres": microgenres.data
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/genres")
+async def create_genre(data: dict):
+    """Create a new genre"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("genres").insert({
+            "name": data["name"],
+            "description": data.get("description", "")
+        }).execute()
+        
+        return {"success": True, "genre": response.data[0]}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/target-audiences")
+async def get_all_target_audiences():
+    """Get all target audiences"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        audiences = supabase_service.client.table("target_audiences").select("*").order("age_group").execute()
+        return {"success": True, "audiences": audiences.data}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/target-audiences")
+async def create_target_audience(data: dict):
+    """Create a new target audience"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("target_audiences").insert({
+            "age_group": data["age_group"],
+            "gender": data.get("gender", "All"),
+            "sexual_orientation": data.get("sexual_orientation", "All"),
+            "interests": data.get("interests", []),
+            "description": data.get("description", "")
+        }).execute()
+        
+        return {"success": True, "audience": response.data[0]}
     except Exception as e:
         return {"error": str(e)}
 

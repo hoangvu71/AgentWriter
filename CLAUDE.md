@@ -300,7 +300,100 @@ User Request → Orchestrator → Author Agent → Plot Agent
 - Removed old `authors.plot_id` column
 - Updated indexes for optimal performance
 
-### 13. Communication & Clarity
+### 13. Genre and Target Audience Management System
+The system provides comprehensive management of content parameters with admin interface and automatic context injection:
+
+#### Admin Interface (`/admin`)
+**Genres Management**:
+- Create new genres with names and descriptions
+- View all existing genres in organized cards
+- Real-time form validation and success/error feedback
+- RESTful API backend for genre CRUD operations
+
+**Target Audiences Management**:
+- Create audiences with structured data:
+  - Age Group: Children, Middle Grade, Young Adult, New Adult, Adult, Senior
+  - Gender: All, Male, Female, Non-binary
+  - Sexual Orientation: All, Heterosexual, LGBTQ+, Gay, Lesbian, Bisexual
+  - Interests: Comma-separated list (Adventure, Romance, Action, etc.)
+  - Custom descriptions for each audience
+- View all audiences with complete metadata display
+- Organized interface with dropdown selections
+
+#### Parameter Selection in Web Chat
+**Collapsible Parameters Section**:
+- Toggle-able interface in main chat (📋 Content Parameters)
+- Real-time dropdown population from database
+- Visual parameter preview with tags and descriptions
+- Smart context injection when referenced in messages
+
+**Context Injection Keywords**:
+User can trigger parameter injection by using phrases like:
+- "specified genres and audience params"
+- "specified genre and audience"
+- "selected parameters"
+- "chosen parameters"
+- "based on the specified"
+- "using the specified"
+
+#### Automatic Context Enhancement
+**Message Processing**:
+```javascript
+// User types: "Create a plot based on the specified genre and audience"
+// System automatically appends:
+// "CONTEXT - Use these specifications:
+// GENRE: Cyberpunk - High tech, low life - stories set in dystopian futures
+// TARGET AUDIENCE: Age Group: Young Adult, Gender: All, Sexual Orientation: All
+// Audience Interests: Gaming, Technology, Dystopian fiction"
+```
+
+**Agent Integration**:
+- No agent code changes required
+- Context automatically included in orchestrator routing
+- Genre/audience parameters flow through to plot and author agents
+- Maintains consistency across all generated content
+
+#### API Endpoints
+**Genre Management**:
+- `GET /api/genres` - List all genres with subgenres and microgenres
+- `POST /api/genres` - Create new genre with name and description
+
+**Target Audience Management**:
+- `GET /api/target-audiences` - List all target audiences
+- `POST /api/target-audiences` - Create new audience with structured data
+
+#### User Workflow
+1. **Setup Parameters** (via `/admin`):
+   - Create custom genres for your project
+   - Define target audiences with specific characteristics
+   - Build reusable parameter library
+
+2. **Select Parameters** (main chat):
+   - Click "📋 Content Parameters" to expand
+   - Choose genre from dropdown
+   - Choose target audience from dropdown
+   - See real-time preview of selections
+
+3. **Generate Content** (natural language):
+   - Type: "Create a cyberpunk plot for the specified audience"
+   - System automatically injects full context
+   - Agents receive detailed genre and audience specifications
+   - Consistent output matching exact parameters
+
+#### Benefits
+**For Content Creators**:
+- Consistent genre adherence across projects
+- Precise target audience matching
+- Reusable parameter definitions
+- No need to retype detailed specifications
+
+**For System Quality**:
+- Standardized genre definitions prevent confusion
+- Structured audience data improves targeting
+- Context injection ensures parameter usage
+- Maintains consistency across all agents
+
+### 14. Communication & Clarity
 - Explain complex implementations clearly
 - Provide multiple solutions when trade-offs exist
 - Highlight potential issues or limitations
