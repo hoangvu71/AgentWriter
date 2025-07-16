@@ -153,7 +153,7 @@ Stores tone variations linked to tropes.
 | `created_at` | TIMESTAMP | When tone was created |
 
 ### 11. **target_audiences** table
-Stores target audience demographics and interests.
+Stores target audience demographics.
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -161,8 +161,6 @@ Stores target audience demographics and interests.
 | `age_group` | VARCHAR(50) | Age group (Young Adult, Adult, etc.) |
 | `gender` | VARCHAR(50) | Gender preference (All, Male, Female, Non-binary) |
 | `sexual_orientation` | VARCHAR(50) | Orientation (All, Heterosexual, LGBTQ+, etc.) |
-| `interests` | TEXT[] | Array of interest keywords |
-| `description` | TEXT | Audience description |
 | `created_at` | TIMESTAMP | When audience was created |
 
 **Hierarchy:** `Genre → Subgenre → Microgenre → Trope → Tone`

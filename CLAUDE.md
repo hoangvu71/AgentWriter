@@ -306,6 +306,10 @@ User Request → Orchestrator → Author Agent → Plot Agent
 - Updated `plots` table to use foreign key references
 - Added `target_audiences` table for structured audience data
 
+**Migration 006**: `remove_target_audience_columns.sql`
+- Simplified target_audiences table by removing interests and description columns
+- Streamlined to core demographic fields: age_group, gender, sexual_orientation
+
 ### 13. Genre and Target Audience Management System
 The system provides comprehensive management of content parameters with admin interface and automatic context injection:
 
@@ -321,8 +325,6 @@ The system provides comprehensive management of content parameters with admin in
   - Age Group: Children, Middle Grade, Young Adult, New Adult, Adult, Senior
   - Gender: All, Male, Female, Non-binary
   - Sexual Orientation: All, Heterosexual, LGBTQ+, Gay, Lesbian, Bisexual
-  - Interests: Comma-separated list (Adventure, Romance, Action, etc.)
-  - Custom descriptions for each audience
 - View all audiences with complete metadata display
 - Organized interface with dropdown selections
 

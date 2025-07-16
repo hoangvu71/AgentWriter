@@ -354,17 +354,20 @@ class SupabaseService:
                 
                 # Get target audience info
                 if plot.get("target_audience_id"):
-                    audience_response = self.client.table("target_audiences").select("age_group, gender, sexual_orientation, description").eq("id", plot["target_audience_id"]).execute()
+                    audience_response = self.client.table("target_audiences").select("age_group, gender, sexual_orientation").eq("id", plot["target_audience_id"]).execute()
                     if audience_response.data:
                         audience = audience_response.data[0]
                         flattened_plot["target_audience_age_group"] = audience["age_group"]
-                        flattened_plot["target_audience_description"] = audience["description"]
+                        flattened_plot["target_audience_gender"] = audience["gender"]
+                        flattened_plot["target_audience_sexual_orientation"] = audience["sexual_orientation"]
                     else:
                         flattened_plot["target_audience_age_group"] = None
-                        flattened_plot["target_audience_description"] = None
+                        flattened_plot["target_audience_gender"] = None
+                        flattened_plot["target_audience_sexual_orientation"] = None
                 else:
                     flattened_plot["target_audience_age_group"] = None
-                    flattened_plot["target_audience_description"] = None
+                    flattened_plot["target_audience_gender"] = None
+                    flattened_plot["target_audience_sexual_orientation"] = None
                 
                 plots.append(flattened_plot)
             
@@ -579,9 +582,7 @@ class SupabaseService:
             new_audience = {
                 "age_group": age_group,
                 "gender": gender,
-                "sexual_orientation": orientation,
-                "description": f"{age_group} - {gender} - {orientation}",
-                "interests": []  # Can be expanded later
+                "sexual_orientation": orientation
             }
             
             response = self.client.table("target_audiences").insert(new_audience).execute()
@@ -656,22 +657,20 @@ class SupabaseService:
     async def get_all_target_audiences(self) -> List[Dict[str, Any]]:
         """Get all target audiences"""
         try:
-            response = self.client.table("target_audiences").select("*").order("age_group", "gender", "sexual_orientation").execute()
+            response = self.client.table("target_audiences").select("*").order("age_group").execute()
             return response.data
             
         except Exception as e:
             print(f"Error getting all target audiences: {e}")
             return []
     
-    async def create_target_audience(self, age_group: str, gender: str, sexual_orientation: str, interests: List[str], description: str = None) -> Dict[str, Any]:
+    async def create_target_audience(self, age_group: str, gender: str, sexual_orientation: str) -> Dict[str, Any]:
         """Create a new target audience"""
         try:
             new_audience = {
                 "age_group": age_group,
                 "gender": gender,
-                "sexual_orientation": sexual_orientation,
-                "interests": interests,
-                "description": description or f"{age_group} - {gender} - {sexual_orientation}"
+                "sexual_orientation": sexual_orientation
             }
             
             response = self.client.table("target_audiences").insert(new_audience).execute()
@@ -689,6 +688,427 @@ class SupabaseService:
             
         except Exception as e:
             print(f"Error updating plot author: {e}")
+            raise
+    
+    async def get_plot_by_id(self, plot_id: str) -> Dict[str, Any]:
+        """Get a single plot by ID"""
+        try:
+            response = self.client.table("plots").select("*").eq("id", plot_id).execute()
+            return response.data[0] if response.data else None
+            
+        except Exception as e:
+            print(f"Error getting plot by ID: {e}")
+            return None
+    
+    async def get_author_by_id(self, author_id: str) -> Dict[str, Any]:
+        """Get a single author by ID"""
+        try:
+            response = self.client.table("authors").select("*").eq("id", author_id).execute()
+            return response.data[0] if response.data else None
+            
+        except Exception as e:
+            print(f"Error getting author by ID: {e}")
+            return None
+    
+    async def save_enhanced_plot(self, plot_id: str, enhanced_content: Dict[str, Any]) -> Dict[str, Any]:
+        """Save enhanced plot content back to database"""
+        try:
+            # Update the existing plot with enhanced content
+            update_data = {
+                "title": enhanced_content.get("title"),
+                "plot_summary": enhanced_content.get("plot_summary"),
+                "updated_at": datetime.utcnow().isoformat()
+            }
+            
+            response = self.client.table("plots").update(update_data).eq("id", plot_id).execute()
+            return response.data[0] if response.data else None
+            
+        except Exception as e:
+            print(f"Error saving enhanced plot: {e}")
+            return None
+    
+    async def save_enhanced_author(self, author_id: str, enhanced_content: Dict[str, Any]) -> Dict[str, Any]:
+        """Save enhanced author content back to database"""
+        try:
+            # Update the existing author with enhanced content
+            update_data = {
+                "author_name": enhanced_content.get("author_name"),
+                "biography": enhanced_content.get("biography"),
+                "writing_style": enhanced_content.get("writing_style"),
+                "updated_at": datetime.utcnow().isoformat()
+            }
+            
+            response = self.client.table("authors").update(update_data).eq("id", author_id).execute()
+            return response.data[0] if response.data else None
+            
+        except Exception as e:
+            print(f"Error saving enhanced author: {e}")
+            return None
+
+    # ========== IMPROVEMENT SESSION MANAGEMENT ==========
+    
+    async def create_improvement_session(
+        self, 
+        user_id: str, 
+        session_id: str, 
+        original_content: str,
+        content_type: str,
+        content_id: str = None,
+        target_score: float = 9.5,
+        max_iterations: int = 4
+    ) -> str:
+        """Create new improvement session and return improvement_session_id"""
+        
+        # TDD-driven validation that should have been implemented from the start
+        if not user_id or not user_id.strip():
+            raise ValueError("user_id is required")
+        if not session_id or not session_id.strip():
+            raise ValueError("session_id is required")
+        if not original_content or not original_content.strip():
+            raise ValueError("original_content is required")
+        if content_type not in ["plot", "author", "text"]:
+            raise ValueError("Invalid content_type. Must be 'plot', 'author', or 'text'")
+        if target_score < 0 or target_score > 10:
+            raise ValueError("target_score must be between 0 and 10")
+        if max_iterations < 1 or max_iterations > 10:
+            raise ValueError("max_iterations must be between 1 and 10")
+        
+        try:
+            # Get user UUID
+            user_data = await self.create_or_get_user(user_id)
+            user_uuid = user_data["id"]
+            
+            # Create improvement session record
+            session_record = {
+                "user_id": user_uuid,
+                "session_id": session_id,
+                "original_content": original_content,
+                "content_type": content_type,
+                "target_score": target_score,
+                "max_iterations": max_iterations,
+                "status": "in_progress",
+                "created_at": datetime.utcnow().isoformat()
+            }
+            
+            # Store content_id in the session_id field as a reference for now
+            # Note: original_content_id field doesn't exist in current schema
+            if content_id:
+                session_record["session_id"] = f"{session_id}_{content_id}"
+            
+            response = self.client.table("improvement_sessions").insert(session_record).execute()
+            
+            if response.data:
+                improvement_session_id = response.data[0]["id"]
+                print(f"Created improvement session: {improvement_session_id}")
+                return improvement_session_id
+            else:
+                raise Exception("No data returned from improvement session creation")
+            
+        except Exception as e:
+            print(f"Error creating improvement session: {e}")
+            raise Exception(f"Failed to create improvement session: {str(e)}")
+
+    async def update_improvement_session_status(
+        self,
+        improvement_session_id: str,
+        status: str = "completed",
+        final_content: str = None,
+        final_score: float = None,
+        completion_reason: str = None
+    ) -> Dict[str, Any]:
+        """Update improvement session with final results"""
+        
+        # TDD-driven validation that should have been implemented from the start
+        if not improvement_session_id or not improvement_session_id.strip():
+            raise ValueError("improvement_session_id is required")
+        if status not in ["in_progress", "completed", "failed", "cancelled"]:
+            raise ValueError("Invalid status. Must be 'in_progress', 'completed', 'failed', or 'cancelled'")
+        if final_score is not None and (final_score < 0 or final_score > 10):
+            raise ValueError("final_score must be between 0 and 10")
+        
+        try:
+            update_data = {
+                "status": status,
+                "completed_at": datetime.utcnow().isoformat()
+            }
+            
+            if final_content:
+                update_data["final_content"] = final_content
+            if final_score:
+                update_data["final_score"] = final_score
+            if completion_reason:
+                update_data["completion_reason"] = completion_reason
+            
+            response = self.client.table("improvement_sessions").update(update_data).eq("id", improvement_session_id).execute()
+            
+            if response.data:
+                print(f"Updated improvement session: {improvement_session_id}")
+                return response.data[0]
+            else:
+                raise Exception("No data returned from improvement session update")
+            
+        except Exception as e:
+            print(f"Error updating improvement session: {e}")
+            raise
+
+    # ========== ITERATION DATA PERSISTENCE ==========
+    
+    async def create_iteration_record(
+        self,
+        improvement_session_id: str,
+        iteration_number: int,
+        content: str
+    ) -> str:
+        """Create iteration record and return iteration_id"""
+        
+        # TDD-driven validation that should have been implemented from the start
+        if not improvement_session_id or not improvement_session_id.strip():
+            raise ValueError("improvement_session_id is required")
+        if iteration_number < 1:
+            raise ValueError("iteration_number must be positive")
+        if not content or not content.strip():
+            raise ValueError("content is required")
+        
+        try:
+            iteration_record = {
+                "improvement_session_id": improvement_session_id,
+                "iteration_number": iteration_number,
+                "content": content,
+                "created_at": datetime.utcnow().isoformat()
+            }
+            
+            response = self.client.table("iterations").insert(iteration_record).execute()
+            
+            if response.data:
+                iteration_id = response.data[0]["id"]
+                print(f"Created iteration {iteration_number}: {iteration_id}")
+                return iteration_id
+            else:
+                raise Exception("No data returned from iteration creation")
+            
+        except Exception as e:
+            print(f"Error creating iteration record: {e}")
+            raise
+
+    async def save_critique_data(
+        self,
+        iteration_id: str,
+        critique_json: Dict[str, Any],
+        agent_response: str
+    ) -> Dict[str, Any]:
+        """Save critique response to database"""
+        
+        # TDD-driven validation that should have been implemented from the start
+        if not iteration_id or not iteration_id.strip():
+            raise ValueError("iteration_id is required")
+        if not isinstance(critique_json, dict):
+            raise ValueError("critique_json must be a dictionary")
+        if not agent_response or not agent_response.strip():
+            raise ValueError("agent_response is required")
+        
+        try:
+            critique_record = {
+                "iteration_id": iteration_id,
+                "critique_json": critique_json,
+                "agent_response": agent_response,
+                "created_at": datetime.utcnow().isoformat()
+            }
+            
+            response = self.client.table("critiques").insert(critique_record).execute()
+            
+            if response.data:
+                print(f"Saved critique for iteration: {iteration_id}")
+                return response.data[0]
+            else:
+                raise Exception("No data returned from critique save")
+            
+        except Exception as e:
+            print(f"Error saving critique: {e}")
+            raise
+
+    async def save_enhancement_data(
+        self,
+        iteration_id: str,
+        enhanced_content: str,
+        changes_made: Dict[str, Any],
+        rationale: str,
+        confidence_score: int = None
+    ) -> Dict[str, Any]:
+        """Save enhancement response to database"""
+        
+        # TDD-driven validation that should have been implemented from the start
+        if not iteration_id or not iteration_id.strip():
+            raise ValueError("iteration_id is required")
+        if not enhanced_content or not enhanced_content.strip():
+            raise ValueError("enhanced_content is required")
+        if not isinstance(changes_made, dict):
+            raise ValueError("changes_made must be a dictionary")
+        if not rationale or not rationale.strip():
+            raise ValueError("rationale is required")
+        if confidence_score is not None and (confidence_score < 0 or confidence_score > 10):
+            raise ValueError("confidence_score must be between 0 and 10")
+        
+        try:
+            enhancement_record = {
+                "iteration_id": iteration_id,
+                "enhanced_content": enhanced_content,
+                "changes_made": changes_made,
+                "rationale": rationale,
+                "created_at": datetime.utcnow().isoformat()
+            }
+            
+            if confidence_score is not None:
+                enhancement_record["confidence_score"] = confidence_score
+            
+            response = self.client.table("enhancements").insert(enhancement_record).execute()
+            
+            if response.data:
+                print(f"Saved enhancement for iteration: {iteration_id}")
+                return response.data[0]
+            else:
+                raise Exception("No data returned from enhancement save")
+            
+        except Exception as e:
+            print(f"Error saving enhancement: {e}")
+            raise
+
+    async def save_score_data(
+        self,
+        iteration_id: str,
+        overall_score: float,
+        category_scores: Dict[str, float],
+        score_rationale: str,
+        improvement_trajectory: str,
+        recommendations: str = None
+    ) -> Dict[str, Any]:
+        """Save scoring response to database"""
+        
+        # TDD-driven validation that should have been implemented from the start
+        if not iteration_id or not iteration_id.strip():
+            raise ValueError("iteration_id is required")
+        if overall_score < 0 or overall_score > 10:
+            raise ValueError("overall_score must be between 0 and 10")
+        if not isinstance(category_scores, dict):
+            raise ValueError("category_scores must be a dictionary")
+        if not score_rationale or not score_rationale.strip():
+            raise ValueError("score_rationale is required")
+        if not improvement_trajectory or not improvement_trajectory.strip():
+            raise ValueError("improvement_trajectory is required")
+        
+        try:
+            score_record = {
+                "iteration_id": iteration_id,
+                "overall_score": overall_score,
+                "category_scores": category_scores,
+                "score_rationale": score_rationale,
+                "improvement_trajectory": improvement_trajectory,
+                "created_at": datetime.utcnow().isoformat()
+            }
+            
+            if recommendations:
+                score_record["recommendations"] = recommendations
+            
+            response = self.client.table("scores").insert(score_record).execute()
+            
+            if response.data:
+                print(f"Saved score for iteration: {iteration_id}")
+                return response.data[0]
+            else:
+                raise Exception("No data returned from score save")
+            
+        except Exception as e:
+            print(f"Error saving score: {e}")
+            raise
+
+    # ========== RETRIEVAL METHODS ==========
+    
+    async def get_improvement_session_with_iterations(
+        self,
+        improvement_session_id: str
+    ) -> Dict[str, Any]:
+        """Get complete improvement session with all iterations"""
+        try:
+            # Get improvement session
+            session_response = self.client.table("improvement_sessions").select("*").eq("id", improvement_session_id).execute()
+            
+            if not session_response.data:
+                return {"session": None, "iterations": []}
+            
+            session_data = session_response.data[0]
+            
+            # Get all iterations for this session
+            iterations_response = self.client.table("iterations").select("*").eq("improvement_session_id", improvement_session_id).order("iteration_number").execute()
+            
+            iterations = []
+            for iteration in iterations_response.data:
+                iteration_id = iteration["id"]
+                
+                # Get critique for this iteration
+                critique_response = self.client.table("critiques").select("*").eq("iteration_id", iteration_id).execute()
+                critique_data = critique_response.data[0] if critique_response.data else None
+                
+                # Get enhancement for this iteration
+                enhancement_response = self.client.table("enhancements").select("*").eq("iteration_id", iteration_id).execute()
+                enhancement_data = enhancement_response.data[0] if enhancement_response.data else None
+                
+                # Get score for this iteration
+                score_response = self.client.table("scores").select("*").eq("iteration_id", iteration_id).execute()
+                score_data = score_response.data[0] if score_response.data else None
+                
+                # Combine iteration data
+                iteration_complete = {
+                    **iteration,
+                    "critique": critique_data,
+                    "enhancement": enhancement_data,
+                    "score": score_data
+                }
+                
+                iterations.append(iteration_complete)
+            
+            return {
+                "session": session_data,
+                "iterations": iterations
+            }
+            
+        except Exception as e:
+            print(f"Error getting improvement session with iterations: {e}")
+            raise
+
+    async def get_user_improvement_sessions(
+        self,
+        user_id: str,
+        limit: int = 20
+    ) -> List[Dict[str, Any]]:
+        """Get user's improvement session history"""
+        try:
+            # Get user UUID
+            user_data = await self.create_or_get_user(user_id)
+            user_uuid = user_data["id"]
+            
+            # Get improvement sessions for user
+            response = self.client.table("improvement_sessions").select("*").eq("user_id", user_uuid).order("created_at", desc=True).limit(limit).execute()
+            
+            return response.data
+            
+        except Exception as e:
+            print(f"Error getting user improvement sessions: {e}")
+            raise
+
+    async def get_content_improvement_sessions(
+        self,
+        content_id: str,
+        content_type: str,
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """Get improvement sessions for specific content"""
+        try:
+            # Since original_content_id doesn't exist, search by session_id pattern
+            response = self.client.table("improvement_sessions").select("*").like("session_id", f"%_{content_id}").eq("content_type", content_type).order("created_at", desc=True).limit(limit).execute()
+            
+            return response.data
+            
+        except Exception as e:
+            print(f"Error getting content improvement sessions: {e}")
             raise
 
 # Global Supabase service instance

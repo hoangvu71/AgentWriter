@@ -163,7 +163,7 @@ async def get_home():
                     <p>Advanced AI system with orchestrator, plot generator, and author generator agents.</p>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <a href="/admin" style="background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">⚙️ Admin</a>
+                    <a href="/admin" style="background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">[ADMIN]</a>
                     <a href="/library" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">📖 View Library</a>
                 </div>
             </div>
@@ -179,23 +179,84 @@ async def get_home():
             <!-- Content Parameters Selection -->
             <div class="parameters-section" style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #dee2e6;">
                 <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 10px;">
-                    <h3 style="margin: 0; color: #495057;">📋 Content Parameters</h3>
+                    <h3 style="margin: 0; color: #495057;">[PARAMS] Content Parameters</h3>
                     <button id="toggleParams" onclick="toggleParameters()" style="background: none; border: none; font-size: 18px; cursor: pointer;">▼</button>
                 </div>
                 
                 <div id="parametersContent" style="display: none;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                        <div>
-                            <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Genre</label>
-                            <select id="genreSelect" onchange="updateContext()">
-                                <option value="">Select Genre...</option>
+                    <!-- Quick Selection Presets -->
+                    <div style="margin-bottom: 20px; padding: 15px; background-color: #e8f4f8; border-radius: 8px; border-left: 4px solid #007bff;">
+                        <h4 style="margin: 0 0 10px 0; color: #007bff;">📚 Complete Genre Package Selection</h4>
+                        <p style="margin: 0; font-size: 14px; color: #495057;">Select a complete genre package below, or choose individual components in the detailed section.</p>
+                        <div style="margin-top: 10px;">
+                            <select id="completePackageSelect" onchange="selectCompletePackage()" style="width: 100%; padding: 8px; border: 1px solid #007bff; border-radius: 4px;">
+                                <option value="">Choose a Complete Genre Package...</option>
                             </select>
                         </div>
-                        <div>
-                            <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Target Audience</label>
-                            <select id="audienceSelect" onchange="updateContext()">
-                                <option value="">Select Audience...</option>
-                            </select>
+                    </div>
+                    
+                    <!-- Detailed Component Selection -->
+                    <div style="border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; background-color: #fafafa;">
+                        <h4 style="margin: 0 0 15px 0; color: #6c757d;">[CONFIG] Detailed Component Selection</h4>
+                        
+                        <!-- Genre Hierarchy Section -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Genre</label>
+                                <select id="genreSelect" onchange="onGenreChange()">
+                                    <option value="">Select Genre...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Subgenre</label>
+                                <select id="subgenreSelect" onchange="onSubgenreChange()" disabled>
+                                    <option value="">Select Subgenre...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Microgenre</label>
+                                <select id="microgenreSelect" onchange="onMicrogenreChange()" disabled>
+                                    <option value="">Select Microgenre...</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Tropes and Tones Section -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Trope</label>
+                                <select id="tropeSelect" onchange="onTropeChange()" disabled>
+                                    <option value="">Select Trope...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Tone</label>
+                                <select id="toneSelect" onchange="updateContext()" disabled>
+                                    <option value="">Select Tone...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Target Audience</label>
+                                <select id="audienceSelect" onchange="updateContext()">
+                                    <option value="">Select Audience...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Content Selection Section -->
+                    <div style="margin-bottom: 15px;">
+                        <h4 style="margin: 0 0 15px 0; color: #6c757d;">🔄 Content Selection (For Improvement)</h4>
+                        <div style="display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: end;">
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Select Content to Improve</label>
+                                <select id="contentSelect" onchange="onContentChange()">
+                                    <option value="">Select Content...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <button onclick="refreshContent()" style="padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">🔄 Refresh</button>
+                            </div>
                         </div>
                     </div>
                     
@@ -204,7 +265,7 @@ async def get_home():
                     </div>
                     
                     <div style="font-size: 12px; color: #6c757d;">
-                        💡 <strong>Tip:</strong> Select parameters above, then use phrases like "Create a plot based on the specified genres and audience params" in your messages.
+                        💡 <strong>Tip:</strong> Select parameters above, then use phrases like "Create a plot based on the specified genres and audience params" in your messages. The system supports hierarchical genre selection (Genre → Subgenre → Microgenre) plus tropes, tones, and target audiences.
                     </div>
                 </div>
             </div>
@@ -273,7 +334,7 @@ async def get_home():
                     
                     // Add agent name header
                     const agentHeader = document.createElement('h4');
-                    agentHeader.textContent = `📊 ${data.agent.replace('_', ' ').toUpperCase()} - Structured Response`;
+                    agentHeader.textContent = `[DATA] ${data.agent.replace('_', ' ').toUpperCase()} - Structured Response`;
                     agentHeader.style.color = '#007bff';
                     agentHeader.style.marginBottom = '10px';
                     structuredMessage.appendChild(agentHeader);
@@ -409,7 +470,12 @@ async def get_home():
             
             // Parameter management
             let selectedGenre = null;
+            let selectedSubgenre = null;
+            let selectedMicrogenre = null;
+            let selectedTrope = null;
+            let selectedTone = null;
             let selectedAudience = null;
+            let selectedContent = null;
             
             function toggleParameters() {
                 const content = document.getElementById('parametersContent');
@@ -424,39 +490,44 @@ async def get_home():
                 }
             }
             
+            // Global data storage for hierarchical relationships
+            let allGenres = [];
+            let allSubgenres = [];
+            let allMicrogenres = [];
+            let allTropes = [];
+            let allTones = [];
+            let allAudiences = [];
+
             async function loadParameters() {
                 try {
-                    // Load genres
+                    // Load all data from the complete hierarchy API
                     const genresResponse = await fetch('/api/genres');
                     if (genresResponse.ok) {
-                        const genresData = await genresResponse.json();
-                        const genreSelect = document.getElementById('genreSelect');
-                        genreSelect.innerHTML = '<option value="">Select Genre...</option>';
+                        const data = await genresResponse.json();
                         
-                        if (genresData.success && genresData.genres) {
-                            genresData.genres.forEach(genre => {
-                                const option = document.createElement('option');
-                                option.value = JSON.stringify(genre);
-                                option.textContent = genre.name;
-                                genreSelect.appendChild(option);
-                            });
+                        if (data.success) {
+                            // Store all data globally
+                            allGenres = data.genres || [];
+                            allSubgenres = data.subgenres || [];
+                            allMicrogenres = data.microgenres || [];
+                            allTropes = data.tropes || [];
+                            allTones = data.tones || [];
+                            
+                            // Populate genre dropdown
+                            populateGenreDropdown();
+                            
+                            // Build complete packages for easy selection
+                            buildCompletePackages();
                         }
                     }
                     
-                    // Load audiences
+                    // Load audiences separately
                     const audiencesResponse = await fetch('/api/target-audiences');
                     if (audiencesResponse.ok) {
                         const audiencesData = await audiencesResponse.json();
-                        const audienceSelect = document.getElementById('audienceSelect');
-                        audienceSelect.innerHTML = '<option value="">Select Audience...</option>';
-                        
                         if (audiencesData.success && audiencesData.audiences) {
-                            audiencesData.audiences.forEach(audience => {
-                                const option = document.createElement('option');
-                                option.value = JSON.stringify(audience);
-                                option.textContent = `${audience.age_group} - ${audience.gender} - ${audience.sexual_orientation}`;
-                                audienceSelect.appendChild(option);
-                            });
+                            allAudiences = audiencesData.audiences;
+                            populateAudienceDropdown();
                         }
                     }
                 } catch (error) {
@@ -464,80 +535,460 @@ async def get_home():
                 }
             }
             
-            function updateContext() {
+            function populateGenreDropdown() {
                 const genreSelect = document.getElementById('genreSelect');
+                genreSelect.innerHTML = '<option value="">Select Genre...</option>';
+                
+                allGenres.forEach(genre => {
+                    const option = document.createElement('option');
+                    option.value = JSON.stringify(genre);
+                    option.textContent = genre.name;
+                    genreSelect.appendChild(option);
+                });
+            }
+            
+            function populateAudienceDropdown() {
+                const audienceSelect = document.getElementById('audienceSelect');
+                audienceSelect.innerHTML = '<option value="">Select Audience...</option>';
+                
+                allAudiences.forEach(audience => {
+                    const option = document.createElement('option');
+                    option.value = JSON.stringify(audience);
+                    option.textContent = `${audience.age_group} - ${audience.gender} - ${audience.sexual_orientation}`;
+                    audienceSelect.appendChild(option);
+                });
+            }
+            
+            function buildCompletePackages() {
+                const packageSelect = document.getElementById('completePackageSelect');
+                packageSelect.innerHTML = '<option value="">Choose a Complete Genre Package...</option>';
+                
+                // Build packages for complete chains: Genre -> Subgenre -> Microgenre -> Trope -> Tone
+                allTones.forEach(tone => {
+                    if (tone.trope_id) {
+                        const trope = allTropes.find(t => t.id === tone.trope_id);
+                        if (trope && trope.microgenre_id) {
+                            const microgenre = allMicrogenres.find(m => m.id === trope.microgenre_id);
+                            if (microgenre && microgenre.subgenre_id) {
+                                const subgenre = allSubgenres.find(s => s.id === microgenre.subgenre_id);
+                                if (subgenre && subgenre.genre_id) {
+                                    const genre = allGenres.find(g => g.id === subgenre.genre_id);
+                                    if (genre) {
+                                        // Create complete package
+                                        const packageData = {
+                                            genre, subgenre, microgenre, trope, tone
+                                        };
+                                        
+                                        const option = document.createElement('option');
+                                        option.value = JSON.stringify(packageData);
+                                        option.textContent = `${genre.name} > ${subgenre.name} > ${microgenre.name} > ${trope.name} > ${tone.name}`;
+                                        packageSelect.appendChild(option);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Complete package selection
+            function selectCompletePackage() {
+                const packageSelect = document.getElementById('completePackageSelect');
+                
+                if (packageSelect.value) {
+                    const packageData = JSON.parse(packageSelect.value);
+                    
+                    // Set all selections based on the complete package
+                    selectedGenre = packageData.genre;
+                    selectedSubgenre = packageData.subgenre;
+                    selectedMicrogenre = packageData.microgenre;
+                    selectedTrope = packageData.trope;
+                    selectedTone = packageData.tone;
+                    
+                    // Update all dropdowns to reflect the selection
+                    updateDropdownsFromSelection();
+                    updateContext();
+                } else {
+                    // Clear all selections
+                    clearAllSelections();
+                }
+            }
+            
+            function updateDropdownsFromSelection() {
+                // Update genre dropdown
+                const genreSelect = document.getElementById('genreSelect');
+                if (selectedGenre) {
+                    genreSelect.value = JSON.stringify(selectedGenre);
+                    populateSubgenreDropdown();
+                }
+                
+                // Update subgenre dropdown
+                const subgenreSelect = document.getElementById('subgenreSelect');
+                if (selectedSubgenre) {
+                    subgenreSelect.value = JSON.stringify(selectedSubgenre);
+                    populateMicrogenreDropdown();
+                }
+                
+                // Update microgenre dropdown
+                const microgenreSelect = document.getElementById('microgenreSelect');
+                if (selectedMicrogenre) {
+                    microgenreSelect.value = JSON.stringify(selectedMicrogenre);
+                    populateTropeDropdown();
+                }
+                
+                // Update trope dropdown
+                const tropeSelect = document.getElementById('tropeSelect');
+                if (selectedTrope) {
+                    tropeSelect.value = JSON.stringify(selectedTrope);
+                    populateToneDropdown();
+                }
+                
+                // Update tone dropdown
+                const toneSelect = document.getElementById('toneSelect');
+                if (selectedTone) {
+                    toneSelect.value = JSON.stringify(selectedTone);
+                }
+            }
+            
+            // Hierarchical genre selection functions
+            function onGenreChange() {
+                const genreSelect = document.getElementById('genreSelect');
+                selectedGenre = genreSelect.value ? JSON.parse(genreSelect.value) : null;
+                selectedSubgenre = null;
+                selectedMicrogenre = null;
+                selectedTrope = null;
+                selectedTone = null;
+                
+                populateSubgenreDropdown();
+                updateContext();
+            }
+            
+            function onSubgenreChange() {
+                const subgenreSelect = document.getElementById('subgenreSelect');
+                selectedSubgenre = subgenreSelect.value ? JSON.parse(subgenreSelect.value) : null;
+                selectedMicrogenre = null;
+                selectedTrope = null;
+                selectedTone = null;
+                
+                populateMicrogenreDropdown();
+                updateContext();
+            }
+            
+            function onMicrogenreChange() {
+                const microgenreSelect = document.getElementById('microgenreSelect');
+                selectedMicrogenre = microgenreSelect.value ? JSON.parse(microgenreSelect.value) : null;
+                selectedTrope = null;
+                selectedTone = null;
+                
+                populateTropeDropdown();
+                updateContext();
+            }
+            
+            function onTropeChange() {
+                const tropeSelect = document.getElementById('tropeSelect');
+                selectedTrope = tropeSelect.value ? JSON.parse(tropeSelect.value) : null;
+                selectedTone = null;
+                
+                populateToneDropdown();
+                updateContext();
+            }
+            
+            // Population functions for hierarchical dropdowns
+            function populateSubgenreDropdown() {
+                const subgenreSelect = document.getElementById('subgenreSelect');
+                subgenreSelect.innerHTML = '<option value="">Select Subgenre...</option>';
+                
+                if (selectedGenre) {
+                    subgenreSelect.disabled = false;
+                    const genreSubgenres = allSubgenres.filter(sub => sub.genre_id === selectedGenre.id);
+                    genreSubgenres.forEach(subgenre => {
+                        const option = document.createElement('option');
+                        option.value = JSON.stringify(subgenre);
+                        option.textContent = subgenre.name;
+                        subgenreSelect.appendChild(option);
+                    });
+                } else {
+                    subgenreSelect.disabled = true;
+                }
+                
+                resetDownstreamDropdowns('microgenre');
+            }
+            
+            function populateMicrogenreDropdown() {
+                const microgenreSelect = document.getElementById('microgenreSelect');
+                microgenreSelect.innerHTML = '<option value="">Select Microgenre...</option>';
+                
+                if (selectedSubgenre) {
+                    microgenreSelect.disabled = false;
+                    const subgenreMicrogenres = allMicrogenres.filter(micro => micro.subgenre_id === selectedSubgenre.id);
+                    subgenreMicrogenres.forEach(microgenre => {
+                        const option = document.createElement('option');
+                        option.value = JSON.stringify(microgenre);
+                        option.textContent = microgenre.name;
+                        microgenreSelect.appendChild(option);
+                    });
+                } else {
+                    microgenreSelect.disabled = true;
+                }
+                
+                resetDownstreamDropdowns('trope');
+            }
+            
+            function populateTropeDropdown() {
+                const tropeSelect = document.getElementById('tropeSelect');
+                tropeSelect.innerHTML = '<option value="">Select Trope...</option>';
+                
+                if (selectedMicrogenre) {
+                    tropeSelect.disabled = false;
+                    const microgenreTropes = allTropes.filter(trope => trope.microgenre_id === selectedMicrogenre.id);
+                    microgenreTropes.forEach(trope => {
+                        const option = document.createElement('option');
+                        option.value = JSON.stringify(trope);
+                        option.textContent = trope.name;
+                        tropeSelect.appendChild(option);
+                    });
+                } else {
+                    tropeSelect.disabled = true;
+                }
+                
+                resetDownstreamDropdowns('tone');
+            }
+            
+            function populateToneDropdown() {
+                const toneSelect = document.getElementById('toneSelect');
+                toneSelect.innerHTML = '<option value="">Select Tone...</option>';
+                
+                if (selectedTrope) {
+                    toneSelect.disabled = false;
+                    const tropeTones = allTones.filter(tone => tone.trope_id === selectedTrope.id);
+                    tropeTones.forEach(tone => {
+                        const option = document.createElement('option');
+                        option.value = JSON.stringify(tone);
+                        option.textContent = tone.name;
+                        toneSelect.appendChild(option);
+                    });
+                } else {
+                    toneSelect.disabled = true;
+                }
+            }
+            
+            function resetDownstreamDropdowns(startFrom) {
+                const dropdowns = ['microgenre', 'trope', 'tone'];
+                const startIndex = dropdowns.indexOf(startFrom);
+                
+                for (let i = startIndex; i < dropdowns.length; i++) {
+                    const select = document.getElementById(dropdowns[i] + 'Select');
+                    select.innerHTML = `<option value="">Select ${dropdowns[i].charAt(0).toUpperCase() + dropdowns[i].slice(1)}...</option>`;
+                    select.disabled = true;
+                }
+            }
+            
+            function clearAllSelections() {
+                selectedGenre = null;
+                selectedSubgenre = null;
+                selectedMicrogenre = null;
+                selectedTrope = null;
+                selectedTone = null;
+                selectedAudience = null;
+                
+                // Reset all dropdowns
+                document.getElementById('genreSelect').value = '';
+                document.getElementById('completePackageSelect').value = '';
+                populateSubgenreDropdown();
+                updateContext();
+            }
+            
+            function updateContext() {
+                const microgenreSelect = document.getElementById('microgenreSelect');
+                const tropeSelect = document.getElementById('tropeSelect');
+                const toneSelect = document.getElementById('toneSelect');
                 const audienceSelect = document.getElementById('audienceSelect');
                 const selectedParamsDiv = document.getElementById('selectedParams');
                 
-                selectedGenre = genreSelect.value ? JSON.parse(genreSelect.value) : null;
+                // Update all selections
+                selectedMicrogenre = microgenreSelect.value ? JSON.parse(microgenreSelect.value) : null;
+                selectedTrope = tropeSelect.value ? JSON.parse(tropeSelect.value) : null;
+                selectedTone = toneSelect.value ? JSON.parse(toneSelect.value) : null;
                 selectedAudience = audienceSelect.value ? JSON.parse(audienceSelect.value) : null;
                 
                 let paramsText = '';
                 
-                if (selectedGenre || selectedAudience) {
+                if (selectedGenre || selectedSubgenre || selectedMicrogenre || selectedTrope || selectedTone || selectedAudience || selectedContent) {
                     paramsText = '<strong>Selected Parameters:</strong><br>';
                     
-                    if (selectedGenre) {
-                        paramsText += `<span style="background: #007bff; color: white; padding: 2px 6px; border-radius: 3px; margin-right: 5px; font-size: 12px;">Genre: ${selectedGenre.name}</span>`;
-                        if (selectedGenre.description) {
-                            paramsText += `<br><em style="font-size: 12px; color: #6c757d;">Genre: ${selectedGenre.description}</em>`;
-                        }
+                    // Selected content for improvement
+                    if (selectedContent) {
+                        paramsText += `<span style="background: #6f42c1; color: white; padding: 2px 6px; border-radius: 3px; margin-right: 5px; font-size: 12px;">Content: ${selectedContent.type.toUpperCase()} - ${selectedContent.title}</span><br>`;
                     }
                     
+                    // Genre hierarchy
+                    if (selectedGenre) {
+                        paramsText += `<span style="background: #007bff; color: white; padding: 2px 6px; border-radius: 3px; margin-right: 5px; font-size: 12px;">Genre: ${selectedGenre.name}</span>`;
+                    }
+                    if (selectedSubgenre) {
+                        paramsText += `<span style="background: #0056b3; color: white; padding: 2px 6px; border-radius: 3px; margin-right: 5px; font-size: 12px;">Subgenre: ${selectedSubgenre.name}</span>`;
+                    }
+                    if (selectedMicrogenre) {
+                        paramsText += `<span style="background: #003d82; color: white; padding: 2px 6px; border-radius: 3px; margin-right: 5px; font-size: 12px;">Microgenre: ${selectedMicrogenre.name}</span>`;
+                    }
+                    
+                    // Tropes and Tones
+                    if (selectedTrope) {
+                        paramsText += `<br><span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; margin-right: 5px; font-size: 12px;">Trope: ${selectedTrope.name} (${selectedTrope.category})</span>`;
+                    }
+                    if (selectedTone) {
+                        paramsText += `<span style="background: #fd7e14; color: white; padding: 2px 6px; border-radius: 3px; margin-right: 5px; font-size: 12px;">Tone: ${selectedTone.name}</span>`;
+                    }
+                    
+                    // Target Audience
                     if (selectedAudience) {
                         paramsText += `<br><span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; margin-right: 5px; font-size: 12px;">Audience: ${selectedAudience.age_group} - ${selectedAudience.gender} - ${selectedAudience.sexual_orientation}</span>`;
-                        if (selectedAudience.description) {
-                            paramsText += `<br><em style="font-size: 12px; color: #6c757d;">Audience: ${selectedAudience.description}</em>`;
-                        }
-                        if (selectedAudience.interests && selectedAudience.interests.length > 0) {
-                            paramsText += `<br><em style="font-size: 12px; color: #6c757d;">Interests: ${selectedAudience.interests.join(', ')}</em>`;
-                        }
                     }
+                    
+                    // Add descriptions
+                    if (selectedMicrogenre && selectedMicrogenre.description) {
+                        paramsText += `<br><em style="font-size: 12px; color: #6c757d;">Microgenre: ${selectedMicrogenre.description}</em>`;
+                    }
+                    if (selectedTrope && selectedTrope.description) {
+                        paramsText += `<br><em style="font-size: 12px; color: #6c757d;">Trope: ${selectedTrope.description}</em>`;
+                    }
+                    if (selectedTone && selectedTone.description) {
+                        paramsText += `<br><em style="font-size: 12px; color: #6c757d;">Tone: ${selectedTone.description}</em>`;
+                    }
+                    // Target audience details are shown in the main tag above
                 } else {
-                    paramsText = '<em style="color: #6c757d;">No parameters selected. Use "specified genres and audience params" in your message to include selected parameters.</em>';
+                    paramsText = '<em style="color: #6c757d;">No parameters selected. Select parameters above to automatically include them in your requests.</em>';
                 }
                 
                 selectedParamsDiv.innerHTML = paramsText;
             }
             
+            // Content selection functions
+            async function loadContent() {
+                try {
+                    const response = await fetch('/api/content-selection');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        const contentSelect = document.getElementById('contentSelect');
+                        contentSelect.innerHTML = '<option value="">Select Content...</option>';
+                        
+                        data.content.forEach(item => {
+                            const option = document.createElement('option');
+                            const value = JSON.stringify({
+                                id: item.id,
+                                type: item.type,
+                                title: item.title
+                            });
+                            option.value = value;
+                            option.textContent = `${item.type.toUpperCase()}: ${item.title}`;
+                            contentSelect.appendChild(option);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error loading content:', error);
+                }
+            }
+            
+            function onContentChange() {
+                const contentSelect = document.getElementById('contentSelect');
+                selectedContent = contentSelect.value ? JSON.parse(contentSelect.value) : null;
+                updateContext();
+            }
+            
+            function refreshContent() {
+                loadContent();
+            }
+            
             function injectParametersIntoMessage(message) {
-                // Check if user wants to reference parameters
-                const parameterKeywords = [
-                    'specified genres and audience params',
-                    'specified genre and audience',
-                    'selected parameters',
-                    'chosen parameters',
-                    'the genre and audience params',
-                    'based on the specified',
-                    'using the specified'
-                ];
-                
-                const shouldInject = parameterKeywords.some(keyword => 
-                    message.toLowerCase().includes(keyword.toLowerCase())
-                );
-                
-                if (!shouldInject || (!selectedGenre && !selectedAudience)) {
+                // Always inject parameters if any are selected
+                if (!selectedGenre && !selectedSubgenre && !selectedMicrogenre && !selectedTrope && !selectedTone && !selectedAudience && !selectedContent) {
                     return message;
                 }
                 
-                let contextText = '\n\nCONTEXT - Use these specifications:';
+                let contextText = '\n\n========== DETAILED CONTENT SPECIFICATIONS ==========';
+                contextText += '\nUse these detailed specifications to guide content creation:\n';
                 
-                if (selectedGenre) {
-                    contextText += `\nGENRE: ${selectedGenre.name}`;
-                    if (selectedGenre.description) {
-                        contextText += ` - ${selectedGenre.description}`;
+                // Selected content for improvement
+                if (selectedContent) {
+                    contextText += '\n--- SELECTED CONTENT FOR IMPROVEMENT ---';
+                    contextText += `\nCONTENT_ID: ${selectedContent.id}`;
+                    contextText += `\nCONTENT_TYPE: ${selectedContent.type}`;
+                    contextText += `\nCONTENT_TITLE: ${selectedContent.title}`;
+                    contextText += '\nNOTE: This content should be fetched from the database for iterative improvement.';
+                }
+                
+                // Complete Genre Hierarchy with detailed descriptions
+                if (selectedGenre || selectedSubgenre || selectedMicrogenre) {
+                    contextText += '\n--- GENRE HIERARCHY ---';
+                    
+                    if (selectedGenre) {
+                        contextText += `\nMAIN GENRE: ${selectedGenre.name}`;
+                        if (selectedGenre.description) {
+                            contextText += `\n  Description: ${selectedGenre.description}`;
+                        }
+                    }
+                    
+                    if (selectedSubgenre) {
+                        contextText += `\nSUBGENRE: ${selectedSubgenre.name}`;
+                        if (selectedSubgenre.description) {
+                            contextText += `\n  Description: ${selectedSubgenre.description}`;
+                        }
+                    }
+                    
+                    if (selectedMicrogenre) {
+                        contextText += `\nMICROGENRE: ${selectedMicrogenre.name}`;
+                        if (selectedMicrogenre.description) {
+                            contextText += `\n  Description: ${selectedMicrogenre.description}`;
+                        }
                     }
                 }
                 
+                // Story Elements
+                if (selectedTrope || selectedTone) {
+                    contextText += '\n\n--- STORY ELEMENTS ---';
+                    
+                    if (selectedTrope) {
+                        contextText += `\nTROPE: ${selectedTrope.name}`;
+                        if (selectedTrope.description) {
+                            contextText += `\n  Description: ${selectedTrope.description}`;
+                        }
+                        contextText += '\n  IMPORTANT: Integrate this trope naturally into the story structure.';
+                    }
+                    
+                    if (selectedTone) {
+                        contextText += `\nTONE: ${selectedTone.name}`;
+                        if (selectedTone.description) {
+                            contextText += `\n  Description: ${selectedTone.description}`;
+                        }
+                        contextText += '\n  IMPORTANT: Maintain this tone consistently throughout the content.';
+                    }
+                }
+                
+                // Target Audience Analysis
                 if (selectedAudience) {
-                    contextText += `\nTARGET AUDIENCE: Age Group: ${selectedAudience.age_group}, Gender: ${selectedAudience.gender}, Sexual Orientation: ${selectedAudience.sexual_orientation}`;
-                    if (selectedAudience.description) {
-                        contextText += ` - ${selectedAudience.description}`;
-                    }
-                    if (selectedAudience.interests && selectedAudience.interests.length > 0) {
-                        contextText += `\nAudience Interests: ${selectedAudience.interests.join(', ')}`;
-                    }
+                    contextText += '\n\n--- TARGET AUDIENCE ANALYSIS ---';
+                    contextText += `\nAUDIENCE PROFILE:`;
+                    contextText += `\n  Age Group: ${selectedAudience.age_group}`;
+                    contextText += `\n  Gender: ${selectedAudience.gender}`;
+                    contextText += `\n  Sexual Orientation: ${selectedAudience.sexual_orientation}`;
+                    
+                    // Target audience is defined by the three core demographic fields above
+                    
+                    contextText += '\n  IMPORTANT: Tailor content complexity, themes, and language to this specific audience.';
                 }
+                
+                // Creative Guidelines
+                contextText += '\n\n--- CREATIVE GUIDELINES ---';
+                contextText += '\n• Follow the genre conventions while being original';
+                contextText += '\n• Ensure all story elements work together cohesively';
+                contextText += '\n• Consider the target audience in every creative decision';
+                contextText += '\n• Maintain consistency with the specified tone throughout';
+                if (selectedTrope) {
+                    contextText += '\n• Weave the trope into the story naturally, avoiding clichés';
+                }
+                
+                contextText += '\n========================================\n';
                 
                 return message + contextText;
             }
@@ -576,6 +1027,7 @@ async def get_home():
                 connect();
                 loadModels();
                 loadParameters();
+                loadContent();
             };
         </script>
     </body>
@@ -610,7 +1062,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                                 # Send agent header
                                 await manager.send_json_message({
                                     "type": "stream_chunk",
-                                    "content": f"\n🤖 {response.agent_name.replace('_', ' ').title()}:\n"
+                                    "content": f"\n[AI] {response.agent_name.replace('_', ' ').title()}:\n"
                                 }, client_id)
                                 
                                 # Send structured JSON response if available
@@ -633,13 +1085,13 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                                     # Send raw response if JSON parsing failed
                                     await manager.send_json_message({
                                         "type": "stream_chunk",
-                                        "content": f"⚠️ JSON parsing failed. Raw response:\n{response.content}\n\n"
+                                        "content": f"[WARNING] JSON parsing failed. Raw response:\n{response.content}\n\n"
                                     }, client_id)
                             else:
                                 # Send error for failed agent
                                 await manager.send_json_message({
                                     "type": "stream_chunk",
-                                    "content": f"⚠️ {response.agent_name} failed: {response.error}\n\n"
+                                    "content": f"[ERROR] {response.agent_name} failed: {response.error}\n\n"
                                 }, client_id)
                         
                         # Send end signal with structured data
@@ -821,147 +1273,28 @@ async def get_analytics(user_id: str = None):
 
 @app.get("/admin")
 async def admin_page():
-    """Admin interface for managing genres and target audiences"""
+    """Content management interface for managing genres and target audiences"""
+    import os
+    file_path = os.path.join(os.path.dirname(__file__), 'new_admin_interface.html')
+    with open(file_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    return HTMLResponse(content=content)
+
+@app.get("/library")
+async def library_page():
+    """Library page to view all plots and authors"""
     return HTMLResponse(content="""
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Admin - Manage Content Parameters</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                max-width: 1200px;
-                margin: 0 auto;
-                padding: 20px;
-                background-color: #f5f5f5;
-            }
-            .header {
-                background-color: white;
-                padding: 20px;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                margin-bottom: 20px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .nav-buttons {
-                display: flex;
-                gap: 10px;
-            }
-            .nav-button {
-                padding: 10px 20px;
-                background-color: #007bff;
-                color: white;
-                text-decoration: none;
-                border-radius: 5px;
-                border: none;
-                cursor: pointer;
-            }
-            .nav-button:hover {
-                background-color: #0056b3;
-            }
-            .content {
-                background-color: white;
-                padding: 20px;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            }
-            .section {
-                margin-bottom: 40px;
-                border: 1px solid #ddd;
-                border-radius: 8px;
-                padding: 20px;
-            }
-            .section h2 {
-                margin-top: 0;
-                color: #333;
-                border-bottom: 2px solid #007bff;
-                padding-bottom: 10px;
-            }
-            .form-group {
-                margin-bottom: 15px;
-            }
-            .form-group label {
-                display: block;
-                font-weight: bold;
-                margin-bottom: 5px;
-                color: #555;
-            }
-            .form-group input, .form-group textarea, .form-group select {
-                width: 100%;
-                padding: 8px;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                font-size: 14px;
-            }
-            .form-group textarea {
-                height: 80px;
-                resize: vertical;
-            }
-            .btn {
-                background-color: #28a745;
-                color: white;
-                padding: 10px 20px;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 14px;
-            }
-            .btn:hover {
-                background-color: #218838;
-            }
-            .btn-danger {
-                background-color: #dc3545;
-            }
-            .btn-danger:hover {
-                background-color: #c82333;
-            }
-            .items-list {
-                margin-top: 20px;
-            }
-            .item-card {
-                border: 1px solid #eee;
-                border-radius: 5px;
-                padding: 15px;
-                margin-bottom: 10px;
-                background-color: #f9f9f9;
-            }
-            .item-header {
-                font-weight: bold;
-                color: #007bff;
-                margin-bottom: 5px;
-            }
-            .item-description {
-                color: #666;
-                font-size: 14px;
-            }
-            .loading {
-                text-align: center;
-                padding: 20px;
-                color: #666;
-            }
-            .success {
-                background-color: #d4edda;
-                color: #155724;
-                padding: 10px;
-                border-radius: 4px;
-                margin-bottom: 15px;
-            }
-            .error {
-                background-color: #f8d7da;
-                color: #721c24;
-                padding: 10px;
-                border-radius: 4px;
-                margin-bottom: 15px;
-            }
-            .two-column {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
+        <title>Book Library - Multi-Agent Book Writer</title>
                 gap: 30px;
             }
-            @media (max-width: 768px) {
-                .two-column {
+            @media (max-width: 1024px) {
+                .grid-layout {
+                    grid-template-columns: 1fr;
+                }
+                .form-row {
                     grid-template-columns: 1fr;
                 }
             }
@@ -969,90 +1302,237 @@ async def admin_page():
     </head>
     <body>
         <div class="header">
-            <h1>Admin - Content Parameters</h1>
+            <h1>📚 Content Parameters Manager</h1>
             <div class="nav-buttons">
-                <a href="/" class="nav-button">Home</a>
-                <a href="/library" class="nav-button">Library</a>
+                <a href="/" class="nav-button">🏠 Home</a>
+                <a href="/library" class="nav-button">📖 Library</a>
             </div>
         </div>
 
         <div class="content">
-            <div class="two-column">
-                <!-- Genres Section -->
-                <div class="section">
-                    <h2>Genres Management</h2>
-                    
-                    <div id="genreMessage"></div>
-                    
-                    <div class="form-group">
-                        <label>Genre Name</label>
-                        <input type="text" id="genreName" placeholder="e.g., Fantasy, Science Fiction">
+            <!-- Tab Navigation -->
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('genres')">📖 Genre Hierarchy</button>
+                <button class="tab" onclick="showTab('tropes')">🎭 Tropes & Tones</button>
+                <button class="tab" onclick="showTab('audiences')">👥 Target Audiences</button>
+            </div>
+
+            <!-- Genre Hierarchy Tab -->
+            <div id="genres" class="tab-content active">
+                <div class="grid-layout">
+                    <!-- Genre Creation -->
+                    <div class="section">
+                        <h3>📚 Create Genre</h3>
+                        <div id="genreMessage"></div>
+                        
+                        <div class="form-group">
+                            <label>Genre Name</label>
+                            <input type="text" id="genreName" placeholder="e.g., Fantasy, Science Fiction, Romance">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="genreDescription" placeholder="Describe this genre and its characteristics..."></textarea>
+                        </div>
+                        
+                        <button class="btn" onclick="createGenre()">Add Genre</button>
+                        
+                        <div class="items-list">
+                            <h4>Existing Genres</h4>
+                            <div id="genresList" class="loading">Loading genres...</div>
+                        </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Description</label>
-                        <textarea id="genreDescription" placeholder="Describe this genre..."></textarea>
-                    </div>
-                    
-                    <button class="btn" onclick="createGenre()">Add Genre</button>
-                    
-                    <div class="items-list">
-                        <h3>Existing Genres</h3>
-                        <div id="genresList" class="loading">Loading genres...</div>
+
+                    <!-- Subgenre Creation -->
+                    <div class="section">
+                        <h3>📑 Create Subgenre</h3>
+                        <div id="subgenreMessage"></div>
+                        
+                        <div class="form-group">
+                            <label>Parent Genre</label>
+                            <select id="subgenreParent">
+                                <option value="">Select parent genre...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Subgenre Name</label>
+                            <input type="text" id="subgenreName" placeholder="e.g., Epic Fantasy, Urban Fantasy">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="subgenreDescription" placeholder="Describe this subgenre..."></textarea>
+                        </div>
+                        
+                        <button class="btn" onclick="createSubgenre()">Add Subgenre</button>
+                        
+                        <div class="items-list">
+                            <h4>Existing Subgenres</h4>
+                            <div id="subgenresList" class="loading">Loading subgenres...</div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Target Audiences Section -->
+                <!-- Microgenre Creation -->
                 <div class="section">
-                    <h2>Target Audiences Management</h2>
-                    
-                    <div id="audienceMessage"></div>
-                    
-                    <div class="form-group">
-                        <label>Age Group</label>
-                        <select id="audienceAgeGroup">
-                            <option value="Children">Children (5-12)</option>
-                            <option value="Middle Grade">Middle Grade (8-12)</option>
-                            <option value="Young Adult">Young Adult (13-17)</option>
-                            <option value="New Adult">New Adult (18-25)</option>
-                            <option value="Adult">Adult (25+)</option>
-                            <option value="Senior">Senior (65+)</option>
-                        </select>
+                    <h3>🔬 Create Microgenre</h3>
+                    <div class="grid-layout">
+                        <div>
+                            <div id="microgenreMessage"></div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Parent Genre</label>
+                                    <select id="microgenreParentGenre" onchange="loadSubgenresForMicro()">
+                                        <option value="">Select parent genre...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Parent Subgenre</label>
+                                    <select id="microgenreParent">
+                                        <option value="">Select parent subgenre...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Microgenre Name</label>
+                                <input type="text" id="microgenreName" placeholder="e.g., Cozy Mystery, Space Opera">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Description</label>
+                                <textarea id="microgenreDescription" placeholder="Describe this microgenre..."></textarea>
+                            </div>
+                            
+                            <button class="btn" onclick="createMicrogenre()">Add Microgenre</button>
+                        </div>
+                        
+                        <div class="items-list">
+                            <h4>Existing Microgenres</h4>
+                            <div id="microgenresList" class="loading">Loading microgenres...</div>
+                        </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Gender</label>
-                        <select id="audienceGender">
-                            <option value="All">All Genders</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Non-binary">Non-binary</option>
-                        </select>
+                </div>
+            </div>
+
+            <!-- Tropes & Tones Tab -->
+            <div id="tropes" class="tab-content">
+                <div class="grid-layout">
+                    <!-- Tropes Section -->
+                    <div class="section">
+                        <h3>🎭 Create Trope</h3>
+                        <div id="tropeMessage"></div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Trope Name</label>
+                                <input type="text" id="tropeName" placeholder="e.g., Chosen One, Enemies to Lovers">
+                            </div>
+                            <div class="form-group">
+                                <label>Category</label>
+                                <select id="tropeCategory">
+                                    <option value="Plot">Plot</option>
+                                    <option value="Character">Character</option>
+                                    <option value="Setting">Setting</option>
+                                    <option value="Relationship">Relationship</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="tropeDescription" placeholder="Describe this trope and how it's used..."></textarea>
+                        </div>
+                        
+                        <button class="btn" onclick="createTrope()">Add Trope</button>
+                        
+                        <div class="items-list">
+                            <h4>Existing Tropes</h4>
+                            <div id="tropesList" class="loading">Loading tropes...</div>
+                        </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Sexual Orientation</label>
-                        <select id="audienceOrientation">
-                            <option value="All">All Orientations</option>
-                            <option value="Heterosexual">Heterosexual</option>
-                            <option value="LGBTQ+">LGBTQ+</option>
-                            <option value="Gay">Gay</option>
-                            <option value="Lesbian">Lesbian</option>
-                            <option value="Bisexual">Bisexual</option>
-                        </select>
+
+                    <!-- Tones Section -->
+                    <div class="section">
+                        <h3>🎵 Create Tone</h3>
+                        <div id="toneMessage"></div>
+                        
+                        <div class="form-group">
+                            <label>Tone Name</label>
+                            <input type="text" id="toneName" placeholder="e.g., Dark, Humorous, Melancholic">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="toneDescription" placeholder="Describe the mood and atmosphere this tone creates..."></textarea>
+                        </div>
+                        
+                        <button class="btn" onclick="createTone()">Add Tone</button>
+                        
+                        <div class="items-list">
+                            <h4>Existing Tones</h4>
+                            <div id="tonesList" class="loading">Loading tones...</div>
+                        </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Interests (comma-separated)</label>
-                        <input type="text" id="audienceInterests" placeholder="e.g., Adventure, Romance, Action">
+                </div>
+            </div>
+
+            <!-- Target Audiences Tab -->
+            <div id="audiences" class="tab-content">
+                <div class="grid-layout">
+                    <div class="section">
+                        <h3>👥 Create Target Audience</h3>
+                        <div id="audienceMessage"></div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Age Group</label>
+                                <select id="audienceAgeGroup">
+                                    <option value="Children">Children (5-12)</option>
+                                    <option value="Middle Grade">Middle Grade (8-12)</option>
+                                    <option value="Young Adult">Young Adult (13-17)</option>
+                                    <option value="New Adult">New Adult (18-25)</option>
+                                    <option value="Adult" selected>Adult (25+)</option>
+                                    <option value="Senior">Senior (65+)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Gender</label>
+                                <select id="audienceGender">
+                                    <option value="All" selected>All Genders</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Non-binary">Non-binary</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Sexual Orientation</label>
+                            <select id="audienceOrientation">
+                                <option value="All" selected>All Orientations</option>
+                                <option value="Heterosexual">Heterosexual</option>
+                                <option value="LGBTQ+">LGBTQ+</option>
+                                <option value="Gay">Gay</option>
+                                <option value="Lesbian">Lesbian</option>
+                                <option value="Bisexual">Bisexual</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Interests (comma-separated)</label>
+                            <input type="text" id="audienceInterests" placeholder="e.g., Adventure, Romance, Technology, Gaming">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="audienceDescription" placeholder="Describe this target audience, their preferences, and characteristics..."></textarea>
+                        </div>
+                        
+                        <button class="btn" onclick="createAudience()">Add Target Audience</button>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Description</label>
-                        <textarea id="audienceDescription" placeholder="Describe this target audience..."></textarea>
-                    </div>
-                    
-                    <button class="btn" onclick="createAudience()">Add Target Audience</button>
                     
                     <div class="items-list">
                         <h3>Existing Target Audiences</h3>
@@ -1063,22 +1543,107 @@ async def admin_page():
         </div>
 
         <script>
-            // Load data when page loads
-            loadGenres();
-            loadAudiences();
+            // Global data storage
+            let allGenres = [];
+            let allSubgenres = [];
+            let allMicrogenres = [];
+            let allTropes = [];
+            let allTones = [];
+            let allAudiences = [];
 
+            // Tab management
+            function showTab(tabName) {
+                // Hide all tab contents
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                // Remove active class from all tabs
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Show selected tab content
+                document.getElementById(tabName).classList.add('active');
+                
+                // Mark selected tab as active
+                event.target.classList.add('active');
+            }
+
+            // Load all data on page load
+            async function loadAllData() {
+                await loadGenres();
+                await loadSubgenres();
+                await loadMicrogenres();
+                await loadTropes();
+                await loadTones();
+                await loadAudiences();
+                populateDropdowns();
+            }
+
+            // API calls
             async function loadGenres() {
                 try {
                     const response = await fetch('/api/genres');
                     const data = await response.json();
-                    
                     if (data.success) {
-                        displayGenres(data.genres);
-                    } else {
-                        document.getElementById('genresList').innerHTML = '<div class="error">Error loading genres</div>';
+                        allGenres = data.genres;
+                        displayGenres();
                     }
                 } catch (error) {
-                    document.getElementById('genresList').innerHTML = '<div class="error">Error loading genres</div>';
+                    console.error('Error loading genres:', error);
+                }
+            }
+
+            async function loadSubgenres() {
+                try {
+                    const response = await fetch('/api/genres');
+                    const data = await response.json();
+                    if (data.success) {
+                        allSubgenres = data.subgenres || [];
+                        displaySubgenres();
+                    }
+                } catch (error) {
+                    console.error('Error loading subgenres:', error);
+                }
+            }
+
+            async function loadMicrogenres() {
+                try {
+                    const response = await fetch('/api/genres');
+                    const data = await response.json();
+                    if (data.success) {
+                        allMicrogenres = data.microgenres || [];
+                        displayMicrogenres();
+                    }
+                } catch (error) {
+                    console.error('Error loading microgenres:', error);
+                }
+            }
+
+            async function loadTropes() {
+                try {
+                    const response = await fetch('/api/tropes');
+                    const data = await response.json();
+                    if (data.success) {
+                        allTropes = data.tropes;
+                        displayTropes();
+                    }
+                } catch (error) {
+                    console.error('Error loading tropes:', error);
+                }
+            }
+
+            async function loadTones() {
+                try {
+                    const response = await fetch('/api/tones');
+                    const data = await response.json();
+                    if (data.success) {
+                        allTones = data.tones;
+                        displayTones();
+                    }
+                } catch (error) {
+                    console.error('Error loading tones:', error);
                 }
             }
 
@@ -1086,42 +1651,136 @@ async def admin_page():
                 try {
                     const response = await fetch('/api/target-audiences');
                     const data = await response.json();
-                    
                     if (data.success) {
-                        displayAudiences(data.audiences);
-                    } else {
-                        document.getElementById('audiencesList').innerHTML = '<div class="error">Error loading audiences</div>';
+                        allAudiences = data.audiences;
+                        displayAudiences();
                     }
                 } catch (error) {
-                    document.getElementById('audiencesList').innerHTML = '<div class="error">Error loading audiences</div>';
+                    console.error('Error loading audiences:', error);
                 }
             }
 
-            function displayGenres(genres) {
+            // Display functions
+            function displayGenres() {
                 const container = document.getElementById('genresList');
-                
-                if (genres.length === 0) {
+                if (allGenres.length === 0) {
                     container.innerHTML = '<div class="item-card">No genres found</div>';
                     return;
                 }
                 
-                container.innerHTML = genres.map(genre => `
+                container.innerHTML = allGenres.map(genre => `
                     <div class="item-card">
                         <div class="item-header">${genre.name}</div>
                         <div class="item-description">${genre.description || 'No description'}</div>
+                        ${getSubgenresForGenre(genre.id)}
                     </div>
                 `).join('');
             }
 
-            function displayAudiences(audiences) {
-                const container = document.getElementById('audiencesList');
+            function getSubgenresForGenre(genreId) {
+                const subgenres = allSubgenres.filter(sub => sub.genre_id === genreId);
+                if (subgenres.length === 0) return '';
                 
-                if (audiences.length === 0) {
+                return `<div class="hierarchy-tree">
+                    <strong>Subgenres:</strong><br>
+                    ${subgenres.map(sub => `
+                        <div style="margin: 5px 0;">
+                            <strong>${sub.name}</strong>
+                            ${sub.description ? `<br><em style="color: #666; font-size: 12px;">${sub.description}</em>` : ''}
+                            ${getMicrogenresForSubgenre(sub.id)}
+                        </div>
+                    `).join('')}
+                </div>`;
+            }
+
+            function getMicrogenresForSubgenre(subgenreId) {
+                const microgenres = allMicrogenres.filter(micro => micro.subgenre_id === subgenreId);
+                if (microgenres.length === 0) return '';
+                
+                return `<div style="margin-left: 15px; margin-top: 5px;">
+                    <strong style="font-size: 12px;">Microgenres:</strong>
+                    ${microgenres.map(micro => `<span style="background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-size: 11px; margin: 2px;">${micro.name}</span>`).join(' ')}
+                </div>`;
+            }
+
+            function displaySubgenres() {
+                const container = document.getElementById('subgenresList');
+                if (allSubgenres.length === 0) {
+                    container.innerHTML = '<div class="item-card">No subgenres found</div>';
+                    return;
+                }
+                
+                container.innerHTML = allSubgenres.map(subgenre => {
+                    const parentGenre = allGenres.find(g => g.id === subgenre.genre_id);
+                    return `
+                        <div class="item-card">
+                            <div class="item-header">${subgenre.name}</div>
+                            <div class="item-meta">Parent: ${parentGenre ? parentGenre.name : 'Unknown'}</div>
+                            <div class="item-description">${subgenre.description || 'No description'}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            function displayMicrogenres() {
+                const container = document.getElementById('microgenresList');
+                if (allMicrogenres.length === 0) {
+                    container.innerHTML = '<div class="item-card">No microgenres found</div>';
+                    return;
+                }
+                
+                container.innerHTML = allMicrogenres.map(microgenre => {
+                    const parentSubgenre = allSubgenres.find(s => s.id === microgenre.subgenre_id);
+                    const parentGenre = parentSubgenre ? allGenres.find(g => g.id === parentSubgenre.genre_id) : null;
+                    return `
+                        <div class="item-card">
+                            <div class="item-header">${microgenre.name}</div>
+                            <div class="item-meta">Path: ${parentGenre ? parentGenre.name : 'Unknown'} > ${parentSubgenre ? parentSubgenre.name : 'Unknown'}</div>
+                            <div class="item-description">${microgenre.description || 'No description'}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            function displayTropes() {
+                const container = document.getElementById('tropesList');
+                if (allTropes.length === 0) {
+                    container.innerHTML = '<div class="item-card">No tropes found</div>';
+                    return;
+                }
+                
+                container.innerHTML = allTropes.map(trope => `
+                    <div class="item-card">
+                        <div class="item-header">${trope.name}</div>
+                        <div class="item-meta">Category: ${trope.category}</div>
+                        <div class="item-description">${trope.description || 'No description'}</div>
+                    </div>
+                `).join('');
+            }
+
+            function displayTones() {
+                const container = document.getElementById('tonesList');
+                if (allTones.length === 0) {
+                    container.innerHTML = '<div class="item-card">No tones found</div>';
+                    return;
+                }
+                
+                container.innerHTML = allTones.map(tone => `
+                    <div class="item-card">
+                        <div class="item-header">${tone.name}</div>
+                        <div class="item-description">${tone.description || 'No description'}</div>
+                    </div>
+                `).join('');
+            }
+
+            function displayAudiences() {
+                const container = document.getElementById('audiencesList');
+                if (allAudiences.length === 0) {
                     container.innerHTML = '<div class="item-card">No target audiences found</div>';
                     return;
                 }
                 
-                container.innerHTML = audiences.map(audience => `
+                container.innerHTML = allAudiences.map(audience => `
                     <div class="item-card">
                         <div class="item-header">${audience.age_group} - ${audience.gender} - ${audience.sexual_orientation}</div>
                         <div class="item-description">${audience.description || 'No description'}</div>
@@ -1132,6 +1791,34 @@ async def admin_page():
                 `).join('');
             }
 
+            // Populate dropdowns
+            function populateDropdowns() {
+                // Populate subgenre parent dropdown
+                const subgenreParent = document.getElementById('subgenreParent');
+                subgenreParent.innerHTML = '<option value="">Select parent genre...</option>' +
+                    allGenres.map(genre => `<option value="${genre.id}">${genre.name}</option>`).join('');
+                
+                // Populate microgenre parent genre dropdown
+                const microgenreParentGenre = document.getElementById('microgenreParentGenre');
+                microgenreParentGenre.innerHTML = '<option value="">Select parent genre...</option>' +
+                    allGenres.map(genre => `<option value="${genre.id}">${genre.name}</option>`).join('');
+            }
+
+            function loadSubgenresForMicro() {
+                const genreId = document.getElementById('microgenreParentGenre').value;
+                const subgenreSelect = document.getElementById('microgenreParent');
+                
+                if (!genreId) {
+                    subgenreSelect.innerHTML = '<option value="">Select parent subgenre...</option>';
+                    return;
+                }
+                
+                const subgenres = allSubgenres.filter(sub => sub.genre_id === genreId);
+                subgenreSelect.innerHTML = '<option value="">Select parent subgenre...</option>' +
+                    subgenres.map(sub => `<option value="${sub.id}">${sub.name}</option>`).join('');
+            }
+
+            // Create functions
             async function createGenre() {
                 const name = document.getElementById('genreName').value.trim();
                 const description = document.getElementById('genreDescription').value.trim();
@@ -1144,27 +1831,147 @@ async def admin_page():
                 try {
                     const response = await fetch('/api/genres', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            name: name,
-                            description: description
-                        })
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, description })
                     });
                     
                     const data = await response.json();
-                    
                     if (data.success) {
                         showMessage('genreMessage', 'Genre created successfully!', 'success');
                         document.getElementById('genreName').value = '';
                         document.getElementById('genreDescription').value = '';
-                        loadGenres();
+                        await loadGenres();
+                        populateDropdowns();
                     } else {
                         showMessage('genreMessage', data.error || 'Failed to create genre', 'error');
                     }
                 } catch (error) {
                     showMessage('genreMessage', 'Error creating genre', 'error');
+                }
+            }
+
+            async function createSubgenre() {
+                const genreId = document.getElementById('subgenreParent').value;
+                const name = document.getElementById('subgenreName').value.trim();
+                const description = document.getElementById('subgenreDescription').value.trim();
+                
+                if (!genreId || !name) {
+                    showMessage('subgenreMessage', 'Parent genre and subgenre name are required', 'error');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/api/subgenres', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ genre_id: genreId, name, description })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        showMessage('subgenreMessage', 'Subgenre created successfully!', 'success');
+                        document.getElementById('subgenreName').value = '';
+                        document.getElementById('subgenreDescription').value = '';
+                        await loadSubgenres();
+                        await loadGenres(); // Refresh to show hierarchy
+                    } else {
+                        showMessage('subgenreMessage', data.error || 'Failed to create subgenre', 'error');
+                    }
+                } catch (error) {
+                    showMessage('subgenreMessage', 'Error creating subgenre', 'error');
+                }
+            }
+
+            async function createMicrogenre() {
+                const subgenreId = document.getElementById('microgenreParent').value;
+                const name = document.getElementById('microgenreName').value.trim();
+                const description = document.getElementById('microgenreDescription').value.trim();
+                
+                if (!subgenreId || !name) {
+                    showMessage('microgenreMessage', 'Parent subgenre and microgenre name are required', 'error');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/api/microgenres', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ subgenre_id: subgenreId, name, description })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        showMessage('microgenreMessage', 'Microgenre created successfully!', 'success');
+                        document.getElementById('microgenreName').value = '';
+                        document.getElementById('microgenreDescription').value = '';
+                        await loadMicrogenres();
+                        await loadGenres(); // Refresh to show hierarchy
+                    } else {
+                        showMessage('microgenreMessage', data.error || 'Failed to create microgenre', 'error');
+                    }
+                } catch (error) {
+                    showMessage('microgenreMessage', 'Error creating microgenre', 'error');
+                }
+            }
+
+            async function createTrope() {
+                const name = document.getElementById('tropeName').value.trim();
+                const category = document.getElementById('tropeCategory').value;
+                const description = document.getElementById('tropeDescription').value.trim();
+                
+                if (!name) {
+                    showMessage('tropeMessage', 'Trope name is required', 'error');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/api/tropes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, category, description })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        showMessage('tropeMessage', 'Trope created successfully!', 'success');
+                        document.getElementById('tropeName').value = '';
+                        document.getElementById('tropeDescription').value = '';
+                        await loadTropes();
+                    } else {
+                        showMessage('tropeMessage', data.error || 'Failed to create trope', 'error');
+                    }
+                } catch (error) {
+                    showMessage('tropeMessage', 'Error creating trope', 'error');
+                }
+            }
+
+            async function createTone() {
+                const name = document.getElementById('toneName').value.trim();
+                const description = document.getElementById('toneDescription').value.trim();
+                
+                if (!name) {
+                    showMessage('toneMessage', 'Tone name is required', 'error');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/api/tones', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, description })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        showMessage('toneMessage', 'Tone created successfully!', 'success');
+                        document.getElementById('toneName').value = '';
+                        document.getElementById('toneDescription').value = '';
+                        await loadTones();
+                    } else {
+                        showMessage('toneMessage', data.error || 'Failed to create tone', 'error');
+                    }
+                } catch (error) {
+                    showMessage('toneMessage', 'Error creating tone', 'error');
                 }
             }
 
@@ -1180,9 +1987,7 @@ async def admin_page():
                 try {
                     const response = await fetch('/api/target-audiences', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             age_group: ageGroup,
                             gender: gender,
@@ -1193,12 +1998,11 @@ async def admin_page():
                     });
                     
                     const data = await response.json();
-                    
                     if (data.success) {
                         showMessage('audienceMessage', 'Target audience created successfully!', 'success');
                         document.getElementById('audienceInterests').value = '';
                         document.getElementById('audienceDescription').value = '';
-                        loadAudiences();
+                        await loadAudiences();
                     } else {
                         showMessage('audienceMessage', data.error || 'Failed to create target audience', 'error');
                     }
@@ -1207,6 +2011,7 @@ async def admin_page():
                 }
             }
 
+            // Utility function for messages
             function showMessage(elementId, message, type) {
                 const element = document.getElementById(elementId);
                 element.innerHTML = `<div class="${type}">${message}</div>`;
@@ -1214,6 +2019,9 @@ async def admin_page():
                     element.innerHTML = '';
                 }, 5000);
             }
+
+            // Load data when page loads
+            window.onload = loadAllData;
         </script>
     </body>
     </html>
@@ -1972,10 +2780,33 @@ async def get_all_authors():
     except Exception as e:
         return {"error": str(e)}
 
+@app.get("/api/content-selection")
+async def get_content_for_selection():
+    """Get simplified content lists for selection in improvement workflow"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        # Get plots with just ID, title, and creation date
+        plots_response = supabase_service.client.table("plots").select("id, title, created_at").order("created_at", desc=True).limit(100).execute()
+        plots = [{"id": plot["id"], "title": plot["title"], "type": "plot", "created_at": plot["created_at"]} for plot in plots_response.data]
+        
+        # Get authors with just ID, name, and creation date
+        authors_response = supabase_service.client.table("authors").select("id, author_name, created_at").order("created_at", desc=True).limit(100).execute()
+        authors = [{"id": author["id"], "title": author["author_name"], "type": "author", "created_at": author["created_at"]} for author in authors_response.data]
+        
+        # Combine and sort by creation date
+        all_content = plots + authors
+        all_content.sort(key=lambda x: x["created_at"], reverse=True)
+        
+        return {"success": True, "content": all_content}
+    except Exception as e:
+        return {"error": str(e)}
+
 # Genre management endpoints
 @app.get("/api/genres")
 async def get_all_genres():
-    """Get all genres with their subgenres and microgenres"""
+    """Get complete hierarchy: genres, subgenres, microgenres, tropes, and tones"""
     if not SUPABASE_ENABLED:
         return {"error": "Supabase not configured"}
     
@@ -1983,12 +2814,16 @@ async def get_all_genres():
         genres = supabase_service.client.table("genres").select("*").order("name").execute()
         subgenres = supabase_service.client.table("subgenres").select("*").order("name").execute()
         microgenres = supabase_service.client.table("microgenres").select("*").order("name").execute()
+        tropes = supabase_service.client.table("tropes").select("*").order("name").execute()
+        tones = supabase_service.client.table("tones").select("*").order("name").execute()
         
         return {
             "success": True,
             "genres": genres.data,
             "subgenres": subgenres.data,
-            "microgenres": microgenres.data
+            "microgenres": microgenres.data,
+            "tropes": tropes.data,
+            "tones": tones.data
         }
     except Exception as e:
         return {"error": str(e)}
@@ -2006,6 +2841,112 @@ async def create_genre(data: dict):
         }).execute()
         
         return {"success": True, "genre": response.data[0]}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/subgenres")
+async def create_subgenre(data: dict):
+    """Create a new subgenre"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("subgenres").insert({
+            "genre_id": data["genre_id"],
+            "name": data["name"],
+            "description": data.get("description", "")
+        }).execute()
+        
+        return {"success": True, "subgenre": response.data[0]}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/microgenres")
+async def create_microgenre(data: dict):
+    """Create a new microgenre"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("microgenres").insert({
+            "subgenre_id": data["subgenre_id"],
+            "name": data["name"],
+            "description": data.get("description", "")
+        }).execute()
+        
+        return {"success": True, "microgenre": response.data[0]}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/tropes")
+async def get_all_tropes():
+    """Get all tropes"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        tropes = supabase_service.client.table("tropes").select("*").order("name").execute()
+        return {"success": True, "tropes": tropes.data}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/tropes")
+async def create_trope(data: dict):
+    """Create a new trope"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        # Check if the new schema is available (after migration)
+        insert_data = {
+            "name": data["name"],
+            "description": data.get("description", "")
+        }
+        
+        # If microgenre_id is provided, we're using the new schema
+        if "microgenre_id" in data:
+            insert_data["microgenre_id"] = data["microgenre_id"]
+        else:
+            # Otherwise use the old schema with category
+            insert_data["category"] = data.get("category", "Plot")
+            
+        response = supabase_service.client.table("tropes").insert(insert_data).execute()
+        
+        return {"success": True, "trope": response.data[0]}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/tones")
+async def get_all_tones():
+    """Get all tones"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        tones = supabase_service.client.table("tones").select("*").order("name").execute()
+        return {"success": True, "tones": tones.data}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/tones")
+async def create_tone(data: dict):
+    """Create a new tone"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        insert_data = {
+            "name": data["name"],
+            "description": data.get("description", "")
+        }
+        
+        # If trope_id is provided, we're using the new schema
+        if "trope_id" in data:
+            insert_data["trope_id"] = data["trope_id"]
+            
+        response = supabase_service.client.table("tones").insert(insert_data).execute()
+        
+        return {"success": True, "tone": response.data[0]}
     except Exception as e:
         return {"error": str(e)}
 
@@ -2031,12 +2972,190 @@ async def create_target_audience(data: dict):
         response = supabase_service.client.table("target_audiences").insert({
             "age_group": data["age_group"],
             "gender": data.get("gender", "All"),
-            "sexual_orientation": data.get("sexual_orientation", "All"),
-            "interests": data.get("interests", []),
-            "description": data.get("description", "")
+            "sexual_orientation": data.get("sexual_orientation", "All")
         }).execute()
         
         return {"success": True, "audience": response.data[0]}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.delete("/api/target-audiences/{audience_id}")
+async def delete_target_audience(audience_id: str):
+    """Delete a target audience"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("target_audiences").delete().eq("id", audience_id).execute()
+        return {"success": True}
+    except Exception as e:
+        return {"error": str(e)}
+
+# Individual GET endpoints for hierarchical data
+
+@app.get("/api/subgenres")
+async def get_subgenres():
+    """Get all subgenres"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("subgenres").select("*").order("name").execute()
+        return {"success": True, "subgenres": response.data}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/microgenres")
+async def get_microgenres():
+    """Get all microgenres"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("microgenres").select("*").order("name").execute()
+        return {"success": True, "microgenres": response.data}
+    except Exception as e:
+        return {"error": str(e)}
+
+# UPDATE and DELETE endpoints for hierarchical management
+
+@app.put("/api/genres/{genre_id}")
+async def update_genre(genre_id: str, data: dict):
+    """Update a genre"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("genres").update({
+            "name": data["name"],
+            "description": data.get("description", "")
+        }).eq("id", genre_id).execute()
+        
+        return {"success": True, "genre": response.data[0]}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.delete("/api/genres/{genre_id}")
+async def delete_genre(genre_id: str):
+    """Delete a genre and all its children"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("genres").delete().eq("id", genre_id).execute()
+        return {"success": True}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.put("/api/subgenres/{subgenre_id}")
+async def update_subgenre(subgenre_id: str, data: dict):
+    """Update a subgenre"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("subgenres").update({
+            "name": data["name"],
+            "description": data.get("description", "")
+        }).eq("id", subgenre_id).execute()
+        
+        return {"success": True, "subgenre": response.data[0]}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.delete("/api/subgenres/{subgenre_id}")
+async def delete_subgenre(subgenre_id: str):
+    """Delete a subgenre and all its children"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("subgenres").delete().eq("id", subgenre_id).execute()
+        return {"success": True}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.put("/api/microgenres/{microgenre_id}")
+async def update_microgenre(microgenre_id: str, data: dict):
+    """Update a microgenre"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("microgenres").update({
+            "name": data["name"],
+            "description": data.get("description", "")
+        }).eq("id", microgenre_id).execute()
+        
+        return {"success": True, "microgenre": response.data[0]}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.delete("/api/microgenres/{microgenre_id}")
+async def delete_microgenre(microgenre_id: str):
+    """Delete a microgenre and all its children"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("microgenres").delete().eq("id", microgenre_id).execute()
+        return {"success": True}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.put("/api/tropes/{trope_id}")
+async def update_trope(trope_id: str, data: dict):
+    """Update a trope"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("tropes").update({
+            "name": data["name"],
+            "description": data.get("description", "")
+        }).eq("id", trope_id).execute()
+        
+        return {"success": True, "trope": response.data[0]}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.delete("/api/tropes/{trope_id}")
+async def delete_trope(trope_id: str):
+    """Delete a trope and all its children"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("tropes").delete().eq("id", trope_id).execute()
+        return {"success": True}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.put("/api/tones/{tone_id}")
+async def update_tone(tone_id: str, data: dict):
+    """Update a tone"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("tones").update({
+            "name": data["name"],
+            "description": data.get("description", "")
+        }).eq("id", tone_id).execute()
+        
+        return {"success": True, "tone": response.data[0]}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.delete("/api/tones/{tone_id}")
+async def delete_tone(tone_id: str):
+    """Delete a tone"""
+    if not SUPABASE_ENABLED:
+        return {"error": "Supabase not configured"}
+    
+    try:
+        response = supabase_service.client.table("tones").delete().eq("id", tone_id).execute()
+        return {"success": True}
     except Exception as e:
         return {"error": str(e)}
 
