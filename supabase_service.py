@@ -109,17 +109,25 @@ class SupabaseService:
             params = orchestrator_params.get("extracted_parameters", {}) if orchestrator_params else {}
             target_audience = params.get("target_audience", {})
             
+            # Get or create foreign key IDs for normalized tables
+            genre_id = await self._get_or_create_genre(params.get("genre")) if params.get("genre") else None
+            subgenre_id = await self._get_or_create_subgenre(params.get("subgenre"), genre_id) if params.get("subgenre") and genre_id else None
+            microgenre_id = await self._get_or_create_microgenre(params.get("microgenre"), subgenre_id) if params.get("microgenre") and subgenre_id else None
+            trope_id = await self._get_or_create_trope(params.get("trope"), microgenre_id) if params.get("trope") and microgenre_id else None
+            tone_id = await self._get_or_create_tone(params.get("tone"), trope_id) if params.get("tone") and trope_id else None
+            target_audience_id = await self._get_or_create_target_audience(target_audience) if target_audience else None
+            
             plot_record = {
                 "session_id": session_data["id"],
                 "user_id": user_data["id"],
                 "title": plot_data.get("title"),
                 "plot_summary": plot_data.get("plot_summary"),
-                "genre": params.get("genre"),
-                "subgenre": params.get("subgenre"),
-                "microgenre": params.get("microgenre"),
-                "trope": params.get("trope"),
-                "tone": params.get("tone"),
-                "target_audience": target_audience,
+                "genre_id": genre_id,
+                "subgenre_id": subgenre_id,
+                "microgenre_id": microgenre_id,
+                "trope_id": trope_id,
+                "tone_id": tone_id,
+                "target_audience_id": target_audience_id,
                 "author_id": author_id,  # New: assign plot to author
                 "created_at": datetime.utcnow().isoformat()
             }
@@ -394,6 +402,283 @@ class SupabaseService:
             
         except Exception as e:
             print(f"Error getting plots by author: {e}")
+            raise
+    
+    async def _get_or_create_genre(self, name: str) -> str:
+        """Get or create genre and return its ID"""
+        if not name:
+            return None
+            
+        try:
+            # Check if genre exists
+            response = self.client.table("genres").select("id").eq("name", name).execute()
+            
+            if response.data:
+                return response.data[0]["id"]
+            
+            # Create new genre
+            new_genre = {
+                "name": name,
+                "description": f"Genre: {name}"
+            }
+            
+            response = self.client.table("genres").insert(new_genre).execute()
+            return response.data[0]["id"]
+            
+        except Exception as e:
+            print(f"Error with genre: {e}")
+            # If it's a duplicate key error, try to get the existing one
+            if "duplicate key" in str(e):
+                response = self.client.table("genres").select("id").eq("name", name).execute()
+                if response.data:
+                    return response.data[0]["id"]
+            return None
+    
+    async def _get_or_create_subgenre(self, name: str, genre_id: str) -> str:
+        """Get or create subgenre and return its ID"""
+        if not name or not genre_id:
+            return None
+            
+        try:
+            # Check if subgenre exists (by name only first)
+            response = self.client.table("subgenres").select("id").eq("name", name).execute()
+            
+            if response.data:
+                return response.data[0]["id"]
+            
+            # Create new subgenre
+            new_subgenre = {
+                "name": name,
+                "genre_id": genre_id,
+                "description": f"Subgenre: {name}"
+            }
+            
+            response = self.client.table("subgenres").insert(new_subgenre).execute()
+            return response.data[0]["id"]
+            
+        except Exception as e:
+            print(f"Error with subgenre: {e}")
+            # If it's a duplicate key error, try to get the existing one
+            if "duplicate key" in str(e):
+                response = self.client.table("subgenres").select("id").eq("name", name).execute()
+                if response.data:
+                    return response.data[0]["id"]
+            return None
+    
+    async def _get_or_create_microgenre(self, name: str, subgenre_id: str) -> str:
+        """Get or create microgenre and return its ID"""
+        if not name or not subgenre_id:
+            return None
+            
+        try:
+            # Check if microgenre exists (by name only first)
+            response = self.client.table("microgenres").select("id").eq("name", name).execute()
+            
+            if response.data:
+                return response.data[0]["id"]
+            
+            # Create new microgenre
+            new_microgenre = {
+                "name": name,
+                "subgenre_id": subgenre_id,
+                "description": f"Microgenre: {name}"
+            }
+            
+            response = self.client.table("microgenres").insert(new_microgenre).execute()
+            return response.data[0]["id"]
+            
+        except Exception as e:
+            print(f"Error with microgenre: {e}")
+            # If it's a duplicate key error, try to get the existing one
+            if "duplicate key" in str(e):
+                response = self.client.table("microgenres").select("id").eq("name", name).execute()
+                if response.data:
+                    return response.data[0]["id"]
+            return None
+    
+    async def _get_or_create_trope(self, name: str, microgenre_id: str) -> str:
+        """Get or create trope and return its ID"""
+        if not name or not microgenre_id:
+            return None
+            
+        try:
+            # Check if trope exists (first by name only due to unique constraint)
+            response = self.client.table("tropes").select("id").eq("name", name).execute()
+            
+            if response.data:
+                return response.data[0]["id"]
+            
+            # Create new trope
+            new_trope = {
+                "name": name,
+                "microgenre_id": microgenre_id,
+                "description": f"Trope: {name}"
+            }
+            
+            response = self.client.table("tropes").insert(new_trope).execute()
+            return response.data[0]["id"]
+            
+        except Exception as e:
+            print(f"Error with trope: {e}")
+            # If it's a duplicate key error, try to get the existing one
+            if "duplicate key" in str(e):
+                response = self.client.table("tropes").select("id").eq("name", name).execute()
+                if response.data:
+                    return response.data[0]["id"]
+            return None
+    
+    async def _get_or_create_tone(self, name: str, trope_id: str) -> str:
+        """Get or create tone and return its ID"""
+        if not name or not trope_id:
+            return None
+            
+        try:
+            # Check if tone exists (by name only first)
+            response = self.client.table("tones").select("id").eq("name", name).execute()
+            
+            if response.data:
+                return response.data[0]["id"]
+            
+            # Create new tone
+            new_tone = {
+                "name": name,
+                "trope_id": trope_id,
+                "description": f"Tone: {name}"
+            }
+            
+            response = self.client.table("tones").insert(new_tone).execute()
+            return response.data[0]["id"]
+            
+        except Exception as e:
+            print(f"Error with tone: {e}")
+            # If it's a duplicate key error, try to get the existing one
+            if "duplicate key" in str(e):
+                response = self.client.table("tones").select("id").eq("name", name).execute()
+                if response.data:
+                    return response.data[0]["id"]
+            return None
+    
+    async def _get_or_create_target_audience(self, audience_data: Dict[str, Any]) -> str:
+        """Get or create target audience and return its ID"""
+        if not audience_data:
+            return None
+            
+        try:
+            # Extract audience details
+            age_group = audience_data.get("age") or audience_data.get("age_group", "Unknown")
+            gender = audience_data.get("gender", "All")
+            orientation = audience_data.get("sexual_orientation", "All")
+            
+            # Check if target audience exists
+            response = self.client.table("target_audiences").select("id").eq("age_group", age_group).eq("gender", gender).eq("sexual_orientation", orientation).execute()
+            
+            if response.data:
+                return response.data[0]["id"]
+            
+            # Create new target audience
+            new_audience = {
+                "age_group": age_group,
+                "gender": gender,
+                "sexual_orientation": orientation,
+                "description": f"{age_group} - {gender} - {orientation}",
+                "interests": []  # Can be expanded later
+            }
+            
+            response = self.client.table("target_audiences").insert(new_audience).execute()
+            return response.data[0]["id"]
+            
+        except Exception as e:
+            print(f"Error with target audience: {e}")
+            return None
+    
+    async def get_all_genres(self) -> List[Dict[str, Any]]:
+        """Get all genres with their hierarchical data"""
+        try:
+            # Get all genres
+            genres_response = self.client.table("genres").select("*").order("name").execute()
+            genres = []
+            
+            for genre in genres_response.data:
+                genre_data = {
+                    "id": genre["id"],
+                    "name": genre["name"],
+                    "description": genre.get("description", ""),
+                    "subgenres": []
+                }
+                
+                # Get subgenres for this genre
+                subgenres_response = self.client.table("subgenres").select("*").eq("genre_id", genre["id"]).order("name").execute()
+                
+                for subgenre in subgenres_response.data:
+                    subgenre_data = {
+                        "id": subgenre["id"],
+                        "name": subgenre["name"],
+                        "description": subgenre.get("description", ""),
+                        "microgenres": []
+                    }
+                    
+                    # Get microgenres for this subgenre
+                    microgenres_response = self.client.table("microgenres").select("*").eq("subgenre_id", subgenre["id"]).order("name").execute()
+                    
+                    for microgenre in microgenres_response.data:
+                        microgenre_data = {
+                            "id": microgenre["id"],
+                            "name": microgenre["name"],
+                            "description": microgenre.get("description", "")
+                        }
+                        subgenre_data["microgenres"].append(microgenre_data)
+                    
+                    genre_data["subgenres"].append(subgenre_data)
+                
+                genres.append(genre_data)
+            
+            return genres
+            
+        except Exception as e:
+            print(f"Error getting all genres: {e}")
+            return []
+    
+    async def create_genre(self, name: str, description: str) -> Dict[str, Any]:
+        """Create a new genre"""
+        try:
+            new_genre = {
+                "name": name,
+                "description": description
+            }
+            
+            response = self.client.table("genres").insert(new_genre).execute()
+            return response.data[0]
+            
+        except Exception as e:
+            print(f"Error creating genre: {e}")
+            raise
+    
+    async def get_all_target_audiences(self) -> List[Dict[str, Any]]:
+        """Get all target audiences"""
+        try:
+            response = self.client.table("target_audiences").select("*").order("age_group", "gender", "sexual_orientation").execute()
+            return response.data
+            
+        except Exception as e:
+            print(f"Error getting all target audiences: {e}")
+            return []
+    
+    async def create_target_audience(self, age_group: str, gender: str, sexual_orientation: str, interests: List[str], description: str = None) -> Dict[str, Any]:
+        """Create a new target audience"""
+        try:
+            new_audience = {
+                "age_group": age_group,
+                "gender": gender,
+                "sexual_orientation": sexual_orientation,
+                "interests": interests,
+                "description": description or f"{age_group} - {gender} - {sexual_orientation}"
+            }
+            
+            response = self.client.table("target_audiences").insert(new_audience).execute()
+            return response.data[0]
+            
+        except Exception as e:
+            print(f"Error creating target audience: {e}")
             raise
 
 # Global Supabase service instance

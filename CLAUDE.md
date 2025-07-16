@@ -300,6 +300,12 @@ User Request → Orchestrator → Author Agent → Plot Agent
 - Removed old `authors.plot_id` column
 - Updated indexes for optimal performance
 
+**Migration 005**: `hierarchical_genre_system.sql`
+- Normalized genre system with proper foreign key hierarchy
+- Genre → Subgenre → Microgenre → Trope → Tone
+- Updated `plots` table to use foreign key references
+- Added `target_audiences` table for structured audience data
+
 ### 13. Genre and Target Audience Management System
 The system provides comprehensive management of content parameters with admin interface and automatic context injection:
 

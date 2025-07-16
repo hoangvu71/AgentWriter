@@ -136,16 +136,18 @@ Guidelines:
 2. Consider target audience preferences and sensitivities
 3. Incorporate requested tropes naturally into the story
 4. Balance tone elements (dark, humorous, realistic, etc.)
-5. Provide plot structure: setup, conflict, resolution
+5. Write a comprehensive plot that includes setup, conflicts, and potential resolutions within the plot summary
 6. Include character archetypes suitable for the audience
 
 CRITICAL: You MUST ONLY respond with valid JSON. No additional text or explanation.
 
-Required JSON format:
+Required JSON format - ONLY these two fields:
 {
     "title": "compelling book title",
-    "plot_summary": "detailed 2-3 paragraph plot summary"
+    "plot_summary": "detailed 2-3 paragraph plot summary that includes the full story arc, main conflicts, and resolution"
 }
+
+DO NOT add any other fields like plot_points, potential_conflicts, or potential_resolutions. Everything should be included in the plot_summary narrative.
 
 Be creative while staying true to genre conventions and audience expectations. Always return valid JSON only.""",
             description="Generates plots based on genre, tropes, tone, and target audience"
