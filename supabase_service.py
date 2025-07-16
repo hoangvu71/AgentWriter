@@ -680,6 +680,16 @@ class SupabaseService:
         except Exception as e:
             print(f"Error creating target audience: {e}")
             raise
+    
+    async def update_plot_author(self, plot_id: str, author_id: str) -> Dict[str, Any]:
+        """Update a plot to assign it to an author"""
+        try:
+            response = self.client.table("plots").update({"author_id": author_id}).eq("id", plot_id).execute()
+            return response.data[0] if response.data else None
+            
+        except Exception as e:
+            print(f"Error updating plot author: {e}")
+            raise
 
 # Global Supabase service instance
 supabase_service = SupabaseService()

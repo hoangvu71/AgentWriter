@@ -97,7 +97,7 @@ CRITICAL: You MUST ONLY respond with valid JSON. No additional text or explanati
 
 Required JSON format:
 {
-    "routing_decision": "plot_only|author_only|plot_then_author",
+    "routing_decision": "plot_only|author_only|plot_then_author|author_then_plot",
     "agents_to_invoke": ["agent_name1", "agent_name2"],
     "extracted_parameters": {
         "genre": "string",
@@ -337,9 +337,65 @@ Create authors that readers would trust and connect with for the specified genre
                 print(f"Failed to save orchestrator decision: {e}")
         
         # Step 3: Route to appropriate agents based on JSON decision
-        # NEW LOGIC: Author first, then plots for that author
-        if "author" in routing_decision and "author_generator" in agents_to_invoke:
-            # Use orchestrator's specific message for author generator
+        if routing_decision == "plot_then_author":
+            # First generate plot
+            plot_message = routing_data.get("message_to_plot_agent", user_message)
+            plot_response = await self._send_to_agent(
+                AgentType.PLOT_GENERATOR.value,
+                plot_message,
+                session_id,
+                user_id
+            )
+            responses.append(plot_response)
+            
+            # Save plot without author assignment first
+            if SUPABASE_ENABLED and plot_response.parsed_json:
+                try:
+                    saved_plot = await supabase_service.save_plot(
+                        session_id, 
+                        user_id, 
+                        plot_response.parsed_json, 
+                        routing_data
+                    )
+                    saved_plot_id = saved_plot["id"]
+                except Exception as e:
+                    print(f"Failed to save plot: {e}")
+            
+            # Then generate author based on plot
+            if "author_generator" in agents_to_invoke and plot_response.parsed_json:
+                author_message = routing_data.get("message_to_author_agent", user_message)
+                # Include plot context in author message
+                author_message += f"\n\nPlot context: {json.dumps(plot_response.parsed_json, indent=2)}"
+                
+                author_response = await self._send_to_agent(
+                    AgentType.AUTHOR_GENERATOR.value,
+                    author_message,
+                    session_id,
+                    user_id
+                )
+                responses.append(author_response)
+                
+                # Save author to Supabase
+                if SUPABASE_ENABLED and author_response.parsed_json:
+                    try:
+                        saved_author = await supabase_service.save_author(
+                            session_id, 
+                            user_id, 
+                            author_response.parsed_json
+                        )
+                        saved_author_id = saved_author["id"]
+                        
+                        # Update plot to link to author
+                        if saved_plot_id:
+                            try:
+                                await supabase_service.update_plot_author(saved_plot_id, saved_author_id)
+                            except Exception as e:
+                                print(f"Failed to update plot-author relationship: {e}")
+                    except Exception as e:
+                        print(f"Failed to save author: {e}")
+        
+        elif routing_decision == "author_then_plot":
+            # First generate author
             author_message = routing_data.get("message_to_author_agent", user_message)
             author_response = await self._send_to_agent(
                 AgentType.AUTHOR_GENERATOR.value,
@@ -361,13 +417,11 @@ Create authors that readers would trust and connect with for the specified genre
                 except Exception as e:
                     print(f"Failed to save author: {e}")
             
-            # If workflow includes plot generation for this author
-            if "plot" in routing_decision and "plot_generator" in agents_to_invoke:
-                # Use orchestrator's specific message for plot generator
+            # Then generate plot for this author
+            if "plot_generator" in agents_to_invoke and author_response.parsed_json:
                 plot_message = routing_data.get("message_to_plot_agent", user_message)
-                if author_response.parsed_json:
-                    # Include author context in plot message
-                    plot_message += f"\n\nAuthor context: {json.dumps(author_response.parsed_json, indent=2)}"
+                # Include author context in plot message
+                plot_message += f"\n\nAuthor context: {json.dumps(author_response.parsed_json, indent=2)}"
                 
                 plot_response = await self._send_to_agent(
                     AgentType.PLOT_GENERATOR.value,
@@ -391,7 +445,7 @@ Create authors that readers would trust and connect with for the specified genre
                     except Exception as e:
                         print(f"Failed to save plot: {e}")
         
-        elif "plot" in routing_decision and "plot_generator" in agents_to_invoke:
+        elif routing_decision == "plot_only" and "plot_generator" in agents_to_invoke:
             # Plot only (no author specified)
             plot_message = routing_data.get("message_to_plot_agent", user_message)
             plot_response = await self._send_to_agent(
