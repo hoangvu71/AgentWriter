@@ -544,6 +544,11 @@ Evaluate with precision and consistency. Always return valid JSON only.""",
     async def _send_to_agent(self, agent_type: str, message: str, session_id: str, user_id: str = "default") -> AgentResponse:
         """Send message to specific agent and get response"""
         try:
+            # Validate agent type exists
+            valid_agent_types = [agent.value for agent in AgentType]
+            if agent_type not in valid_agent_types:
+                raise ValueError("orchestrator agent not configured")
+            
             # Ensure session exists
             await self._create_session(agent_type, session_id, user_id)
             
@@ -604,6 +609,9 @@ Evaluate with precision and consistency. Always return valid JSON only.""",
                 success=True
             )
             
+        except ValueError:
+            # Re-raise ValueError for invalid agent types
+            raise
         except Exception as e:
             return AgentResponse(
                 agent_name=agent_type,
@@ -614,7 +622,7 @@ Evaluate with precision and consistency. Always return valid JSON only.""",
                 error=str(e)
             )
     
-    async def process_request(self, user_message: str, session_id: str, user_id: str = "default") -> Dict[str, Any]:
+    async def process_message(self, user_message: str, user_id: str, session_id: str) -> Dict[str, Any]:
         """Process user request through multi-agent system"""
         
         # Step 1: Send to orchestrator for routing decision

@@ -40,7 +40,7 @@ class TestMultiAgentOrchestratorTDD:
             with patch.object(orchestrator, '_send_to_agent') as mock_send:
                 mock_send.return_value = AgentResponse(
                     agent_name="orchestrator",
-                    message="Route to plot agent",
+                    content="Route to plot agent",
                     success=True,
                     parsed_json={
                         "routing_decision": "single_agent",
@@ -65,7 +65,7 @@ class TestMultiAgentOrchestratorTDD:
                 # Mock orchestrator deciding on multi-agent workflow
                 mock_orchestrator_response = AgentResponse(
                     agent_name="orchestrator",
-                    message="Route to multiple agents",
+                    content="Route to multiple agents",
                     success=True,
                     parsed_json={
                         "routing_decision": "multi_agent",
@@ -91,7 +91,7 @@ class TestMultiAgentOrchestratorTDD:
             with patch.object(orchestrator, '_send_to_agent') as mock_send:
                 mock_orchestrator_response = AgentResponse(
                     agent_name="orchestrator",
-                    message="Route to iterative improvement",
+                    content="Route to iterative improvement",
                     success=True,
                     parsed_json={
                         "routing_decision": "iterative_improvement",

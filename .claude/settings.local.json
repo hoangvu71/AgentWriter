@@ -36,7 +36,11 @@
       "Bash(TASKKILL /F /PID 2224)",
       "Bash(echo:*)",
       "Bash(git log:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(git push:*)",
+      "Bash(git remote add:*)",
+      "Bash(git rm:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

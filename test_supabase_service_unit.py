@@ -85,10 +85,28 @@ class TestSupabaseServiceTDD:
         @pytest.mark.asyncio
         async def test_should_create_valid_session_record(self, supabase_service, mock_supabase_client):
             """GREEN: This test should pass after proper implementation"""
-            # Mock successful database response
-            mock_response = Mock()
-            mock_response.data = [{"id": "test-session-uuid"}]
-            mock_supabase_client.table.return_value.insert.return_value.execute.return_value = mock_response
+            # Mock the create_or_get_user response
+            mock_user_response = Mock()
+            mock_user_response.data = [{"id": "test-user-uuid", "user_id": "test_user"}]
+            
+            # Mock the create_session response
+            mock_session_response = Mock()
+            mock_session_response.data = [{"id": "test-session-uuid", "session_id": "test_session"}]
+            
+            # Mock the improvement session insert response
+            mock_improvement_response = Mock()
+            mock_improvement_response.data = [{"id": "test-improvement-uuid"}]
+            
+            # Configure the mock chain for all database calls
+            mock_table = Mock()
+            mock_supabase_client.table.return_value = mock_table
+            
+            # Set up the mock chain for each operation
+            mock_table.select.return_value.eq.return_value.execute.side_effect = [
+                mock_user_response,  # First call: get user
+                mock_session_response,  # Second call: get session
+            ]
+            mock_table.insert.return_value.execute.return_value = mock_improvement_response
             
             session_id = await supabase_service.create_improvement_session(
                 user_id="test_user",
@@ -99,7 +117,7 @@ class TestSupabaseServiceTDD:
                 max_iterations=4
             )
             
-            assert session_id == "test-session-uuid"
+            assert session_id == "test-improvement-uuid"
             mock_supabase_client.table.assert_called_with("improvement_sessions")
         
         @pytest.mark.asyncio
