@@ -374,16 +374,21 @@ async def get_home():
             .chat-messages {
                 flex: 1;
                 overflow-y: auto;
-                padding: 1rem;
+                padding: 1.5rem;
                 display: flex;
                 flex-direction: column;
-                gap: 1rem;
+                gap: 1.5rem;
             }
 
             .message {
                 display: flex;
                 gap: 1rem;
                 max-width: 100%;
+                margin-bottom: 0.5rem;
+            }
+            
+            .message:last-child {
+                margin-bottom: 0;
             }
 
             .message.user {
@@ -391,12 +396,22 @@ async def get_home():
             }
 
             .message-content {
-                max-width: 80%;
+                max-width: 65%;
                 padding: 1rem 1.25rem;
                 border-radius: 12px;
                 font-size: 0.95rem;
-                line-height: 1.5;
+                line-height: 1.6;
                 word-wrap: break-word;
+                word-break: break-word;
+                overflow-wrap: break-word;
+                min-height: 44px;
+                display: flex;
+                align-items: flex-start;
+                flex-direction: column;
+                justify-content: center;
+                max-height: 500px;
+                overflow-y: auto;
+                position: relative;
             }
 
             .message.user .message-content {
@@ -422,6 +437,63 @@ async def get_home():
                 font-weight: 600;
                 font-size: 0.875rem;
                 flex-shrink: 0;
+            }
+            
+            .message-timestamp {
+                font-size: 0.75rem;
+                color: var(--text-tertiary);
+                margin-top: 0.25rem;
+                opacity: 0.7;
+                font-weight: 400;
+            }
+
+            /* Custom scrollbar for long messages */
+            .message-content::-webkit-scrollbar {
+                width: 4px;
+            }
+
+            .message-content::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            .message-content::-webkit-scrollbar-thumb {
+                background: var(--text-tertiary);
+                border-radius: 2px;
+                opacity: 0.3;
+            }
+
+            .message-content::-webkit-scrollbar-thumb:hover {
+                opacity: 0.6;
+            }
+
+            /* Long message indicator */
+            .message-content.long-message::after {
+                content: "📄 Long message - scroll to read more";
+                position: absolute;
+                bottom: 0;
+                right: 0;
+                background: var(--bg-tertiary);
+                color: var(--text-tertiary);
+                font-size: 0.7rem;
+                padding: 2px 6px;
+                border-radius: 4px;
+                opacity: 0.8;
+                pointer-events: none;
+            }
+
+            /* Fade effect for long messages */
+            .message-content.long-message {
+                background: linear-gradient(to bottom, 
+                    var(--chat-assistant) 0%, 
+                    var(--chat-assistant) 85%, 
+                    var(--bg-tertiary) 100%);
+            }
+
+            .message.user .message-content.long-message {
+                background: linear-gradient(to bottom, 
+                    var(--chat-user) 0%, 
+                    var(--chat-user) 85%, 
+                    rgba(16, 163, 127, 0.7) 100%);
             }
 
             .message.user .message-avatar {
@@ -606,6 +678,19 @@ async def get_home():
                 .nav-actions {
                     flex-direction: column;
                     gap: 0.5rem;
+                }
+
+                /* Adjust message width for mobile */
+                .message-content {
+                    max-width: 85%;
+                    max-height: 300px;
+                }
+
+                /* Smaller long message indicator on mobile */
+                .message-content.long-message::after {
+                    content: "📄 Scroll to read more";
+                    font-size: 0.65rem;
+                    padding: 1px 4px;
                 }
             }
         </style>
@@ -813,10 +898,54 @@ async def get_home():
                 }
             }
             
+            function showTypingIndicator() {
+                const chatContainer = document.getElementById('chat');
+                
+                // Remove existing typing indicator
+                const existingIndicator = document.getElementById('typing-indicator');
+                if (existingIndicator) {
+                    existingIndicator.remove();
+                }
+                
+                const messageWrapper = document.createElement('div');
+                messageWrapper.className = 'message assistant';
+                messageWrapper.id = 'typing-indicator';
+                
+                const avatar = document.createElement('div');
+                avatar.className = 'message-avatar';
+                avatar.textContent = 'AI';
+                
+                const typingContent = document.createElement('div');
+                typingContent.className = 'typing-indicator';
+                typingContent.innerHTML = `
+                    <span>AI is thinking</span>
+                    <div class="typing-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                `;
+                
+                messageWrapper.appendChild(avatar);
+                messageWrapper.appendChild(typingContent);
+                chatContainer.appendChild(messageWrapper);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            function hideTypingIndicator() {
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) {
+                    indicator.remove();
+                }
+            }
+
             function handleMessage(data) {
                 const chatContainer = document.getElementById('chat');
                 
                 if (data.type === 'stream_chunk') {
+                    // Hide typing indicator when first chunk arrives
+                    hideTypingIndicator();
+                    
                     let currentMessage = document.getElementById('current-agent-message');
                     if (!currentMessage) {
                         const messageWrapper = document.createElement('div');
@@ -831,6 +960,10 @@ async def get_home():
                         currentMessage.id = 'current-agent-message';
                         currentMessage.style.whiteSpace = 'pre-wrap';
                         
+                        // Store timestamp for later addition
+                        currentMessage.dataset.timestamp = new Date().toISOString();
+                        
+                        // AI: avatar first, then content (avatar on left)
                         messageWrapper.appendChild(avatar);
                         messageWrapper.appendChild(currentMessage);
                         chatContainer.appendChild(messageWrapper);
@@ -859,6 +992,16 @@ async def get_home():
                     jsonContent.textContent = JSON.stringify(data.json_data, null, 2);
                     structuredMessage.appendChild(jsonContent);
                     
+                    // Add timestamp to structured response
+                    const timestamp = document.createElement('div');
+                    timestamp.className = 'message-timestamp';
+                    timestamp.textContent = formatTimestamp(new Date());
+                    structuredMessage.appendChild(timestamp);
+                    
+                    // Check if structured message is too long
+                    setTimeout(() => handleLongMessage(structuredMessage), 100);
+                    
+                    // AI: avatar first, then content (avatar on left)
                     messageWrapper.appendChild(avatar);
                     messageWrapper.appendChild(structuredMessage);
                     chatContainer.appendChild(messageWrapper);
@@ -868,7 +1011,18 @@ async def get_home():
                     if (currentMessage) {
                         currentMessage.id = '';
                         // Format the final message
-                        currentMessage.innerHTML = formatMessage(currentMessage.textContent);
+                        const messageText = currentMessage.textContent;
+                        currentMessage.innerHTML = formatMessage(messageText);
+                        
+                        // Add timestamp to AI message
+                        const timestamp = document.createElement('div');
+                        timestamp.className = 'message-timestamp';
+                        const messageTime = new Date(currentMessage.dataset.timestamp);
+                        timestamp.textContent = formatTimestamp(messageTime);
+                        currentMessage.appendChild(timestamp);
+                        
+                        // Check if message is too long
+                        setTimeout(() => handleLongMessage(currentMessage), 100);
                     }
                     
                     // Log structured responses for debugging
@@ -890,6 +1044,16 @@ async def get_home():
                     errorMessage.style.color = '#ef4444';
                     errorMessage.style.border = '1px solid #ef4444';
                     
+                    // Add timestamp to error message
+                    const timestamp = document.createElement('div');
+                    timestamp.className = 'message-timestamp';
+                    timestamp.textContent = formatTimestamp(new Date());
+                    errorMessage.appendChild(timestamp);
+                    
+                    // Check if error message is too long
+                    setTimeout(() => handleLongMessage(errorMessage), 100);
+                    
+                    // AI: avatar first, then content (avatar on left)
                     messageWrapper.appendChild(avatar);
                     messageWrapper.appendChild(errorMessage);
                     chatContainer.appendChild(messageWrapper);
@@ -897,6 +1061,45 @@ async def get_home():
                 }
             }
             
+            function formatTimestamp(date) {
+                const now = new Date();
+                const diff = now - date;
+                const seconds = Math.floor(diff / 1000);
+                const minutes = Math.floor(seconds / 60);
+                const hours = Math.floor(minutes / 60);
+                
+                if (seconds < 60) {
+                    return 'just now';
+                } else if (minutes < 60) {
+                    return `${minutes}m ago`;
+                } else if (hours < 24) {
+                    return `${hours}h ago`;
+                } else {
+                    return date.toLocaleDateString();
+                }
+            }
+
+            function handleLongMessage(messageElement) {
+                // Check if message content is too long
+                const contentHeight = messageElement.scrollHeight;
+                const visibleHeight = messageElement.clientHeight;
+                
+                if (contentHeight > visibleHeight) {
+                    messageElement.classList.add('long-message');
+                    
+                    // Add click handler to expand/collapse
+                    messageElement.addEventListener('click', function() {
+                        if (messageElement.style.maxHeight === 'none') {
+                            messageElement.style.maxHeight = '500px';
+                            messageElement.classList.add('long-message');
+                        } else {
+                            messageElement.style.maxHeight = 'none';
+                            messageElement.classList.remove('long-message');
+                        }
+                    });
+                }
+            }
+
             function formatMessage(text) {
                 // Convert numbered lists to HTML
                 text = text.replace(/^(\d+\.\s\*\*)(.+?)(\*\*)/gm, '<strong>$1$2</strong>');
@@ -921,14 +1124,24 @@ async def get_home():
                     const messageWrapper = document.createElement('div');
                     messageWrapper.className = 'message user';
                     
-                    const avatar = document.createElement('div');
-                    avatar.className = 'message-avatar';
-                    avatar.textContent = 'You';
-                    
                     const messageContent = document.createElement('div');
                     messageContent.className = 'message-content';
                     messageContent.textContent = message;
                     
+                    // Add timestamp to user message
+                    const timestamp = document.createElement('div');
+                    timestamp.className = 'message-timestamp';
+                    timestamp.textContent = formatTimestamp(new Date());
+                    messageContent.appendChild(timestamp);
+                    
+                    // Check if message is too long
+                    setTimeout(() => handleLongMessage(messageContent), 100);
+                    
+                    const avatar = document.createElement('div');
+                    avatar.className = 'message-avatar';
+                    avatar.textContent = 'You';
+                    
+                    // User: content first, then avatar (avatar on right)
                     messageWrapper.appendChild(messageContent);
                     messageWrapper.appendChild(avatar);
                     chatContainer.appendChild(messageWrapper);
@@ -939,6 +1152,9 @@ async def get_home():
                         content: message,
                         user_id: userId
                     }));
+                    
+                    // Show typing indicator
+                    showTypingIndicator();
                     
                     input.value = '';
                     input.style.height = 'auto';
