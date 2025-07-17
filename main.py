@@ -52,246 +52,731 @@ async def get_home():
     """Serve the main HTML page"""
     return HTMLResponse(content=r"""
     <!DOCTYPE html>
-    <html>
+    <html lang="en" data-theme="light">
     <head>
-        <title>Book Writer Agent</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>BooksWriter AI</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <style>
+            :root {
+                /* Light theme colors (inspired by OpenAI) */
+                --bg-primary: #ffffff;
+                --bg-secondary: #f7f7f8;
+                --bg-tertiary: #ececf1;
+                --text-primary: #0d0d0d;
+                --text-secondary: #676767;
+                --text-tertiary: #8e8ea0;
+                --border: #e6e6ea;
+                --accent: #10a37f;
+                --accent-hover: #0d8765;
+                --accent-light: #10a37f10;
+                --chat-user: #10a37f;
+                --chat-assistant: #f7f7f8;
+                --shadow: rgba(0, 0, 0, 0.05);
+                --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            }
+
+            [data-theme="dark"] {
+                /* Dark theme colors */
+                --bg-primary: #0d1117;
+                --bg-secondary: #161b22;
+                --bg-tertiary: #21262d;
+                --text-primary: #f0f6fc;
+                --text-secondary: #9198a1;
+                --text-tertiary: #656d76;
+                --border: #30363d;
+                --accent: #10a37f;
+                --accent-hover: #0d8765;
+                --accent-light: #10a37f20;
+                --chat-user: #10a37f;
+                --chat-assistant: #161b22;
+                --shadow: rgba(0, 0, 0, 0.3);
+                --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            }
+
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
             body {
-                font-family: Arial, sans-serif;
-                max-width: 800px;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                background: var(--bg-secondary);
+                color: var(--text-primary);
+                line-height: 1.6;
+                transition: all 0.3s ease;
+            }
+
+            .header {
+                background: var(--bg-primary);
+                border-bottom: 1px solid var(--border);
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                backdrop-filter: blur(20px);
+                background: var(--bg-primary)f0;
+            }
+
+            .header-content {
+                max-width: 1200px;
                 margin: 0 auto;
-                padding: 20px;
-                background-color: #f5f5f5;
-            }
-            .container {
-                background-color: white;
-                padding: 20px;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            }
-            .chat-container {
-                height: 400px;
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                overflow-y: auto;
-                padding: 10px;
-                margin-bottom: 20px;
-                background-color: #fafafa;
-            }
-            .message {
-                margin-bottom: 10px;
-                padding: 8px;
-                border-radius: 5px;
-            }
-            .user-message {
-                background-color: #007bff;
-                color: white;
-                margin-left: 20%;
-            }
-            .agent-message {
-                background-color: #e9ecef;
-                color: #333;
-                margin-right: 20%;
-            }
-            .input-container {
+                padding: 1rem 2rem;
                 display: flex;
-                gap: 10px;
+                align-items: center;
+                justify-content: space-between;
             }
-            .input-container input {
-                flex: 1;
-                padding: 10px;
-                border: 1px solid #ddd;
-                border-radius: 5px;
+
+            .logo {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                font-weight: 700;
+                font-size: 1.25rem;
+                color: var(--text-primary);
+                text-decoration: none;
             }
-            .input-container button {
-                padding: 10px 20px;
-                background-color: #007bff;
+
+            .logo-icon {
+                width: 32px;
+                height: 32px;
+                background: var(--gradient);
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
                 color: white;
+                font-weight: bold;
+            }
+
+            .nav-actions {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .theme-toggle {
+                background: none;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 0.5rem;
+                color: var(--text-primary);
+                cursor: pointer;
+                transition: all 0.2s ease;
+                width: 40px;
+                height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .theme-toggle:hover {
+                background: var(--bg-tertiary);
+            }
+
+            .nav-link {
+                background: var(--accent);
+                color: white;
+                padding: 0.5rem 1rem;
+                text-decoration: none;
+                border-radius: 8px;
+                font-weight: 500;
+                transition: all 0.2s ease;
                 border: none;
-                border-radius: 5px;
                 cursor: pointer;
             }
-            .input-container button:hover {
-                background-color: #0056b3;
+
+            .nav-link:hover {
+                background: var(--accent-hover);
+                transform: translateY(-1px);
             }
-            .status {
-                margin-top: 10px;
-                padding: 5px;
-                border-radius: 3px;
-                font-size: 12px;
+
+            .nav-link.secondary {
+                background: var(--bg-tertiary);
+                color: var(--text-primary);
             }
-            .status.connected {
-                background-color: #d4edda;
-                color: #155724;
+
+            .nav-link.secondary:hover {
+                background: var(--border);
             }
-            .status.disconnected {
-                background-color: #f8d7da;
-                color: #721c24;
+
+            .main-container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 2rem;
+                display: grid;
+                grid-template-columns: 1fr 2fr;
+                gap: 2rem;
+                min-height: calc(100vh - 80px);
             }
-            .typing {
-                font-style: italic;
-                color: #666;
+            .sidebar {
+                background: var(--bg-primary);
+                border-radius: 12px;
+                padding: 1.5rem;
+                height: fit-content;
+                border: 1px solid var(--border);
+                box-shadow: 0 4px 6px var(--shadow);
             }
+
+            .sidebar-section {
+                margin-bottom: 2rem;
+            }
+
+            .sidebar-section:last-child {
+                margin-bottom: 0;
+            }
+
+            .section-title {
+                font-size: 0.875rem;
+                font-weight: 600;
+                color: var(--text-secondary);
+                margin-bottom: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+
             .model-selector {
-                margin-bottom: 20px;
-                padding: 10px;
-                background-color: #f8f9fa;
-                border-radius: 5px;
-                border: 1px solid #dee2e6;
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
             }
-            .model-selector label {
-                font-weight: bold;
-                margin-right: 10px;
-            }
+
             .model-selector select {
-                padding: 5px;
-                border-radius: 3px;
-                border: 1px solid #ccc;
-                margin-right: 10px;
+                background: var(--bg-secondary);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 0.75rem;
+                color: var(--text-primary);
+                font-size: 0.875rem;
+                transition: all 0.2s ease;
             }
-            .model-selector span {
-                font-size: 12px;
-                color: #666;
+
+            .model-selector select:focus {
+                outline: none;
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px var(--accent-light);
+            }
+
+            .model-info {
+                font-size: 0.75rem;
+                color: var(--text-tertiary);
+                line-height: 1.4;
+            }
+
+            .parameters-section {
+                background: var(--bg-secondary);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                overflow: hidden;
+            }
+
+            .parameters-header {
+                padding: 1rem 1.5rem;
+                background: var(--bg-primary);
+                border-bottom: 1px solid var(--border);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            .parameters-title {
+                font-weight: 600;
+                color: var(--text-primary);
+                margin: 0;
+            }
+
+            .toggle-btn {
+                background: none;
+                border: none;
+                color: var(--text-secondary);
+                cursor: pointer;
+                font-size: 1.25rem;
+                transition: transform 0.2s ease;
+            }
+
+            .toggle-btn:hover {
+                color: var(--text-primary);
+            }
+
+            .toggle-btn.expanded {
+                transform: rotate(180deg);
+            }
+
+            .parameters-content {
+                padding: 1.5rem;
+            }
+
+            .param-group {
+                margin-bottom: 1.5rem;
+            }
+
+            .param-label {
+                display: block;
+                font-weight: 500;
+                color: var(--text-primary);
+                margin-bottom: 0.5rem;
+                font-size: 0.875rem;
+            }
+
+            .param-select {
+                width: 100%;
+                background: var(--bg-primary);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 0.75rem;
+                color: var(--text-primary);
+                font-size: 0.875rem;
+                transition: all 0.2s ease;
+            }
+
+            .param-select:focus {
+                outline: none;
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px var(--accent-light);
+            }
+
+            .param-select:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            .chat-main {
+                background: var(--bg-primary);
+                border-radius: 12px;
+                border: 1px solid var(--border);
+                display: flex;
+                flex-direction: column;
+                height: calc(100vh - 140px);
+                box-shadow: 0 4px 6px var(--shadow);
+            }
+
+            .chat-header {
+                padding: 1rem 1.5rem;
+                border-bottom: 1px solid var(--border);
+                background: var(--bg-primary);
+                border-radius: 12px 12px 0 0;
+            }
+
+            .chat-title {
+                font-size: 1.125rem;
+                font-weight: 600;
+                color: var(--text-primary);
+                margin: 0;
+            }
+
+            .chat-subtitle {
+                font-size: 0.875rem;
+                color: var(--text-secondary);
+                margin: 0.25rem 0 0 0;
+            }
+
+            .chat-messages {
+                flex: 1;
+                overflow-y: auto;
+                padding: 1rem;
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .message {
+                display: flex;
+                gap: 1rem;
+                max-width: 100%;
+            }
+
+            .message.user {
+                justify-content: flex-end;
+            }
+
+            .message-content {
+                max-width: 80%;
+                padding: 1rem 1.25rem;
+                border-radius: 12px;
+                font-size: 0.95rem;
+                line-height: 1.5;
+                word-wrap: break-word;
+            }
+
+            .message.user .message-content {
+                background: var(--chat-user);
+                color: white;
+                border-bottom-right-radius: 4px;
+            }
+
+            .message.assistant .message-content {
+                background: var(--chat-assistant);
+                color: var(--text-primary);
+                border: 1px solid var(--border);
+                border-bottom-left-radius: 4px;
+            }
+
+            .message-avatar {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 600;
+                font-size: 0.875rem;
+                flex-shrink: 0;
+            }
+
+            .message.user .message-avatar {
+                background: var(--chat-user);
+                color: white;
+            }
+
+            .message.assistant .message-avatar {
+                background: var(--gradient);
+                color: white;
+            }
+
+            .chat-input-container {
+                padding: 1rem 1.5rem;
+                border-top: 1px solid var(--border);
+                background: var(--bg-primary);
+                border-radius: 0 0 12px 12px;
+            }
+
+            .chat-input {
+                display: flex;
+                gap: 0.75rem;
+                align-items: flex-end;
+            }
+
+            .input-field {
+                flex: 1;
+                background: var(--bg-secondary);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                padding: 0.75rem 1rem;
+                color: var(--text-primary);
+                font-size: 0.95rem;
+                resize: none;
+                min-height: 44px;
+                max-height: 120px;
+                transition: all 0.2s ease;
+            }
+
+            .input-field:focus {
+                outline: none;
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px var(--accent-light);
+            }
+
+            .send-btn {
+                background: var(--accent);
+                color: white;
+                border: none;
+                border-radius: 12px;
+                padding: 0.75rem 1.5rem;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .send-btn:hover:not(:disabled) {
+                background: var(--accent-hover);
+                transform: translateY(-1px);
+            }
+
+            .send-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            .status-bar {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                margin-top: 0.5rem;
+                padding: 0.5rem 0;
+            }
+
+            .status-indicator {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                flex-shrink: 0;
+            }
+
+            .status-indicator.connected {
+                background: #10a37f;
+            }
+
+            .status-indicator.disconnected {
+                background: #ef4444;
+            }
+
+            .status-text {
+                font-size: 0.75rem;
+                color: var(--text-tertiary);
+            }
+
+            .typing-indicator {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 1rem 1.25rem;
+                color: var(--text-secondary);
+                font-style: italic;
+                font-size: 0.875rem;
+            }
+
+            .typing-dots {
+                display: flex;
+                gap: 2px;
+            }
+
+            .typing-dots span {
+                width: 4px;
+                height: 4px;
+                background: var(--text-tertiary);
+                border-radius: 50%;
+                animation: typing 1.4s infinite;
+            }
+
+            .typing-dots span:nth-child(2) {
+                animation-delay: 0.2s;
+            }
+
+            .typing-dots span:nth-child(3) {
+                animation-delay: 0.4s;
+            }
+
+            @keyframes typing {
+                0%, 60%, 100% {
+                    transform: translateY(0);
+                    opacity: 0.4;
+                }
+                30% {
+                    transform: translateY(-10px);
+                    opacity: 1;
+                }
+            }
+
+            .structured-response {
+                background: var(--bg-secondary) !important;
+                border: 2px solid var(--accent) !important;
+                border-radius: 12px !important;
+                margin: 1rem 0;
+            }
+
+            .structured-response h4 {
+                color: var(--accent);
+                margin-bottom: 1rem;
+                font-size: 0.875rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+
+            .structured-response pre {
+                background: var(--bg-primary);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 1rem;
+                overflow-x: auto;
+                font-size: 0.8rem;
+                color: var(--text-primary);
+            }
+
+            @media (max-width: 768px) {
+                .main-container {
+                    grid-template-columns: 1fr;
+                    gap: 1rem;
+                    padding: 1rem;
+                }
+
+                .header-content {
+                    padding: 1rem;
+                }
+
+                .chat-main {
+                    height: calc(100vh - 200px);
+                }
+
+                .nav-actions {
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
             }
         </style>
     </head>
     <body>
-        <div class="container">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <div>
-                    <h1>📚 Multi-Agent Book Writer System</h1>
-                    <p>Advanced AI system with orchestrator, plot generator, and author generator agents.</p>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <a href="/admin" style="background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">[ADMIN]</a>
-                    <a href="/library" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">📖 View Library</a>
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <a href="/" class="logo">
+                    <div class="logo-icon">AI</div>
+                    BooksWriter AI
+                </a>
+                <div class="nav-actions">
+                    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                        <span id="theme-icon">🌙</span>
+                    </button>
+                    <a href="/admin" class="nav-link secondary">Admin</a>
+                    <a href="/library" class="nav-link">View Library</a>
                 </div>
             </div>
-            
-            <div class="model-selector">
-                <label for="modelSelect">AI Model:</label>
-                <select id="modelSelect" onchange="switchModel()">
-                    <option value="">Loading models...</option>
-                </select>
-                <span id="modelInfo"></span>
-            </div>
-            
-            <!-- Content Parameters Selection -->
-            <div class="parameters-section" style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #dee2e6;">
-                <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 10px;">
-                    <h3 style="margin: 0; color: #495057;">[PARAMS] Content Parameters</h3>
-                    <button id="toggleParams" onclick="toggleParameters()" style="background: none; border: none; font-size: 18px; cursor: pointer;">▼</button>
-                </div>
-                
-                <div id="parametersContent" style="display: none;">
-                    <!-- Quick Selection Presets -->
-                    <div style="margin-bottom: 20px; padding: 15px; background-color: #e8f4f8; border-radius: 8px; border-left: 4px solid #007bff;">
-                        <h4 style="margin: 0 0 10px 0; color: #007bff;">📚 Complete Genre Package Selection</h4>
-                        <p style="margin: 0; font-size: 14px; color: #495057;">Select a complete genre package below, or choose individual components in the detailed section.</p>
-                        <div style="margin-top: 10px;">
-                            <select id="completePackageSelect" onchange="selectCompletePackage()" style="width: 100%; padding: 8px; border: 1px solid #007bff; border-radius: 4px;">
-                                <option value="">Choose a Complete Genre Package...</option>
-                            </select>
-                        </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-container">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <!-- Model Selection -->
+                <div class="sidebar-section">
+                    <h3 class="section-title">AI Model</h3>
+                    <div class="model-selector">
+                        <select id="modelSelect" onchange="switchModel()">
+                            <option value="">Loading models...</option>
+                        </select>
+                        <div class="model-info" id="modelInfo">Select a model to get started</div>
                     </div>
-                    
-                    <!-- Detailed Component Selection -->
-                    <div style="border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; background-color: #fafafa;">
-                        <h4 style="margin: 0 0 15px 0; color: #6c757d;">[CONFIG] Detailed Component Selection</h4>
-                        
-                        <!-- Genre Hierarchy Section -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                            <div>
-                                <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Genre</label>
-                                <select id="genreSelect" onchange="onGenreChange()">
+                </div>
+
+                <!-- Content Parameters -->
+                <div class="sidebar-section">
+                    <div class="parameters-section">
+                        <div class="parameters-header">
+                            <h3 class="parameters-title">Content Parameters</h3>
+                            <button class="toggle-btn" id="toggleParams" onclick="toggleParameters()">
+                                ▼
+                            </button>
+                        </div>
+                        <div class="parameters-content" id="parametersContent" style="display: none;">
+                            <!-- Genre Hierarchy -->
+                            <div class="param-group">
+                                <label class="param-label">Genre</label>
+                                <select class="param-select" id="genreSelect" onchange="onGenreChange()">
                                     <option value="">Select Genre...</option>
                                 </select>
                             </div>
-                            <div>
-                                <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Subgenre</label>
-                                <select id="subgenreSelect" onchange="onSubgenreChange()" disabled>
+                            
+                            <div class="param-group">
+                                <label class="param-label">Subgenre</label>
+                                <select class="param-select" id="subgenreSelect" onchange="onSubgenreChange()" disabled>
                                     <option value="">Select Subgenre...</option>
                                 </select>
                             </div>
-                            <div>
-                                <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Microgenre</label>
-                                <select id="microgenreSelect" onchange="onMicrogenreChange()" disabled>
+                            
+                            <div class="param-group">
+                                <label class="param-label">Microgenre</label>
+                                <select class="param-select" id="microgenreSelect" onchange="onMicrogenreChange()" disabled>
                                     <option value="">Select Microgenre...</option>
                                 </select>
                             </div>
-                        </div>
-                        
-                        <!-- Tropes and Tones Section -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                            <div>
-                                <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Trope</label>
-                                <select id="tropeSelect" onchange="onTropeChange()" disabled>
+                            
+                            <div class="param-group">
+                                <label class="param-label">Trope</label>
+                                <select class="param-select" id="tropeSelect" onchange="onTropeChange()" disabled>
                                     <option value="">Select Trope...</option>
                                 </select>
                             </div>
-                            <div>
-                                <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Tone</label>
-                                <select id="toneSelect" onchange="updateContext()" disabled>
+                            
+                            <div class="param-group">
+                                <label class="param-label">Tone</label>
+                                <select class="param-select" id="toneSelect" onchange="updateContext()" disabled>
                                     <option value="">Select Tone...</option>
                                 </select>
                             </div>
-                            <div>
-                                <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Target Audience</label>
-                                <select id="audienceSelect" onchange="updateContext()">
+                            
+                            <div class="param-group">
+                                <label class="param-label">Target Audience</label>
+                                <select class="param-select" id="audienceSelect" onchange="updateContext()">
                                     <option value="">Select Audience...</option>
                                 </select>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Content Selection Section -->
-                    <div style="margin-bottom: 15px;">
-                        <h4 style="margin: 0 0 15px 0; color: #6c757d;">🔄 Content Selection (For Improvement)</h4>
-                        <div style="display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: end;">
-                            <div>
-                                <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #6c757d;">Select Content to Improve</label>
-                                <select id="contentSelect" onchange="onContentChange()">
+                            
+                            <div class="param-group">
+                                <label class="param-label">Content to Improve</label>
+                                <select class="param-select" id="contentSelect" onchange="onContentChange()">
                                     <option value="">Select Content...</option>
                                 </select>
                             </div>
-                            <div>
-                                <button onclick="refreshContent()" style="padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">🔄 Refresh</button>
+                            
+                            <div id="selectedParams" style="padding: 0.75rem; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; font-size: 0.75rem; color: var(--text-tertiary);">
+                                No parameters selected. Use "specified genres and audience params" in your message.
                             </div>
                         </div>
                     </div>
-                    
-                    <div id="selectedParams" style="margin-bottom: 10px; padding: 10px; background-color: white; border-radius: 5px; border: 1px solid #ddd; min-height: 20px;">
-                        <em style="color: #6c757d;">No parameters selected. Use "specified genres and audience params" in your message to include selected parameters.</em>
+                </div>
+            </aside>
+
+            <!-- Chat Interface -->
+            <section class="chat-main">
+                <div class="chat-header">
+                    <h1 class="chat-title">Multi-Agent Book Writer</h1>
+                    <p class="chat-subtitle">Advanced AI system with orchestrator, plot generator, and author generator agents</p>
+                </div>
+                
+                <div class="chat-messages" id="chat">
+                    <!-- Messages will be added here dynamically -->
+                </div>
+                
+                <div class="chat-input-container">
+                    <div class="chat-input">
+                        <textarea 
+                            class="input-field" 
+                            id="messageInput" 
+                            placeholder="Try: 'Create a plot and author based on the specified genres and audience params' or describe what you want!"
+                            rows="1"
+                        ></textarea>
+                        <button class="send-btn" onclick="sendMessage()" id="sendButton">
+                            <span>Send</span>
+                            <span>→</span>
+                        </button>
                     </div>
-                    
-                    <div style="font-size: 12px; color: #6c757d;">
-                        💡 <strong>Tip:</strong> Select parameters above, then use phrases like "Create a plot based on the specified genres and audience params" in your messages. The system supports hierarchical genre selection (Genre → Subgenre → Microgenre) plus tropes, tones, and target audiences.
+                    <div class="status-bar">
+                        <div class="status-indicator disconnected" id="statusIndicator"></div>
+                        <span class="status-text" id="statusText">Disconnected</span>
                     </div>
                 </div>
-            </div>
-            
-            <div class="chat-container" id="chat"></div>
-            
-            <div class="input-container">
-                <input type="text" id="messageInput" placeholder="Try: 'Create a plot and author based on the specified genres and audience params' or just describe what you want!" />
-                <button onclick="sendMessage()">Send</button>
-            </div>
-            
-            <div class="status disconnected" id="status">Disconnected</div>
-        </div>
+            </section>
+        </main>
 
         <script>
             let ws = null;
             let sessionId = null;
             let userId = "user_" + Math.random().toString(36).substr(2, 9);
             
+            // Theme management
+            function toggleTheme() {
+                const html = document.documentElement;
+                const currentTheme = html.getAttribute('data-theme');
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                
+                html.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                
+                // Update theme icon
+                const themeIcon = document.getElementById('theme-icon');
+                themeIcon.textContent = newTheme === 'light' ? '🌙' : '☀️';
+            }
+
+            // Initialize theme
+            function initializeTheme() {
+                const savedTheme = localStorage.getItem('theme') || 'light';
+                document.documentElement.setAttribute('data-theme', savedTheme);
+                
+                const themeIcon = document.getElementById('theme-icon');
+                themeIcon.textContent = savedTheme === 'light' ? '🌙' : '☀️';
+            }
+
             function connect() {
                 sessionId = "session_" + Math.random().toString(36).substr(2, 9);
                 ws = new WebSocket(`ws://localhost:8000/ws/${sessionId}`);
                 
                 ws.onopen = function(event) {
-                    document.getElementById('status').textContent = 'Connected';
-                    document.getElementById('status').className = 'status connected';
+                    updateStatus('connected');
                 };
                 
                 ws.onmessage = function(event) {
@@ -300,13 +785,32 @@ async def get_home():
                 };
                 
                 ws.onclose = function(event) {
-                    document.getElementById('status').textContent = 'Disconnected';
-                    document.getElementById('status').className = 'status disconnected';
+                    updateStatus('disconnected');
                 };
                 
                 ws.onerror = function(event) {
                     console.error('WebSocket error:', event);
+                    updateStatus('error');
                 };
+            }
+
+            function updateStatus(status) {
+                const indicator = document.getElementById('statusIndicator');
+                const text = document.getElementById('statusText');
+                
+                indicator.className = `status-indicator ${status}`;
+                
+                switch(status) {
+                    case 'connected':
+                        text.textContent = 'Connected';
+                        break;
+                    case 'disconnected':
+                        text.textContent = 'Disconnected';
+                        break;
+                    case 'error':
+                        text.textContent = 'Connection Error';
+                        break;
+                }
             }
             
             function handleMessage(data) {
@@ -315,42 +819,49 @@ async def get_home():
                 if (data.type === 'stream_chunk') {
                     let currentMessage = document.getElementById('current-agent-message');
                     if (!currentMessage) {
+                        const messageWrapper = document.createElement('div');
+                        messageWrapper.className = 'message assistant';
+                        
+                        const avatar = document.createElement('div');
+                        avatar.className = 'message-avatar';
+                        avatar.textContent = 'AI';
+                        
                         currentMessage = document.createElement('div');
-                        currentMessage.className = 'message agent-message';
+                        currentMessage.className = 'message-content';
                         currentMessage.id = 'current-agent-message';
                         currentMessage.style.whiteSpace = 'pre-wrap';
-                        chatContainer.appendChild(currentMessage);
+                        
+                        messageWrapper.appendChild(avatar);
+                        messageWrapper.appendChild(currentMessage);
+                        chatContainer.appendChild(messageWrapper);
                     }
                     currentMessage.textContent += data.content;
                     chatContainer.scrollTop = chatContainer.scrollHeight;
                 } else if (data.type === 'structured_response') {
-                    // Handle structured JSON responses
+                    // Handle structured JSON responses  
+                    const messageWrapper = document.createElement('div');
+                    messageWrapper.className = 'message assistant';
+                    
+                    const avatar = document.createElement('div');
+                    avatar.className = 'message-avatar';
+                    avatar.textContent = 'AI';
+                    
                     const structuredMessage = document.createElement('div');
-                    structuredMessage.className = 'message agent-message structured-response';
-                    structuredMessage.style.border = '2px solid #007bff';
-                    structuredMessage.style.borderRadius = '8px';
-                    structuredMessage.style.padding = '15px';
-                    structuredMessage.style.backgroundColor = '#f8f9fa';
+                    structuredMessage.className = 'message-content structured-response';
                     
                     // Add agent name header
                     const agentHeader = document.createElement('h4');
                     agentHeader.textContent = `[DATA] ${data.agent.replace('_', ' ').toUpperCase()} - Structured Response`;
-                    agentHeader.style.color = '#007bff';
-                    agentHeader.style.marginBottom = '10px';
                     structuredMessage.appendChild(agentHeader);
                     
                     // Add JSON data as formatted text
                     const jsonContent = document.createElement('pre');
-                    jsonContent.style.backgroundColor = '#ffffff';
-                    jsonContent.style.border = '1px solid #ddd';
-                    jsonContent.style.borderRadius = '4px';
-                    jsonContent.style.padding = '10px';
-                    jsonContent.style.overflow = 'auto';
-                    jsonContent.style.fontSize = '12px';
                     jsonContent.textContent = JSON.stringify(data.json_data, null, 2);
                     structuredMessage.appendChild(jsonContent);
                     
-                    chatContainer.appendChild(structuredMessage);
+                    messageWrapper.appendChild(avatar);
+                    messageWrapper.appendChild(structuredMessage);
+                    chatContainer.appendChild(messageWrapper);
                     chatContainer.scrollTop = chatContainer.scrollHeight;
                 } else if (data.type === 'stream_end') {
                     const currentMessage = document.getElementById('current-agent-message');
@@ -365,12 +876,23 @@ async def get_home():
                         console.log('Structured responses received:', data.structured_responses);
                     }
                 } else if (data.type === 'error') {
+                    const messageWrapper = document.createElement('div');
+                    messageWrapper.className = 'message assistant';
+                    
+                    const avatar = document.createElement('div');
+                    avatar.className = 'message-avatar';
+                    avatar.textContent = '⚠️';
+                    
                     const errorMessage = document.createElement('div');
-                    errorMessage.className = 'message agent-message';
+                    errorMessage.className = 'message-content';
                     errorMessage.textContent = 'Error: ' + data.content;
-                    errorMessage.style.backgroundColor = '#f8d7da';
-                    errorMessage.style.color = '#721c24';
-                    chatContainer.appendChild(errorMessage);
+                    errorMessage.style.backgroundColor = 'var(--bg-tertiary)';
+                    errorMessage.style.color = '#ef4444';
+                    errorMessage.style.border = '1px solid #ef4444';
+                    
+                    messageWrapper.appendChild(avatar);
+                    messageWrapper.appendChild(errorMessage);
+                    chatContainer.appendChild(messageWrapper);
                     chatContainer.scrollTop = chatContainer.scrollHeight;
                 }
             }
@@ -396,10 +918,20 @@ async def get_home():
                 if (message && ws && ws.readyState === WebSocket.OPEN) {
                     // Display user message
                     const chatContainer = document.getElementById('chat');
-                    const userMessage = document.createElement('div');
-                    userMessage.className = 'message user-message';
-                    userMessage.textContent = message;
-                    chatContainer.appendChild(userMessage);
+                    const messageWrapper = document.createElement('div');
+                    messageWrapper.className = 'message user';
+                    
+                    const avatar = document.createElement('div');
+                    avatar.className = 'message-avatar';
+                    avatar.textContent = 'You';
+                    
+                    const messageContent = document.createElement('div');
+                    messageContent.className = 'message-content';
+                    messageContent.textContent = message;
+                    
+                    messageWrapper.appendChild(messageContent);
+                    messageWrapper.appendChild(avatar);
+                    chatContainer.appendChild(messageWrapper);
                     
                     // Send to server
                     ws.send(JSON.stringify({
@@ -409,15 +941,28 @@ async def get_home():
                     }));
                     
                     input.value = '';
+                    input.style.height = 'auto';
                     chatContainer.scrollTop = chatContainer.scrollHeight;
                 }
             }
             
-            // Enter key support
-            document.getElementById('messageInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
+            // Auto-resize textarea
+            function autoResize(textarea) {
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+            }
+            
+            // Enter key support (with Shift+Enter for new lines)
+            document.getElementById('messageInput').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
                     sendMessage();
                 }
+            });
+            
+            // Auto-resize textarea on input
+            document.getElementById('messageInput').addEventListener('input', function(e) {
+                autoResize(e.target);
             });
             
             // Model management functions
@@ -484,9 +1029,11 @@ async def get_home():
                 if (content.style.display === 'none') {
                     content.style.display = 'block';
                     button.textContent = '▲';
+                    button.classList.add('expanded');
                 } else {
                     content.style.display = 'none';
                     button.textContent = '▼';
+                    button.classList.remove('expanded');
                 }
             }
             
@@ -1024,6 +1571,7 @@ async def get_home():
 
             // Connect on page load
             window.onload = function() {
+                initializeTheme();
                 connect();
                 loadModels();
                 loadParameters();
@@ -1053,7 +1601,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             if message_type == "message":
                 try:
                     # Process through multi-agent system
-                    result = await multi_agent_system.process_request(content, session_id, user_id)
+                    result = await multi_agent_system.process_message(content, user_id, session_id)
                     
                     if result["success"]:
                         # Stream responses from all agents
