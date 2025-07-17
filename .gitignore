@@ -105,3 +105,14 @@ kill*
 start_*
 supabase/
 package*.json
+
+# Security - Service account keys and secrets
+service-account-key.json
+*service-account*.json
+*.pem
+*.key
+*.crt
+.env.local
+.env.production
+secrets/
+credentials/
