@@ -163,6 +163,66 @@ class SupabaseService:
             print(f"Error saving author: {e}")
             raise
     
+    async def save_world_building(self, session_id: str, user_id: str, world_data: Dict[str, Any], orchestrator_params: Dict[str, Any] = None, plot_id: str = None) -> Dict[str, Any]:
+        """Save world building to database"""
+        try:
+            # Get user and session UUIDs
+            user_data = await self.create_or_get_user(user_id)
+            session_data = await self.create_session(session_id, user_id)
+            
+            world_record = {
+                "session_id": session_data["id"],
+                "user_id": user_data["id"],
+                "plot_id": plot_id,  # Foreign key to plots table
+                "world_name": world_data.get("world_name"),
+                "world_type": world_data.get("world_type"),
+                "overview": world_data.get("overview"),
+                "geography": world_data.get("geography"),
+                "political_landscape": world_data.get("political_landscape"),
+                "cultural_systems": world_data.get("cultural_systems"),
+                "economic_framework": world_data.get("economic_framework"),
+                "historical_timeline": world_data.get("historical_timeline"),
+                "power_systems": world_data.get("power_systems"),
+                "languages_and_communication": world_data.get("languages_and_communication"),
+                "religious_and_belief_systems": world_data.get("religious_and_belief_systems"),
+                "unique_elements": world_data.get("unique_elements"),
+                "created_at": datetime.utcnow().isoformat()
+            }
+            
+            response = self.client.table("world_building").insert(world_record).execute()
+            return response.data[0]
+            
+        except Exception as e:
+            print(f"Error saving world building: {e}")
+            raise
+    
+    async def save_characters(self, session_id: str, user_id: str, characters_data: Dict[str, Any], orchestrator_params: Dict[str, Any] = None, world_id: str = None, plot_id: str = None) -> Dict[str, Any]:
+        """Save characters to database"""
+        try:
+            # Get user and session UUIDs
+            user_data = await self.create_or_get_user(user_id)
+            session_data = await self.create_session(session_id, user_id)
+            
+            characters_record = {
+                "session_id": session_data["id"],
+                "user_id": user_data["id"],
+                "world_id": world_id,  # Foreign key to world_building table
+                "plot_id": plot_id,  # Foreign key to plots table
+                "character_count": characters_data.get("character_count"),
+                "world_context_integration": characters_data.get("world_context_integration"),
+                "characters": characters_data.get("characters"),
+                "relationship_networks": characters_data.get("relationship_networks"),
+                "character_dynamics": characters_data.get("character_dynamics"),
+                "created_at": datetime.utcnow().isoformat()
+            }
+            
+            response = self.client.table("characters").insert(characters_record).execute()
+            return response.data[0]
+            
+        except Exception as e:
+            print(f"Error saving characters: {e}")
+            raise
+    
     async def get_user_plots(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
         """Get all plots for a user"""
         try:
@@ -185,6 +245,60 @@ class SupabaseService:
             
         except Exception as e:
             print(f"Error getting user authors: {e}")
+            raise
+    
+    async def get_user_world_building(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get all world building for a user"""
+        try:
+            user_data = await self.create_or_get_user(user_id)
+            
+            response = self.client.table("world_building").select("*").eq("user_id", user_data["id"]).order("created_at", desc=True).limit(limit).execute()
+            return response.data
+            
+        except Exception as e:
+            print(f"Error getting user world building: {e}")
+            raise
+    
+    async def get_user_characters(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get all characters for a user"""
+        try:
+            user_data = await self.create_or_get_user(user_id)
+            
+            response = self.client.table("characters").select("*").eq("user_id", user_data["id"]).order("created_at", desc=True).limit(limit).execute()
+            return response.data
+            
+        except Exception as e:
+            print(f"Error getting user characters: {e}")
+            raise
+    
+    async def get_plot_by_id(self, plot_id: str) -> Dict[str, Any]:
+        """Get plot by ID"""
+        try:
+            response = self.client.table("plots").select("*").eq("id", plot_id).execute()
+            return response.data[0] if response.data else None
+            
+        except Exception as e:
+            print(f"Error getting plot by ID: {e}")
+            return None
+    
+    async def get_world_building_by_id(self, world_id: str) -> Dict[str, Any]:
+        """Get world building by ID"""
+        try:
+            response = self.client.table("world_building").select("*").eq("id", world_id).execute()
+            return response.data[0] if response.data else None
+            
+        except Exception as e:
+            print(f"Error getting world building by ID: {e}")
+            return None
+    
+    async def get_characters_by_world_id(self, world_id: str) -> List[Dict[str, Any]]:
+        """Get all characters for a specific world"""
+        try:
+            response = self.client.table("characters").select("*").eq("world_id", world_id).order("created_at", desc=True).execute()
+            return response.data
+            
+        except Exception as e:
+            print(f"Error getting characters by world ID: {e}")
             raise
     
     async def get_session_data(self, session_id: str) -> Dict[str, Any]:

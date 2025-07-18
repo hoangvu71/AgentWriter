@@ -8,7 +8,7 @@ import psycopg2
 from dotenv import load_dotenv
 import json
 
-load_dotenv()
+load_dotenv('../../config/.env')
 
 def verify_migration():
     """Verify the data migration worked correctly"""

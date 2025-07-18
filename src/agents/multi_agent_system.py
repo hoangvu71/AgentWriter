@@ -59,6 +59,8 @@ class AgentType(Enum):
     ORCHESTRATOR = "orchestrator"
     PLOT_GENERATOR = "plot_generator"
     AUTHOR_GENERATOR = "author_generator"
+    WORLD_BUILDING = "world_building"
+    CHARACTERS = "characters"
     CRITIQUE = "critique"
     ENHANCEMENT = "enhancement"
     SCORING = "scoring"
@@ -85,27 +87,38 @@ class MultiAgentSystem:
             instruction="""You are the Orchestrator Agent in a multi-agent book writing system.
 
 Your responsibilities:
-1. ROUTE user requests to appropriate agents (plot_generator, author_generator, critique)
+1. ROUTE user requests to appropriate agents (plot_generator, author_generator, world_building, characters, critique)
 2. COORDINATE sequential workflows
 3. ANALYZE user intent and determine which agents to invoke
 4. MANAGE communication between agents
 5. COMPILE final responses from multiple agents
+6. EXTRACT selected content from message context (look for CONTENT_ID, CONTENT_TYPE, CONTENT_TITLE)
 
 Routing Logic:
 - If user mentions plot, story, genre, trope → route to plot_generator
-- If user mentions author, biography, voice, style → route to author_generator  
+- If user mentions author, biography, voice, style → route to author_generator
+- If user mentions world, setting, geography, culture, politics, history → route to plot_then_world_building
+- If user mentions characters, people, personalities, NPCs → route to plot_then_world_building_then_characters
 - If user requests critique, review, feedback, analysis → route to critique
-- If user requests improve/enhancement/iterate/refine WITH plot_id/author_id → route to iterative_improvement
+- If user requests improve/enhancement/iterate/refine WITH content_id → route to iterative_improvement
 - If user requests improve WITHOUT specific content → ask for selection
-- If user requests both → coordinate sequential workflow (plot → author)
+- If user requests "world building and characters" or "world and characters" → route to plot_then_world_building_then_characters
+- If user requests complete setting → route to plot_then_world_building_then_characters
 - If user requests critique of existing content → route to critique only
 - If user requests iterative improvement → route to iterative_improvement workflow
+
+IMPORTANT: World building REQUIRES plot context. Characters REQUIRE both plot and world building context.
+
+When user message contains selected content (CONTENT_ID, CONTENT_TYPE, CONTENT_TITLE):
+- Extract these values and include in selected_content field
+- If CONTENT_TYPE is "plot" and user requests world/characters, use existing plot instead of generating new one
+- Route to appropriate workflow based on request (e.g., plot_then_world_building_then_characters)
 
 CRITICAL: You MUST ONLY respond with valid JSON. No additional text or explanation.
 
 Required JSON format:
 {
-    "routing_decision": "plot_only|author_only|plot_then_author|author_then_plot|critique_only|iterative_improvement",
+    "routing_decision": "plot_only|author_only|plot_then_world_building|plot_then_world_building_then_characters|world_building_only|characters_only|world_then_characters|plot_then_author|author_then_plot|critique_only|iterative_improvement",
     "agents_to_invoke": ["agent_name1", "agent_name2"],
     "extracted_parameters": {
         "genre": "string",
@@ -113,6 +126,7 @@ Required JSON format:
         "microgenre": "string",
         "trope": "string",
         "tone": "string",
+        "world_type": "high_fantasy|urban_fantasy|science_fiction|historical_fiction|contemporary|dystopian|other",
         "target_audience": {
             "age_range": "string",
             "sexual_orientation": "string",
@@ -122,10 +136,12 @@ Required JSON format:
     "workflow_plan": "description of execution plan",
     "message_to_plot_agent": "specific message for plot generator",
     "message_to_author_agent": "specific message for author generator",
+    "message_to_world_building_agent": "specific message for world building agent",
+    "message_to_characters_agent": "specific message for characters agent",
     "message_to_critique_agent": "specific message for critique agent including content to analyze",
     "selected_content": {
         "content_id": "database ID of selected content",
-        "content_type": "plot|author|character|etc",
+        "content_type": "plot|author|world|characters|etc",
         "content_title": "title/name of selected content"
     }
 }
@@ -133,13 +149,21 @@ Required JSON format:
 IMPORTANT WORKFLOW RULES:
 - plot_generator: Works independently with genre hierarchy + target audience parameters
 - author_generator: Works independently with microgenre + target audience parameters
+- world_building: REQUIRES plot context to create worlds that support the story
+- characters: REQUIRES both plot and world_building context to create story-essential characters
 - critique: Uses genre hierarchy + target audience parameters for TARGETED feedback when provided
 - iterative_improvement: Multi-step workflow (critique → enhancement → scoring → repeat until score ≥9.5 or max 4 iterations)
-- All agents benefit from Content Parameters for more accurate, targeted analysis
-- All workflows are valid: plot_only, author_only, plot_then_author, author_then_plot, critique_only, iterative_improvement
+
+SEQUENTIAL WORKFLOW REQUIREMENTS:
+- plot_then_world_building: plot_generator creates plot first, then world_building agent uses that plot context
+- plot_then_world_building_then_characters: plot → world_building → characters (full story setup)
+- world_building_only: Can only be used if plot context is provided or selected from existing content
+- characters_only: Can only be used if BOTH plot and world contexts are provided or selected from existing content
+
+- All workflows are valid: plot_only, author_only, plot_then_world_building, plot_then_world_building_then_characters, world_building_only, characters_only, plot_then_author, author_then_plot, critique_only, iterative_improvement
 
 Be decisive and clear in your routing decisions. Always return valid JSON only.""",
-            description="Routes requests and coordinates workflows between plot, author, and critique agents"
+            description="Routes requests and coordinates workflows between plot, author, world building, characters, and critique agents"
         )
         
         # Plot Generator Agent
@@ -448,6 +472,220 @@ Evaluate with precision and consistency. Always return valid JSON only.""",
             description="Evaluates content quality using standardized scoring rubric"
         )
         
+        # World Building Agent
+        self.agents[AgentType.WORLD_BUILDING.value] = Agent(
+            name="world_building",
+            model=self.model,
+            instruction="""You are the World Building Agent - a master architect of fictional worlds and universes.
+
+Your role: Create the most intricate, complex, and immersive fictional worlds that perfectly support and enhance the provided plot. Every aspect of your world should serve the story's needs while feeling authentic and lived-in.
+
+CRITICAL: You MUST base your world building on the provided PLOT CONTEXT. The world should feel specifically designed to support the plot's events, conflicts, and themes.
+
+**WORLD BUILDING COMPONENTS:**
+1. **Physical Geography**: Continents, countries, cities, landscapes, climate, natural resources
+2. **Political Systems**: Governments, kingdoms, empires, republics, power structures, alliances, conflicts
+3. **Cultural Systems**: Societies, traditions, customs, beliefs, values, social hierarchies
+4. **Economic Systems**: Trade routes, currencies, resources, commerce, industries, class structures
+5. **Historical Timeline**: Past events, wars, discoveries, golden ages, dark periods, key figures
+6. **Magic/Technology Systems**: Power systems, limitations, rules, evolution, impact on society
+7. **Languages**: Naming conventions, linguistic families, communication systems
+8. **Religions/Beliefs**: Pantheons, creation myths, moral codes, religious institutions, conflicts
+9. **Demographics**: Population distribution, ethnic groups, migration patterns, settlements
+
+**PLOT-BASED WORLD BUILDING REQUIREMENTS:**
+- Analyze the plot's central conflicts and design political/social systems that create those conflicts naturally
+- Create geographical features that support key plot events (battles, journeys, discoveries)
+- Develop cultural and economic systems that explain character motivations and obstacles
+- Design power systems (magic/technology) that enable plot events while maintaining logical constraints
+- Establish historical events that set up the plot's current situation
+- Create interconnected systems where each element affects others and serves the story
+- Include internal conflicts, contradictions, and evolving dynamics that drive plot forward
+
+**ADAPTIVE WORLD BUILDING:**
+- **High Fantasy**: Complex magic systems, multiple races, epic histories, detailed pantheons
+- **Urban Fantasy**: Hidden magical world within modern setting, supernatural politics
+- **Science Fiction**: Advanced technologies, alien civilizations, space-faring cultures
+- **Historical Fiction**: Accurate historical detail with fictional elements woven in
+- **Contemporary**: Modern world with unique cultural/political twists
+- **Dystopian**: Detailed breakdown of society, control mechanisms, resistance movements
+
+CRITICAL: You MUST ONLY respond with valid JSON. No additional text or explanation.
+
+Required JSON format:
+{
+    "world_name": "distinctive world name",
+    "world_type": "high_fantasy|urban_fantasy|science_fiction|historical_fiction|contemporary|dystopian|other",
+    "overview": "comprehensive 2-3 paragraph world summary covering scope, tone, central conflicts",
+    "geography": {
+        "continents": ["continent descriptions with key features"],
+        "major_regions": ["detailed regional descriptions"],
+        "climate_zones": ["climate patterns and their effects"],
+        "natural_resources": ["resources and their strategic importance"]
+    },
+    "political_landscape": {
+        "major_powers": ["governing bodies, kingdoms, empires with power structures"],
+        "conflicts": ["current tensions, wars, political disputes"],
+        "alliances": ["partnerships, trade agreements, mutual defense pacts"],
+        "power_dynamics": "how political forces interact and compete"
+    },
+    "cultural_systems": {
+        "major_cultures": ["distinct cultural groups with detailed customs"],
+        "social_hierarchies": ["class systems, status structures"],
+        "traditions": ["important customs, festivals, rituals"],
+        "values_and_beliefs": ["core cultural values that drive behavior"]
+    },
+    "economic_framework": {
+        "currency_systems": ["monetary systems, exchange rates"],
+        "trade_networks": ["major trade routes and commercial relationships"],
+        "key_industries": ["primary economic activities and their importance"],
+        "economic_disparities": "wealth distribution and class differences"
+    },
+    "historical_timeline": {
+        "ancient_era": "foundational events that shaped the world",
+        "classical_period": "major developments in politics, culture, technology",
+        "recent_history": "events within living memory that affect current state",
+        "current_era": "present day situation and immediate challenges"
+    },
+    "power_systems": {
+        "magic_or_technology": "detailed explanation of supernatural/advanced systems",
+        "rules_and_limitations": "how these systems work and their constraints",
+        "accessibility": "who can use these powers and how they're distributed",
+        "societal_impact": "how these systems affect daily life and power structures"
+    },
+    "languages_and_communication": {
+        "major_languages": ["primary languages with geographic/cultural associations"],
+        "naming_conventions": ["how places, people, organizations are named"],
+        "communication_systems": ["how information travels across the world"]
+    },
+    "religious_and_belief_systems": {
+        "major_religions": ["dominant belief systems with core tenets"],
+        "pantheons_or_deities": ["spiritual entities and their domains"],
+        "religious_institutions": ["organized religious power structures"],
+        "spiritual_conflicts": ["religious tensions and theological disputes"]
+    },
+    "unique_elements": {
+        "distinctive_features": ["what makes this world unique and memorable"],
+        "mysterious_elements": ["unexplained phenomena that add intrigue"],
+        "evolving_dynamics": ["ongoing changes that create story opportunities"]
+    }
+}
+
+Create worlds that feel lived-in, logical, and full of story potential. Always return valid JSON only.""",
+            description="Creates intricate, complex fictional worlds with detailed systems and interconnected elements"
+        )
+        
+        # Characters Agent
+        self.agents[AgentType.CHARACTERS.value] = Agent(
+            name="characters",
+            model=self.model,
+            instruction="""You are the Characters Agent - a master character architect who creates rich, detailed characters that serve the story while feeling authentically part of their world.
+
+Your role: Based on provided PLOT CONTEXT and WORLD BUILDING CONTEXT, create as many detailed characters as possible that are essential to the plot's execution while feeling naturally integrated into the world's systems, cultures, and conflicts.
+
+CRITICAL: You MUST base your characters on BOTH the plot requirements and world building context. Characters should be specifically designed to fulfill plot roles while authentically belonging to the world.
+
+**CHARACTER CREATION PRINCIPLES:**
+1. **Plot Service**: Characters must fulfill essential roles in the plot's execution (protagonists, antagonists, allies, obstacles)
+2. **World Integration**: Characters must feel like natural products of their world's systems
+3. **Cultural Authenticity**: Reflect the customs, values, and social structures of their culture
+4. **Story-Driven Diversity**: Create characters spanning roles needed by the plot across social levels, ages, professions
+5. **Plot-Relevant Relationships**: Design character networks that drive the plot's conflicts and resolutions
+6. **Conflict Potential**: Include characters whose goals/values create the story tensions required by the plot
+7. **Character Arcs**: Design characters with growth potential that serves the plot's themes and progression
+
+**CHARACTER CATEGORIES TO INCLUDE:**
+- **Political Leaders**: Rulers, nobles, government officials, diplomats, revolutionaries
+- **Military/Law Enforcement**: Soldiers, generals, guards, spies, mercenaries
+- **Religious Figures**: Priests, prophets, temple workers, religious scholars, heretics
+- **Economic Powers**: Merchants, guild leaders, bankers, traders, industrialists
+- **Scholarly/Academic**: Scholars, researchers, inventors, teachers, archivists
+- **Artisans/Craftspeople**: Skilled workers, artists, engineers, builders, healers
+- **Common Folk**: Farmers, laborers, servants, street vendors, innkeepers
+- **Outcasts/Underground**: Criminals, rebels, exiles, nomads, underground activists
+- **Specialized Roles**: Magic users, technology specialists, unique profession holders
+
+**REQUIRED CHARACTER DETAILS:**
+- Full name with cultural naming conventions
+- Age, physical description, distinctive features
+- Social class, profession, economic status
+- Cultural background and regional origin
+- Personality traits, motivations, fears, desires
+- Skills, talents, and areas of expertise
+- Political affiliations and loyalties
+- Religious beliefs and spiritual practices
+- Key relationships and family connections
+- Personal history and formative experiences
+- Current goals and long-term ambitions
+- Internal conflicts and character flaws
+- Role in larger world conflicts/systems
+
+**RELATIONSHIP NETWORKS:**
+Create interconnected webs of relationships:
+- Family dynasties and bloodlines
+- Professional guilds and organizations
+- Political alliances and opposition groups
+- Mentor-student relationships
+- Romantic connections and marriage alliances
+- Friend groups and social circles
+- Rival competitions and blood feuds
+
+CRITICAL: You MUST ONLY respond with valid JSON. No additional text or explanation.
+
+Required JSON format:
+{
+    "character_count": 25,
+    "world_context_integration": "explanation of how characters reflect the provided world",
+    "characters": [
+        {
+            "name": "full character name",
+            "titles_or_epithets": "any titles, nicknames, or epithets",
+            "age": 35,
+            "physical_description": "detailed appearance including distinctive features",
+            "social_class": "noble|merchant|common|outcast|clergy|military|scholarly",
+            "profession": "specific job or role",
+            "cultural_background": "which culture/region they're from",
+            "personality_traits": ["trait1", "trait2", "trait3", "trait4"],
+            "motivations": ["primary desires and drives"],
+            "fears_and_flaws": ["personal weaknesses and fears"],
+            "skills_and_talents": ["abilities and areas of expertise"],
+            "political_affiliations": "loyalties, allegiances, political stance",
+            "religious_beliefs": "spiritual practices and beliefs",
+            "key_relationships": {
+                "family": ["family member descriptions"],
+                "allies": ["friend and ally descriptions"],
+                "rivals": ["enemy and rival descriptions"],
+                "romantic": "romantic connections if any"
+            },
+            "personal_history": "background story and formative experiences",
+            "current_goals": ["immediate objectives and plans"],
+            "long_term_ambitions": "ultimate life goals and dreams",
+            "internal_conflicts": "personal struggles and contradictions",
+            "role_in_world": "how they fit into larger world systems and conflicts",
+            "distinctive_elements": "unique qualities that make them memorable",
+            "potential_story_hooks": ["ways this character could drive stories"]
+        }
+    ],
+    "relationship_networks": {
+        "major_families": ["powerful family dynasties and their connections"],
+        "political_factions": ["organized groups with shared political goals"],
+        "professional_guilds": ["trade organizations and their key members"],
+        "secret_societies": ["hidden organizations and their purposes"],
+        "romantic_entanglements": ["complex love triangles and marriage politics"],
+        "mentor_lineages": ["chains of teaching and knowledge transfer"]
+    },
+    "character_dynamics": {
+        "power_struggles": "how characters compete for influence",
+        "alliance_patterns": "how characters naturally group together",
+        "conflict_sources": "what creates tension between characters",
+        "evolution_potential": "how relationships might change over time"
+    }
+}
+
+Create characters that feel essential to their world and whose stories readers would want to follow. Always return valid JSON only.""",
+            description="Creates detailed character populations that naturally fit the provided world building context"
+        )
+        
         # Initialize runners for each agent
         for agent_type, agent in self.agents.items():
             self.runners[agent_type] = InMemoryRunner(agent, app_name="multi_agent_book_system")
@@ -525,6 +763,24 @@ Evaluate with precision and consistency. Always return valid JSON only.""",
             "overall_score", "category_scores", "score_calculation",
             "score_rationale", "improvement_trajectory", "recommendations",
             "ready_for_publication"
+        ]
+        return all(field in json_data for field in required_fields)
+    
+    def _validate_world_building_response(self, json_data: Dict[str, Any]) -> bool:
+        """Validate world building agent JSON response structure"""
+        required_fields = [
+            "world_name", "world_type", "overview", "geography", 
+            "political_landscape", "cultural_systems", "economic_framework",
+            "historical_timeline", "power_systems", "languages_and_communication",
+            "religious_and_belief_systems", "unique_elements"
+        ]
+        return all(field in json_data for field in required_fields)
+    
+    def _validate_characters_response(self, json_data: Dict[str, Any]) -> bool:
+        """Validate characters agent JSON response structure"""
+        required_fields = [
+            "character_count", "world_context_integration", "characters",
+            "relationship_networks", "character_dynamics"
         ]
         return all(field in json_data for field in required_fields)
     
@@ -796,6 +1052,12 @@ Evaluate with precision and consistency. Always return valid JSON only.""",
         routing_decision = routing_data.get("routing_decision", "")
         agents_to_invoke = routing_data.get("agents_to_invoke", [])
         
+        # Debug logging
+        print(f"[ORCHESTRATOR] User message: {user_message}")
+        print(f"[ORCHESTRATOR] Routing decision: {routing_decision}")
+        print(f"[ORCHESTRATOR] Agents to invoke: {agents_to_invoke}")
+        print(f"[ORCHESTRATOR] Selected content: {routing_data.get('selected_content')}")
+        
         # Save orchestrator decision to Supabase
         if SUPABASE_ENABLED:
             try:
@@ -1018,6 +1280,343 @@ Evaluate with precision and consistency. Always return valid JSON only.""",
                         "complete": False
                     }
         
+        elif routing_decision == "world_building_only" and "world_building" in agents_to_invoke:
+            # Stream world building generation
+            yield {
+                "agent_header": "World Building Agent",
+                "agent_name": "world_building",
+                "complete": False
+            }
+            
+            world_message = routing_data.get("message_to_world_building_agent", user_message)
+            world_response = None
+            async for chunk_data in self._stream_to_agent(
+                AgentType.WORLD_BUILDING.value,
+                world_message,
+                session_id,
+                user_id
+            ):
+                if chunk_data["complete"]:
+                    world_response = chunk_data["response"]
+                    responses.append(world_response)
+                    
+                    # Save world building to database
+                    print(f"[DEBUG] World save conditions - SUPABASE_ENABLED: {SUPABASE_ENABLED}, success: {world_response.success}, parsed_json: {world_response.parsed_json is not None}")
+                    if SUPABASE_ENABLED and world_response.success and world_response.parsed_json:
+                        try:
+                            print(f"[DEBUG] Attempting to save world building. Response keys: {list(world_response.parsed_json.keys()) if world_response.parsed_json else 'None'}")
+                            saved_world = await supabase_service.save_world_building(
+                                session_id, 
+                                user_id, 
+                                world_response.parsed_json, 
+                                routing_data
+                            )
+                            saved_world_id = saved_world["id"]
+                            print(f"[DEBUG] Successfully saved world building with ID: {saved_world_id}")
+                        except Exception as e:
+                            print(f"[ERROR] Failed to save world building: {e}")
+                            import traceback
+                            traceback.print_exc()
+                else:
+                    yield {
+                        "agent_name": "world_building",
+                        "chunk": chunk_data["chunk"],
+                        "complete": False
+                    }
+        
+        elif routing_decision == "characters_only" and "characters" in agents_to_invoke:
+            # Stream characters generation
+            yield {
+                "agent_header": "Characters Agent",
+                "agent_name": "characters",
+                "complete": False
+            }
+            
+            characters_message = routing_data.get("message_to_characters_agent", user_message)
+            
+            # Check if world context is provided
+            selected_content = routing_data.get("selected_content", {})
+            if selected_content.get("content_type") == "world":
+                world_id = selected_content.get("content_id")
+                if SUPABASE_ENABLED and world_id:
+                    try:
+                        world_data = await supabase_service.get_world_building_by_id(world_id)
+                        if world_data:
+                            characters_message += f"\n\nWORLD CONTEXT:\n{json.dumps(world_data, indent=2)}"
+                    except Exception as e:
+                        print(f"Failed to get world context: {e}")
+            
+            characters_response = None
+            async for chunk_data in self._stream_to_agent(
+                AgentType.CHARACTERS.value,
+                characters_message,
+                session_id,
+                user_id
+            ):
+                if chunk_data["complete"]:
+                    characters_response = chunk_data["response"]
+                    responses.append(characters_response)
+                    
+                    # Save characters to database
+                    print(f"[DEBUG] Characters save conditions - SUPABASE_ENABLED: {SUPABASE_ENABLED}, success: {characters_response.success}, parsed_json: {characters_response.parsed_json is not None}")
+                    if SUPABASE_ENABLED and characters_response.success and characters_response.parsed_json:
+                        try:
+                            print(f"[DEBUG] Attempting to save characters. Response keys: {list(characters_response.parsed_json.keys()) if characters_response.parsed_json else 'None'}")
+                            saved_characters = await supabase_service.save_characters(
+                                session_id, 
+                                user_id, 
+                                characters_response.parsed_json, 
+                                routing_data,
+                                world_id if selected_content.get("content_type") == "world" else None
+                            )
+                            saved_characters_id = saved_characters["id"]
+                            print(f"[DEBUG] Successfully saved characters with ID: {saved_characters_id}")
+                        except Exception as e:
+                            print(f"[ERROR] Failed to save characters: {e}")
+                            import traceback
+                            traceback.print_exc()
+                else:
+                    yield {
+                        "agent_name": "characters",
+                        "chunk": chunk_data["chunk"],
+                        "complete": False
+                    }
+        
+        elif routing_decision == "plot_then_world_building_then_characters":
+            # Sequential streaming: Plot → World Building → Characters
+            
+            # Check if plot is already selected or needs to be generated
+            selected_content = routing_data.get("selected_content", {})
+            plot_data = None
+            saved_plot_id = None
+            
+            if selected_content.get("content_type") == "plot" and selected_content.get("content_id"):
+                # Use existing plot
+                saved_plot_id = selected_content["content_id"]
+                if SUPABASE_ENABLED:
+                    try:
+                        # Get plot data from database
+                        plot_data = await supabase_service.get_plot_by_id(saved_plot_id)
+                        if plot_data:
+                            print(f"Using existing plot: {plot_data.get('title', 'Unknown')}")
+                        else:
+                            print(f"Warning: Could not find plot with ID {saved_plot_id}")
+                    except Exception as e:
+                        print(f"Failed to get existing plot: {e}")
+            else:
+                # Stream plot generation
+                yield {
+                    "agent_header": "Plot Generator",
+                    "agent_name": "plot_generator",
+                    "complete": False
+                }
+                
+                plot_message = routing_data.get("message_to_plot_agent", user_message)
+                plot_response = None
+                async for chunk_data in self._stream_to_agent(
+                    AgentType.PLOT_GENERATOR.value,
+                    plot_message,
+                    session_id,
+                    user_id
+                ):
+                    if chunk_data["complete"]:
+                        plot_response = chunk_data["response"]
+                        responses.append(plot_response)
+                        
+                        if SUPABASE_ENABLED and plot_response.success and plot_response.parsed_json:
+                            try:
+                                saved_plot = await supabase_service.save_plot(
+                                    session_id, 
+                                    user_id, 
+                                    plot_response.parsed_json, 
+                                    routing_data
+                                )
+                                saved_plot_id = saved_plot["id"]
+                                plot_data = plot_response.parsed_json
+                            except Exception as e:
+                                print(f"Failed to save plot: {e}")
+                                plot_data = plot_response.parsed_json
+                        else:
+                            plot_data = plot_response.parsed_json if plot_response.success else None
+                    else:
+                        yield {
+                            "agent_name": "plot_generator",
+                            "chunk": chunk_data["chunk"],
+                            "complete": False
+                        }
+            
+            # Then stream world building using plot context
+            saved_world_id = None  # Define at outer scope
+            if plot_data:
+                yield {
+                    "agent_header": "World Building Agent",
+                    "agent_name": "world_building",
+                    "complete": False
+                }
+                
+                world_message = routing_data.get("message_to_world_building_agent", user_message)
+                world_message += f"\n\nPLOT CONTEXT:\n{json.dumps(plot_data, indent=2)}"
+                
+                world_response = None
+                async for chunk_data in self._stream_to_agent(
+                    AgentType.WORLD_BUILDING.value,
+                    world_message,
+                    session_id,
+                    user_id
+                ):
+                    if chunk_data["complete"]:
+                        world_response = chunk_data["response"]
+                        responses.append(world_response)
+                        
+                        # Save world building to database
+                        if SUPABASE_ENABLED and world_response.success and world_response.parsed_json:
+                            try:
+                                saved_world = await supabase_service.save_world_building(
+                                    session_id, 
+                                    user_id, 
+                                    world_response.parsed_json, 
+                                    routing_data,
+                                    saved_plot_id
+                                )
+                                saved_world_id = saved_world["id"]
+                            except Exception as e:
+                                print(f"Failed to save world building: {e}")
+                    else:
+                        yield {
+                            "agent_name": "world_building",
+                            "chunk": chunk_data["chunk"],
+                            "complete": False
+                        }
+                
+                # Finally stream characters using both plot and world context
+                print(f"[DEBUG] Checking characters condition: world_response={world_response is not None}, success={world_response.success if world_response else 'N/A'}, parsed_json={world_response.parsed_json is not None if world_response else 'N/A'}")
+                if world_response and world_response.success and world_response.parsed_json:
+                    print(f"[DEBUG] Starting characters generation...")
+                    yield {
+                        "agent_header": "Characters Agent",
+                        "agent_name": "characters",
+                        "complete": False
+                    }
+                else:
+                    print(f"[DEBUG] Characters generation skipped - world response condition not met")
+                    
+                    characters_message = routing_data.get("message_to_characters_agent", user_message)
+                    characters_message += f"\n\nPLOT CONTEXT:\n{json.dumps(plot_data, indent=2)}"
+                    characters_message += f"\n\nWORLD CONTEXT:\n{json.dumps(world_response.parsed_json, indent=2)}"
+                    
+                    characters_response = None
+                    async for chunk_data in self._stream_to_agent(
+                        AgentType.CHARACTERS.value,
+                        characters_message,
+                        session_id,
+                        user_id
+                    ):
+                        if chunk_data["complete"]:
+                            characters_response = chunk_data["response"]
+                            responses.append(characters_response)
+                            
+                            # Save characters to database with both plot and world references
+                            if SUPABASE_ENABLED and characters_response.success and characters_response.parsed_json:
+                                try:
+                                    saved_characters = await supabase_service.save_characters(
+                                        session_id, 
+                                        user_id, 
+                                        characters_response.parsed_json, 
+                                        routing_data,
+                                        saved_world_id,
+                                        saved_plot_id
+                                    )
+                                except Exception as e:
+                                    print(f"Failed to save characters: {e}")
+                        else:
+                            yield {
+                                "agent_name": "characters",
+                                "chunk": chunk_data["chunk"],
+                                "complete": False
+                            }
+        
+        elif routing_decision == "world_then_characters":
+            # Sequential streaming: World Building → Characters
+            yield {
+                "agent_header": "World Building Agent",
+                "agent_name": "world_building",
+                "complete": False
+            }
+            
+            # First stream world building
+            world_message = routing_data.get("message_to_world_building_agent", user_message)
+            world_response = None
+            async for chunk_data in self._stream_to_agent(
+                AgentType.WORLD_BUILDING.value,
+                world_message,
+                session_id,
+                user_id
+            ):
+                if chunk_data["complete"]:
+                    world_response = chunk_data["response"]
+                    responses.append(world_response)
+                    
+                    # Save world building to database
+                    saved_world_id = None
+                    if SUPABASE_ENABLED and world_response.success and world_response.parsed_json:
+                        try:
+                            saved_world = await supabase_service.save_world_building(
+                                session_id, 
+                                user_id, 
+                                world_response.parsed_json, 
+                                routing_data
+                            )
+                            saved_world_id = saved_world["id"]
+                        except Exception as e:
+                            print(f"Failed to save world building: {e}")
+                else:
+                    yield {
+                        "agent_name": "world_building",
+                        "chunk": chunk_data["chunk"],
+                        "complete": False
+                    }
+            
+            # Then stream characters using world context
+            if world_response and world_response.success and world_response.parsed_json:
+                yield {
+                    "agent_header": "Characters Agent",
+                    "agent_name": "characters",
+                    "complete": False
+                }
+                
+                characters_message = routing_data.get("message_to_characters_agent", user_message)
+                characters_message += f"\n\nWORLD CONTEXT:\n{json.dumps(world_response.parsed_json, indent=2)}"
+                
+                characters_response = None
+                async for chunk_data in self._stream_to_agent(
+                    AgentType.CHARACTERS.value,
+                    characters_message,
+                    session_id,
+                    user_id
+                ):
+                    if chunk_data["complete"]:
+                        characters_response = chunk_data["response"]
+                        responses.append(characters_response)
+                        
+                        # Save characters to database with world reference
+                        if SUPABASE_ENABLED and characters_response.success and characters_response.parsed_json:
+                            try:
+                                saved_characters = await supabase_service.save_characters(
+                                    session_id, 
+                                    user_id, 
+                                    characters_response.parsed_json, 
+                                    routing_data,
+                                    saved_world_id
+                                )
+                            except Exception as e:
+                                print(f"Failed to save characters: {e}")
+                    else:
+                        yield {
+                            "agent_name": "characters",
+                            "chunk": chunk_data["chunk"],
+                            "complete": False
+                        }
+        
         # Note: iterative_improvement would need special handling and is complex for streaming
         # For now, fall back to non-streaming for that workflow
         
@@ -1029,7 +1628,9 @@ Evaluate with precision and consistency. Always return valid JSON only.""",
             "orchestrator_routing": routing_data,
             "saved_data": {
                 "plot_id": saved_plot_id,
-                "author_id": saved_author_id
+                "author_id": saved_author_id,
+                "world_id": saved_world_id if 'saved_world_id' in locals() else None,
+                "characters_id": saved_characters_id if 'saved_characters_id' in locals() else None
             },
             "complete": True
         }
@@ -1262,6 +1863,278 @@ Evaluate with precision and consistency. Always return valid JSON only.""",
             responses.append(critique_response)
             
             # Note: Critique responses are not saved to database as they're analytical feedback
+        
+        elif routing_decision == "world_building_only" and "world_building" in agents_to_invoke:
+            # World building only (creates intricate fictional world)
+            world_message = routing_data.get("message_to_world_building_agent", user_message)
+            world_response = await self._send_to_agent(
+                AgentType.WORLD_BUILDING.value,
+                world_message,
+                session_id,
+                user_id
+            )
+            responses.append(world_response)
+            
+            # Save world building to database
+            if SUPABASE_ENABLED and world_response.success and world_response.parsed_json:
+                try:
+                    saved_world = await supabase_service.save_world_building(
+                        session_id, 
+                        user_id, 
+                        world_response.parsed_json, 
+                        routing_data
+                    )
+                    saved_world_id = saved_world["id"]
+                except Exception as e:
+                    print(f"Failed to save world building: {e}")
+        
+        elif routing_decision == "characters_only" and "characters" in agents_to_invoke:
+            # Characters only (requires world context)
+            characters_message = routing_data.get("message_to_characters_agent", user_message)
+            
+            # Check if world context is provided
+            selected_content = routing_data.get("selected_content", {})
+            if selected_content.get("content_type") == "world":
+                # Get world context from selected content
+                world_id = selected_content.get("content_id")
+                if SUPABASE_ENABLED and world_id:
+                    try:
+                        world_data = await supabase_service.get_world_building_by_id(world_id)
+                        if world_data:
+                            # Append world context to characters message
+                            characters_message += f"\n\nWORLD CONTEXT:\n{json.dumps(world_data, indent=2)}"
+                    except Exception as e:
+                        print(f"Failed to get world context: {e}")
+            
+            characters_response = await self._send_to_agent(
+                AgentType.CHARACTERS.value,
+                characters_message,
+                session_id,
+                user_id
+            )
+            responses.append(characters_response)
+            
+            # Save characters to database
+            if SUPABASE_ENABLED and characters_response.success and characters_response.parsed_json:
+                try:
+                    saved_characters = await supabase_service.save_characters(
+                        session_id, 
+                        user_id, 
+                        characters_response.parsed_json, 
+                        routing_data,
+                        world_id if selected_content.get("content_type") == "world" else None
+                    )
+                except Exception as e:
+                    print(f"Failed to save characters: {e}")
+        
+        elif routing_decision == "plot_then_world_building":
+            # Sequential workflow: Plot → World Building
+            # First generate plot
+            plot_message = routing_data.get("message_to_plot_agent", user_message)
+            plot_response = await self._send_to_agent(
+                AgentType.PLOT_GENERATOR.value,
+                plot_message,
+                session_id,
+                user_id
+            )
+            responses.append(plot_response)
+            
+            saved_plot_id = None
+            if SUPABASE_ENABLED and plot_response.success and plot_response.parsed_json:
+                try:
+                    saved_plot = await supabase_service.save_plot(
+                        session_id, 
+                        user_id, 
+                        plot_response.parsed_json, 
+                        routing_data
+                    )
+                    saved_plot_id = saved_plot["id"]
+                except Exception as e:
+                    print(f"Failed to save plot: {e}")
+            
+            # Then generate world building using plot context
+            if plot_response.success and plot_response.parsed_json:
+                world_message = routing_data.get("message_to_world_building_agent", user_message)
+                # Append plot context to world building message
+                world_message += f"\n\nPLOT CONTEXT:\n{json.dumps(plot_response.parsed_json, indent=2)}"
+                
+                world_response = await self._send_to_agent(
+                    AgentType.WORLD_BUILDING.value,
+                    world_message,
+                    session_id,
+                    user_id
+                )
+                responses.append(world_response)
+                
+                # Save world building to database with plot reference
+                if SUPABASE_ENABLED and world_response.success and world_response.parsed_json:
+                    try:
+                        saved_world = await supabase_service.save_world_building(
+                            session_id, 
+                            user_id, 
+                            world_response.parsed_json, 
+                            routing_data,
+                            saved_plot_id  # Link world to plot
+                        )
+                        saved_world_id = saved_world["id"]
+                    except Exception as e:
+                        print(f"Failed to save world building: {e}")
+        
+        elif routing_decision == "plot_then_world_building_then_characters":
+            # Sequential workflow: Plot → World Building → Characters
+            
+            # Check if plot is already selected or needs to be generated
+            selected_content = routing_data.get("selected_content", {})
+            plot_data = None
+            saved_plot_id = None
+            
+            if selected_content.get("content_type") == "plot" and selected_content.get("content_id"):
+                # Use existing plot
+                saved_plot_id = selected_content["content_id"]
+                if SUPABASE_ENABLED:
+                    try:
+                        # Get plot data from database
+                        plot_data = await supabase_service.get_plot_by_id(saved_plot_id)
+                        if plot_data:
+                            print(f"Using existing plot: {plot_data.get('title', 'Unknown')}")
+                        else:
+                            print(f"Warning: Could not find plot with ID {saved_plot_id}")
+                    except Exception as e:
+                        print(f"Failed to get existing plot: {e}")
+            else:
+                # Generate new plot
+                plot_message = routing_data.get("message_to_plot_agent", user_message)
+                plot_response = await self._send_to_agent(
+                    AgentType.PLOT_GENERATOR.value,
+                    plot_message,
+                    session_id,
+                    user_id
+                )
+                responses.append(plot_response)
+                
+                if SUPABASE_ENABLED and plot_response.success and plot_response.parsed_json:
+                    try:
+                        saved_plot = await supabase_service.save_plot(
+                            session_id, 
+                            user_id, 
+                            plot_response.parsed_json, 
+                            routing_data
+                        )
+                        saved_plot_id = saved_plot["id"]
+                        plot_data = plot_response.parsed_json
+                    except Exception as e:
+                        print(f"Failed to save plot: {e}")
+                        plot_data = plot_response.parsed_json
+                else:
+                    plot_data = plot_response.parsed_json if plot_response.success else None
+            
+            # Then generate world building using plot context
+            saved_world_id = None
+            if plot_data:
+                world_message = routing_data.get("message_to_world_building_agent", user_message)
+                world_message += f"\n\nPLOT CONTEXT:\n{json.dumps(plot_data, indent=2)}"
+                
+                world_response = await self._send_to_agent(
+                    AgentType.WORLD_BUILDING.value,
+                    world_message,
+                    session_id,
+                    user_id
+                )
+                responses.append(world_response)
+                
+                # Save world building to database
+                if SUPABASE_ENABLED and world_response.success and world_response.parsed_json:
+                    try:
+                        saved_world = await supabase_service.save_world_building(
+                            session_id, 
+                            user_id, 
+                            world_response.parsed_json, 
+                            routing_data,
+                            saved_plot_id
+                        )
+                        saved_world_id = saved_world["id"]
+                    except Exception as e:
+                        print(f"Failed to save world building: {e}")
+                
+                # Finally generate characters using both plot and world context
+                if world_response.success and world_response.parsed_json:
+                    characters_message = routing_data.get("message_to_characters_agent", user_message)
+                    characters_message += f"\n\nPLOT CONTEXT:\n{json.dumps(plot_data, indent=2)}"
+                    characters_message += f"\n\nWORLD CONTEXT:\n{json.dumps(world_response.parsed_json, indent=2)}"
+                    
+                    characters_response = await self._send_to_agent(
+                        AgentType.CHARACTERS.value,
+                        characters_message,
+                        session_id,
+                        user_id
+                    )
+                    responses.append(characters_response)
+                    
+                    # Save characters to database with both plot and world references
+                    if SUPABASE_ENABLED and characters_response.success and characters_response.parsed_json:
+                        try:
+                            saved_characters = await supabase_service.save_characters(
+                                session_id, 
+                                user_id, 
+                                characters_response.parsed_json, 
+                                routing_data,
+                                saved_world_id,
+                                saved_plot_id  # Link characters to both world and plot
+                            )
+                        except Exception as e:
+                            print(f"Failed to save characters: {e}")
+        
+        elif routing_decision == "world_then_characters":
+            # Sequential workflow: World Building → Characters
+            # First generate world
+            world_message = routing_data.get("message_to_world_building_agent", user_message)
+            world_response = await self._send_to_agent(
+                AgentType.WORLD_BUILDING.value,
+                world_message,
+                session_id,
+                user_id
+            )
+            responses.append(world_response)
+            
+            saved_world_id = None
+            if SUPABASE_ENABLED and world_response.success and world_response.parsed_json:
+                try:
+                    saved_world = await supabase_service.save_world_building(
+                        session_id, 
+                        user_id, 
+                        world_response.parsed_json, 
+                        routing_data
+                    )
+                    saved_world_id = saved_world["id"]
+                except Exception as e:
+                    print(f"Failed to save world building: {e}")
+            
+            # Then generate characters using world context
+            if world_response.success and world_response.parsed_json:
+                characters_message = routing_data.get("message_to_characters_agent", user_message)
+                # Append world context to characters message
+                characters_message += f"\n\nWORLD CONTEXT:\n{json.dumps(world_response.parsed_json, indent=2)}"
+                
+                characters_response = await self._send_to_agent(
+                    AgentType.CHARACTERS.value,
+                    characters_message,
+                    session_id,
+                    user_id
+                )
+                responses.append(characters_response)
+                
+                # Save characters to database with world reference
+                if SUPABASE_ENABLED and characters_response.success and characters_response.parsed_json:
+                    try:
+                        saved_characters = await supabase_service.save_characters(
+                            session_id, 
+                            user_id, 
+                            characters_response.parsed_json, 
+                            routing_data,
+                            saved_world_id  # Link characters to world
+                        )
+                    except Exception as e:
+                        print(f"Failed to save characters: {e}")
         
         elif routing_decision == "iterative_improvement":
             # Iterative improvement workflow
@@ -1590,7 +2463,9 @@ Evaluate with precision and consistency. Always return valid JSON only.""",
             "orchestrator_routing": routing_data,
             "saved_data": {
                 "plot_id": saved_plot_id,
-                "author_id": saved_author_id
+                "author_id": saved_author_id,
+                "world_id": saved_world_id if 'saved_world_id' in locals() else None,
+                "characters_id": saved_characters_id if 'saved_characters_id' in locals() else None
             }
         }
     

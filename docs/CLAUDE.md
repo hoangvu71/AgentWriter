@@ -2,11 +2,11 @@
 
 ## CRITICAL REQUIREMENTS
 
-### 1. Test-Driven Development (TDD)
-- ALWAYS write tests FIRST before any implementation
-- Red-Green-Refactor cycle is mandatory
-- No code without a failing test first
-- Tests drive the design, not the other way around
+### 1. Test-Driven Development (TDD) 
+- Write tests alongside implementation when adding new features
+- Ensure all new code has appropriate test coverage
+- Use existing test patterns in the tests/ directory
+- Run tests before committing changes
 
 ### 2. Always Ask for Clarification
 - NEVER assume requirements
@@ -39,6 +39,41 @@
 - Sequential workflows are preferred over parallel processing for complexity management
 - Agent responses should be clean, formatted, and user-friendly
 - All agents should maintain session state and memory
+
+#### Current Multi-Agent Architecture
+The system implements a comprehensive multi-agent ecosystem with specialized agents:
+
+**Core Content Generation Agents:**
+- **Orchestrator Agent**: Routes requests and coordinates workflows between all agents
+- **Plot Generator Agent**: Creates detailed plots based on genre hierarchy and target audience
+- **Author Generator Agent**: Creates author profiles matching microgenre and target audience
+- **World Building Agent**: Creates intricate fictional worlds based on plot requirements
+- **Characters Agent**: Creates detailed character populations based on both plot and world building contexts
+- **Library Service**: Manages viewing and organizing all generated content with search/filter capabilities
+
+**Quality Assurance Agents:**
+- **Critique Agent**: Provides detailed, constructive feedback on any writing content (plots, authors, drafts, outlines, etc.)
+- **Enhancement Agent**: Improves content based on critique feedback using systematic rewriting
+- **Scoring Agent**: Evaluates content quality using standardized rubric (Content Quality 30%, Structure 25%, Style 20%, Genre Appropriateness 15%, Technical Execution 10%)
+
+**Iterative Improvement Workflow:**
+1. User requests improvement of existing content (plot_id or author_id)
+2. Critique Agent analyzes content and provides detailed feedback
+3. Enhancement Agent rewrites content addressing all critique points
+4. Scoring Agent evaluates enhanced content using weighted rubric
+5. Process repeats until score ≥ 9.5 or maximum 4 iterations reached
+6. Final enhanced content replaces original in database
+
+**Agent Communication Protocol:**
+- All agent requests route through orchestrator with standardized JSON responses
+- Agents never communicate directly - all coordination via orchestrator
+- Session state maintained across multi-step workflows
+- Error handling and fallback mechanisms for agent failures
+
+**Critical Workflow Dependencies:**
+- **World Building** requires **Plot Context** - worlds are designed to support specific stories
+- **Characters** require **both Plot and World Building contexts** - characters serve story needs within authentic world systems
+- **Proper Sequence**: Plot → World Building → Characters for complete story foundation
 
 ## Core Principles
 
@@ -134,34 +169,89 @@
 - Format agent responses for optimal user experience
 - Test agent coordination and sequential workflows thoroughly
 
+#### Current System Implementation
+**Technology Stack:**
+- Google AI SDK (google.adk.agents) for agent creation and management
+- InMemoryRunner for session management and agent execution
+- Gemini 2.0 Flash model for fast, efficient content generation
+- Supabase for data persistence and normalized database schema
+- FastAPI for REST API endpoints and WebSocket communication
+
+**Agent Response Standards:**
+- All agents return standardized JSON responses with consistent structure
+- Content generation agents return domain-specific fields (title, plot_summary, author_name, etc.)
+- Quality agents return structured analysis with scores, feedback, and improvement suggestions
+- Error handling with fallback responses and graceful degradation
+
+**Quality Assurance Integration:**
+- Built-in iterative improvement system with automatic content enhancement
+- Standardized scoring rubric ensuring consistent quality evaluation
+- Multi-iteration workflow capable of transforming content from initial draft to professional quality
+- Integration with library system for content management and version tracking
+
 ### 10. Database Schema Evolution and Migration Workflow
+
+**QUICK REFERENCE - How Claude Applies Migrations:**
+```bash
+# 1. Create migration
+npx supabase migration new "world_building_and_characters"
+
+# 2. Edit supabase/migrations/YYYYMMDDHHMMSS_description.sql
+
+# 3. Apply to database (user provides password)
+npx supabase db push --password "USER_PROVIDED_PASSWORD"
+
+# 4. Verify tables created
+python verify_tables_simple.py
+```
+
 When making changes to database schema (adding tables, normalizing data, etc.), follow this proven workflow:
 
 #### Phase 1: Planning & Migration Creation
-1. **Create Migration File**
+1. **Create Migration File Using Supabase CLI**
    ```bash
-   python create_migration.py "description of changes"
+   npx supabase migration new "description of changes"
    ```
+   This creates: `supabase/migrations/YYYYMMDDHHMMSS_description.sql`
+
 2. **Design New Schema** 
    - Use proper normalization (foreign keys instead of VARCHAR/JSONB)
    - Add appropriate indexes for performance
    - Include sample data for immediate testing
    - Use `IF NOT EXISTS` for idempotent operations
+   - Edit the generated migration file with your SQL
 
 #### Phase 2: Schema Application
-3. **Apply New Schema**
+3. **Apply New Schema Using Supabase CLI**
    ```bash
-   # Use direct database connection with password
-   python apply_migration_direct.py
+   # IMPORTANT: You must have the database password
+   npx supabase db push --password "YOUR_DB_PASSWORD"
+   ```
+   
+   **Getting the Database Password:**
+   - Go to Supabase Dashboard → Project Settings → Database
+   - Copy the database password
+   - Or ask the user to provide it when needed
+   
+   **Alternative: Set password in environment**
+   ```bash
+   # Add to .env file
+   SUPABASE_DB_PASSWORD=your_password_here
+   
+   # Then use with environment variable
+   npx supabase db push --password "$SUPABASE_DB_PASSWORD"
    ```
 4. **Verify Schema Creation**
+   ```bash
+   python verify_tables_simple.py
+   ```
    - Check all tables created successfully
    - Verify foreign key relationships
    - Confirm indexes are in place
-   - Test with sample data
+   - Automatically updates migration tracking
 
 #### Phase 3: Data Migration (Critical!)
-5. **Migrate Existing Data**
+5. **Migrate Existing Data** (if needed)
    ```bash
    python migrate_existing_data.py
    ```
@@ -195,7 +285,7 @@ When making changes to database schema (adding tables, normalizing data, etc.), 
    - Update agent code if needed
 
 #### Documentation Requirements
-- Update `DATABASE_DOCUMENTATION.md` with new schema
+- Update `database_documentation.md` with new schema
 - Document migration in `migrations/README.md`
 - Add new tables to entity relationship documentation
 - Update API documentation if schema affects endpoints
@@ -206,6 +296,36 @@ When making changes to database schema (adding tables, normalizing data, etc.), 
 - **Test thoroughly** - run full system tests after migration
 - **Document everything** - migrations should be self-explanatory
 - **Use transactions** - ensure atomicity of migration operations
+
+#### Database Connection Requirements
+
+**IMPORTANT: Claude can apply migrations directly using Supabase CLI**
+
+**Prerequisites:**
+1. **Supabase CLI available via npx** (already installed)
+2. **Project must be linked** to Supabase:
+   ```bash
+   npx supabase link --project-ref YOUR_PROJECT_REF
+   ```
+3. **Database password required** for remote operations
+
+**Standard Migration Application Process:**
+1. Create migration: `npx supabase migration new "description"`
+2. Edit the SQL file in `supabase/migrations/`
+3. Apply with password: `npx supabase db push --password "PASSWORD"`
+4. Verify with: `python verify_tables_simple.py`
+
+**Project Configuration:**
+- Project Reference ID: `cfqgzbudjnvtyxrrvvmo` (already linked)
+- Database Host: `aws-0-us-east-1.pooler.supabase.com`
+- Migration Path: `supabase/migrations/`
+- Tracking: `migrations/applied_migrations.json`
+
+**Troubleshooting:**
+- If "failed SASL auth": Wrong password provided
+- If "No connection": Database or network issue
+- If "target machine refused": Local Supabase not running (use remote)
+- Always use `--password` flag for remote database operations
 
 ### 11. Library Interface and User Experience
 The system includes a comprehensive library interface for viewing and managing generated content:
@@ -310,6 +430,16 @@ User Request → Orchestrator → Author Agent → Plot Agent
 - Simplified target_audiences table by removing interests and description columns
 - Streamlined to core demographic fields: age_group, gender, sexual_orientation
 
+**Migration 007**: `iterative_improvement_system.sql`
+- Added improvement_sessions and improvement_iterations tables
+- Enabled multi-step content enhancement workflow
+- Added tracking for critique → enhancement → scoring cycles
+
+**Migration 008**: `world_building_and_characters_system.sql` ✅ Applied
+- Added world_building table with complex JSONB fields for geography, politics, culture
+- Added characters table with character populations and relationship networks
+- Both tables link to plots via foreign keys for context-aware generation
+
 ### 13. Genre and Target Audience Management System
 The system provides comprehensive management of content parameters with admin interface and automatic context injection:
 
@@ -407,6 +537,114 @@ User can trigger parameter injection by using phrases like:
 - Highlight potential issues or limitations
 - Suggest improvements to existing code
 - Be proactive about best practices
+
+### 15. Project Structure and Organization
+The project follows a clean, modular structure with full separation of concerns:
+
+```
+BooksWriter/
+├── src/                    # Source code modules
+│   ├── agents/            # Multi-agent system components
+│   │   ├── agent_service.py      # Individual agent implementations
+│   │   └── multi_agent_system.py # Orchestrator and coordination
+│   ├── database/          # Database services
+│   │   └── supabase_service.py   # Supabase integration
+│   ├── services/          # Business logic services
+│   │   └── library_service.py    # Library management and content retrieval
+│   ├── api/               # API endpoints (future expansion)
+│   └── utils/             # Utility functions
+│       └── validation.py  # Input validation and sanitization
+├── tests/                 # Comprehensive test suite
+│   ├── unit/             # Unit tests for components
+│   ├── integration/      # Integration and system tests
+│   ├── conftest.py       # Pytest configuration and fixtures
+│   ├── test_library_functionality.py  # Library unit tests
+│   └── test_library_integration.py    # Library integration tests
+├── templates/             # HTML templates with full functionality
+│   ├── index.html        # Main application landing page
+│   ├── chat.html         # Interactive chat interface
+│   ├── library.html      # Content library with search/filter
+│   └── admin.html        # Administration interface
+├── static/                # Static assets (JS, CSS)
+│   ├── css/main.css      # Unified CSS with theme support
+│   └── js/main.js        # JavaScript utilities and theme management
+├── docs/                  # Documentation
+│   ├── CLAUDE.md         # This file - AI instructions
+│   ├── SETUP_GUIDE.md    # Consolidated setup instructions
+│   └── archive/          # Historical/obsolete docs
+├── scripts/               # Automation scripts
+│   ├── setup/            # Installation and setup
+│   └── maintenance/      # System maintenance tools
+├── migrations/            # Database migrations with full history
+└── config/                # Configuration files
+    └── service-account-key.json  # Google Cloud credentials
+
+```
+
+**Key Files**:
+- `main.py` - FastAPI application entry point with modular route organization
+- `requirements.txt` - Python dependencies
+- `.env` - Environment variables for Google Cloud and database configuration
+- `pytest.ini` - Test configuration with coverage reporting
+- `kill_port_8000.sh/.bat` - Development utility scripts
+
+**Architecture Highlights**:
+- **Modular Design**: Complete separation of agents, database, services, and utilities
+- **Template Organization**: Full HTML templates extracted from main.py (removed 2,590+ lines of inline code)
+- **Comprehensive Testing**: Unit and integration tests with fixtures and mocking
+- **Library System**: Complete content management with search, filtering, and detailed modal views
+- **Admin Interface**: Genre and target audience management with real-time validation
+- **Responsive Design**: Mobile-friendly interface with dark/light theme support
+
+### 16. Agent Development Guidelines
+
+#### Adding New Agents to the System
+When extending the multi-agent system with new specialized agents:
+
+**1. Agent Definition**
+```python
+# Add to AgentType enum in multi_agent_system.py
+class AgentType(Enum):
+    NEW_AGENT = "new_agent_name"
+
+# Add to _initialize_agents() method
+self.agents[AgentType.NEW_AGENT.value] = Agent(
+    name="new_agent_name",
+    model=self.model,
+    instruction="""Clear, detailed instructions for the agent's role...""",
+    description="Brief description of agent capabilities"
+)
+```
+
+**2. Agent Design Principles**
+- **Single Responsibility**: Each agent handles one specific content type or task
+- **JSON Response Format**: All agents must return structured JSON for parsing
+- **Error Handling**: Include fallback responses and graceful error management
+- **Context Awareness**: Consider genre, audience, and existing content in responses
+- **Scalable Instructions**: Write instructions that work across different content types
+
+**3. Integration with Orchestrator**
+- Update orchestrator routing logic to recognize new agent triggers
+- Add appropriate workflow coordination (sequential vs parallel execution)
+- Ensure session state management across multi-agent workflows
+- Test agent communication protocols thoroughly
+
+**4. Current Agent Capabilities Summary**
+- **Plot Generator**: Creates complete story concepts with genre-appropriate elements
+- **Author Generator**: Develops believable author personas matching target demographics
+- **Critique Agent**: Provides comprehensive feedback on any writing content type
+- **Enhancement Agent**: Systematically improves content based on critique analysis
+- **Scoring Agent**: Evaluates content using weighted quality rubric
+- **Library Service**: Manages content organization, search, and metadata display
+
+**5. Potential Agent Extensions**
+Consider these specialized agents for future development:
+- **Character Development Agent**: Detailed character profiles with arcs and relationships
+- **World Building Agent**: Settings, cultures, magic systems, and fictional environments
+- **Dialogue Agent**: Natural character conversations with voice consistency
+- **Research Agent**: Real-world information gathering for story authenticity
+- **Chapter Structure Agent**: Plot breakdown into detailed scene outlines
+- **Marketing Agent**: Blurbs, descriptions, and promotional content generation
 
 ## Commands to Run
 

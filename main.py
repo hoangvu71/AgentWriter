@@ -85,7 +85,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             message_data = json.loads(data)
             
             message_type = message_data.get("type", "message")
-            content = sanitize_string(message_data.get("content", ""), max_length=5000)
+            content = sanitize_string(message_data.get("content", ""), max_length=50000)
             user_id = sanitize_string(message_data.get("user_id", "anonymous"), max_length=50)
             
             if message_type == "message":

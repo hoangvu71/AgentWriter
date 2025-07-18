@@ -108,7 +108,7 @@ CREATE TABLE schema_versions (
 
 1. **For Development**: Use the Supabase CLI
    - Install: `npm install -g supabase`
-   - Link to your project: `supabase link --project-ref cfqgzbudjnvtyxrrvvmo`
+   - Link to your project: `supabase link --project-ref YOUR_PROJECT_ID`
    - Create migrations: `supabase migration new [description]`
    - Apply: `supabase db push`
 

@@ -68,7 +68,7 @@ A sophisticated multi-agent system for book writing powered by Google's Agent De
 - ✅ **AI decisions** for system improvement
 - ✅ **Searchable history** of all creations
 
-**📖 See `DATABASE_DOCUMENTATION.md` for complete schema details.**
+**📖 See `docs/database_documentation.md` for complete schema details.**
 
 ## Features
 
@@ -118,11 +118,11 @@ A sophisticated multi-agent system for book writing powered by Google's Agent De
 # Google Cloud AI
 GOOGLE_CLOUD_PROJECT=writing-book-457206
 GOOGLE_CLOUD_LOCATION=us-central1
-GOOGLE_APPLICATION_CREDENTIALS=service-account-key.json
+GOOGLE_APPLICATION_CREDENTIALS=config/service-account-key.json
 GOOGLE_GENAI_USE_VERTEXAI=true
 
 # Supabase Database  
-SUPABASE_URL=https://cfqgzbudjnvtyxrrvvmo.supabase.co
+SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
 SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 SUPABASE_DB_PASSWORD=BTTmSilqcNn9Ynj5
 ```
@@ -183,60 +183,65 @@ npx supabase db push
 ### Database Testing
 ```bash
 # Test complete database functionality
-python test_database.py
+python -m pytest tests/unit/test_database.py -v
 ```
 
 ### Application Testing
 ```bash
-# Run the test suite
-python test_app.py
+# Run all tests
+python -m pytest tests/unit/ -v
 
-# Integration tests
-python -m pytest test_agent_integration.py -v
-
-# Multi-agent system tests
-python -m pytest test_multi_agent_integration.py -v
+# Specific test files
+python -m pytest tests/unit/test_app.py -v
+python -m pytest tests/unit/test_agent_integration.py -v
+python -m pytest tests/unit/test_multi_agent_integration.py -v
 ```
 
 ## 📁 File Structure
 
 ```
 BooksWriter/
-├── main.py                     # FastAPI application with multi-agent support
-├── orchestrator_agent.py       # Main routing agent
-├── plot_generator_agent.py     # Plot creation agent
-├── author_generator_agent.py   # Author creation agent
-├── supabase_service.py         # Database service layer
-├── .env                        # Environment configuration
-│
+├── main.py                     # FastAPI web server with multi-agent support
+├── src/                        # Application source code
+│   ├── agents/
+│   │   ├── multi_agent_system.py    # Main multi-agent orchestrator
+│   │   └── agent_service.py         # Agent service utilities
+│   ├── database/
+│   │   └── supabase_service.py      # Database service layer
+│   ├── api/                    # Future API endpoints
+│   └── utils/                  # Utility functions
+├── tests/unit/                 # All test files
+├── templates/                  # HTML templates
+├── scripts/
+│   ├── setup/                  # Setup automation scripts
+│   └── maintenance/            # Maintenance utilities
 ├── migrations/                 # Database migration system
 │   ├── 001_initial_schema.sql  # Base schema (✅ Applied)
-│   ├── 002_*.sql              # Future migrations
+│   ├── 002_*.sql              # Additional migrations
 │   └── README.md               # Migration instructions
-│
-├── DATABASE_DOCUMENTATION.md   # Complete schema reference
-├── SETUP_DOCUMENTATION.md      # Detailed setup guide
-├── create_migration.py         # Migration helper tool
-│
-├── test_app.py                 # Application tests
-├── test_agent_integration.py   # Integration tests
-├── test_database.py            # Database functionality tests
+├── docs/                       # All documentation
+│   ├── database_documentation.md   # Complete schema reference
+│   ├── setup_documentation.md      # Detailed setup guide
+│   └── CLAUDE.md               # Development guidelines
+├── static/                     # Frontend assets
+├── config/                     # Configuration files
+│   ├── .env                    # Environment variables  
+│   └── service-account-key.json # Google Cloud credentials
 ├── requirements.txt            # Python dependencies
-├── service-account-key.json    # Google Cloud credentials
 └── README.md                   # This file
 ```
 
 ## 📊 Database Access
 
 ### Supabase Dashboard
-- **URL**: https://app.supabase.com/project/cfqgzbudjnvtyxrrvvmo
+- **URL**: https://app.supabase.com/project/YOUR_PROJECT_ID
 - **Tables**: users, sessions, plots, authors, orchestrator_decisions
 - **Status**: ✅ All tables operational with data
 
 ### Connection Details
-- **Host**: db.cfqgzbudjnvtyxrrvvmo.supabase.co
+- **Host**: db.YOUR_PROJECT_ID.supabase.co
 - **Database**: postgres
-- **Connection**: `postgresql://postgres:BTTmSilqcNn9Ynj5@db.cfqgzbudjnvtyxrrvvmo.supabase.co:5432/postgres`
+- **Connection**: `postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_ID.supabase.co:5432/postgres`
 
 ## WebSocket Message Format
 
@@ -312,8 +317,8 @@ The project follows Test-Driven Development (TDD) principles:
 
 ## 📚 Documentation
 
-- **📖 `DATABASE_DOCUMENTATION.md`** - Complete database schema and API reference
-- **⚙️ `SETUP_DOCUMENTATION.md`** - Detailed setup and configuration guide
+- **📖 `docs/database_documentation.md`** - Complete database schema and API reference
+- **⚙️ `docs/setup_documentation.md`** - Detailed setup and configuration guide
 - **🔄 `migrations/README.md`** - Database migration system guide
 
 ## Contributing

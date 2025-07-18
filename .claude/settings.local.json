@@ -41,7 +41,16 @@
       "Bash(git remote add:*)",
       "Bash(git rm:*)",
       "Bash(mkdir:*)",
-      "WebFetch(domain:platform.openai.com)"
+      "WebFetch(domain:platform.openai.com)",
+      "Bash(tree:*)",
+      "Bash(mv:*)",
+      "Bash(touch:*)",
+      "Bash(diff:*)",
+      "Bash(git mv:*)",
+      "Bash(cmd //c:*)",
+      "Bash(kill_port_8000.bat)",
+      "Bash(\"C:\\Program Files\\nodejs\\npx.cmd\" supabase status)",
+      "Bash(copy migrations008_world_building_and_characters_system.sql supabasemigrations20250718210113_world_building_and_characters.sql /Y)"
     ],
     "deny": []
   }
