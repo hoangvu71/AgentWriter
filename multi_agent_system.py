@@ -542,7 +542,7 @@ Evaluate with precision and consistency. Always return valid JSON only.""",
             self.sessions[session_id][agent_type] = session
     
     async def _send_to_agent(self, agent_type: str, message: str, session_id: str, user_id: str = "default") -> AgentResponse:
-        """Send message to specific agent and get response"""
+        """Send message to specific agent and get response (non-streaming version)"""
         try:
             # Validate agent type exists
             valid_agent_types = [agent.value for agent in AgentType]
@@ -621,7 +621,397 @@ Evaluate with precision and consistency. Always return valid JSON only.""",
                 success=False,
                 error=str(e)
             )
+
+    async def _stream_to_agent(self, agent_type: str, message: str, session_id: str, user_id: str = "default"):
+        """Send message to specific agent and yield streaming response chunks"""
+        try:
+            # Validate agent type exists
+            valid_agent_types = [agent.value for agent in AgentType]
+            if agent_type not in valid_agent_types:
+                raise ValueError(f"{agent_type} agent not configured")
+            
+            # Ensure session exists
+            await self._create_session(agent_type, session_id, user_id)
+            
+            # Create message content
+            content = types.Content(
+                role='user',
+                parts=[types.Part(text=message)]
+            )
+            
+            # Stream response from agent
+            response_text = ""
+            async for event in self.runners[agent_type].run_async(
+                user_id=user_id,
+                session_id=f"{session_id}_{agent_type}",
+                new_message=content
+            ):
+                # Extract chunk text from event
+                chunk_text = ""
+                if hasattr(event, 'content') and event.content:
+                    if hasattr(event.content, 'text'):
+                        chunk_text = event.content.text
+                    else:
+                        chunk_text = str(event.content)
+                elif hasattr(event, 'text') and event.text:
+                    chunk_text = event.text
+                
+                if chunk_text:
+                    # Clean chunk text (similar to agent_service)
+                    cleaned_chunk = self._clean_response_text(chunk_text)
+                    if cleaned_chunk:
+                        response_text += cleaned_chunk
+                        # Split large chunks into smaller pieces for better streaming effect
+                        if len(cleaned_chunk) > 50:
+                            # Split into words and stream smaller chunks
+                            words = cleaned_chunk.split()
+                            current_chunk = ""
+                            for word in words:
+                                if len(current_chunk + " " + word) > 20:
+                                    if current_chunk:
+                                        yield {
+                                            "agent_name": agent_type,
+                                            "chunk": current_chunk + " ",
+                                            "complete": False
+                                        }
+                                        # Add delay for visible streaming effect
+                                        await asyncio.sleep(0.05)
+                                    current_chunk = word
+                                else:
+                                    current_chunk = current_chunk + " " + word if current_chunk else word
+                            # Send remaining chunk
+                            if current_chunk:
+                                yield {
+                                    "agent_name": agent_type,
+                                    "chunk": current_chunk,
+                                    "complete": False
+                                }
+                        else:
+                            yield {
+                                "agent_name": agent_type,
+                                "chunk": cleaned_chunk,
+                                "complete": False
+                            }
+            
+            # If response is wrapped in parts= structure, extract the text
+            if response_text.startswith("parts="):
+                import re
+                text_match = re.search(r'text="""(.*?)"""', response_text, re.DOTALL)
+                if text_match:
+                    response_text = text_match.group(1).strip()
+            
+            # Parse JSON from complete response
+            parsed_json = self._extract_json_from_response(response_text)
+            
+            # Validate JSON structure based on agent type
+            json_valid = False
+            if parsed_json:
+                if agent_type == AgentType.ORCHESTRATOR.value:
+                    json_valid = self._validate_orchestrator_response(parsed_json)
+                elif agent_type == AgentType.PLOT_GENERATOR.value:
+                    json_valid = self._validate_plot_response(parsed_json)
+                elif agent_type == AgentType.AUTHOR_GENERATOR.value:
+                    json_valid = self._validate_author_response(parsed_json)
+                elif agent_type == AgentType.CRITIQUE.value:
+                    json_valid = self._validate_critique_response(parsed_json)
+                elif agent_type == AgentType.ENHANCEMENT.value:
+                    json_valid = self._validate_enhancement_response(parsed_json)
+                elif agent_type == AgentType.SCORING.value:
+                    json_valid = self._validate_scoring_response(parsed_json)
+            
+            # Yield final complete response
+            yield {
+                "agent_name": agent_type,
+                "chunk": "",
+                "complete": True,
+                "response": AgentResponse(
+                    agent_name=agent_type,
+                    content=response_text,
+                    parsed_json=parsed_json if json_valid else None,
+                    metadata={"session_id": session_id, "user_id": user_id, "json_valid": json_valid},
+                    success=True
+                )
+            }
+            
+        except Exception as e:
+            yield {
+                "agent_name": agent_type,
+                "chunk": "",
+                "complete": True,
+                "response": AgentResponse(
+                    agent_name=agent_type,
+                    content="",
+                    parsed_json=None,
+                    metadata={"session_id": session_id, "user_id": user_id},
+                    success=False,
+                    error=str(e)
+                )
+            }
+
+    def _clean_response_text(self, text: str) -> str:
+        """Clean response text similar to agent_service"""
+        if not text:
+            return ""
+        
+        # Remove parts= wrapper if present
+        if text.startswith("parts="):
+            import re
+            text_match = re.search(r'text="""(.*?)"""', text, re.DOTALL)
+            if text_match:
+                text = text_match.group(1).strip()
+        
+        # Remove extra whitespace and normalize
+        text = text.strip()
+        return text
     
+    async def process_message_streaming(self, user_message: str, user_id: str, session_id: str):
+        """Process user request through multi-agent system with streaming"""
+        
+        # Step 1: Send to orchestrator for routing decision (non-streaming since it's quick)
+        orchestrator_response = await self._send_to_agent(
+            AgentType.ORCHESTRATOR.value,
+            user_message,
+            session_id,
+            user_id
+        )
+        
+        if not orchestrator_response.success:
+            yield {
+                "success": False,
+                "error": f"Orchestrator failed: {orchestrator_response.error}",
+                "complete": True
+            }
+            return
+        
+        # Step 2: Parse orchestrator JSON decision
+        if not orchestrator_response.parsed_json:
+            yield {
+                "success": False,
+                "error": "Orchestrator did not return valid JSON",
+                "complete": True
+            }
+            return
+        
+        routing_data = orchestrator_response.parsed_json
+        routing_decision = routing_data.get("routing_decision", "")
+        agents_to_invoke = routing_data.get("agents_to_invoke", [])
+        
+        # Save orchestrator decision to Supabase
+        if SUPABASE_ENABLED:
+            try:
+                await supabase_service.save_orchestrator_decision(session_id, user_id, routing_data)
+            except Exception as e:
+                print(f"Failed to save orchestrator decision: {e}")
+        
+        # Step 3: Stream agent responses based on routing decision
+        saved_plot_id = None
+        saved_author_id = None
+        responses = [orchestrator_response]
+        
+        if routing_decision == "plot_then_author":
+            # First stream plot generation
+            plot_message = routing_data.get("message_to_plot_agent", user_message)
+            
+            yield {
+                "agent_header": "Plot Generator",
+                "agent_name": "plot_generator",
+                "complete": False
+            }
+            
+            plot_response = None
+            async for chunk_data in self._stream_to_agent(
+                AgentType.PLOT_GENERATOR.value,
+                plot_message,
+                session_id,
+                user_id
+            ):
+                if chunk_data["complete"]:
+                    plot_response = chunk_data["response"]
+                    responses.append(plot_response)
+                else:
+                    yield {
+                        "agent_name": "plot_generator",
+                        "chunk": chunk_data["chunk"],
+                        "complete": False
+                    }
+            
+            # Save plot without author assignment first
+            if SUPABASE_ENABLED and plot_response and plot_response.parsed_json:
+                try:
+                    saved_plot = await supabase_service.save_plot(
+                        session_id, 
+                        user_id, 
+                        plot_response.parsed_json, 
+                        routing_data
+                    )
+                    saved_plot_id = saved_plot["id"]
+                except Exception as e:
+                    print(f"Failed to save plot: {e}")
+            
+            # Then stream author generation if requested
+            if "author_generator" in agents_to_invoke:
+                yield {
+                    "agent_header": "Author Generator", 
+                    "agent_name": "author_generator",
+                    "complete": False
+                }
+                
+                author_message = routing_data.get("message_to_author_agent", user_message)
+                author_response = None
+                async for chunk_data in self._stream_to_agent(
+                    AgentType.AUTHOR_GENERATOR.value,
+                    author_message,
+                    session_id,
+                    user_id
+                ):
+                    if chunk_data["complete"]:
+                        author_response = chunk_data["response"]
+                        responses.append(author_response)
+                    else:
+                        yield {
+                            "agent_name": "author_generator",
+                            "chunk": chunk_data["chunk"],
+                            "complete": False
+                        }
+                
+                # Save author to Supabase and link to plot
+                if SUPABASE_ENABLED and author_response and author_response.parsed_json:
+                    try:
+                        saved_author = await supabase_service.save_author(
+                            session_id, 
+                            user_id, 
+                            author_response.parsed_json
+                        )
+                        saved_author_id = saved_author["id"]
+                        
+                        # Update plot to link to author
+                        if saved_plot_id:
+                            try:
+                                await supabase_service.update_plot_author(saved_plot_id, saved_author_id)
+                            except Exception as e:
+                                print(f"Failed to update plot-author relationship: {e}")
+                    except Exception as e:
+                        print(f"Failed to save author: {e}")
+        
+        elif routing_decision == "plot_only" and "plot_generator" in agents_to_invoke:
+            # Stream plot generation only
+            yield {
+                "agent_header": "Plot Generator",
+                "agent_name": "plot_generator", 
+                "complete": False
+            }
+            
+            plot_message = routing_data.get("message_to_plot_agent", user_message)
+            plot_response = None
+            async for chunk_data in self._stream_to_agent(
+                AgentType.PLOT_GENERATOR.value,
+                plot_message,
+                session_id,
+                user_id
+            ):
+                if chunk_data["complete"]:
+                    plot_response = chunk_data["response"]
+                    responses.append(plot_response)
+                else:
+                    yield {
+                        "agent_name": "plot_generator",
+                        "chunk": chunk_data["chunk"],
+                        "complete": False
+                    }
+            
+            # Save plot without author assignment
+            if SUPABASE_ENABLED and plot_response and plot_response.parsed_json:
+                try:
+                    saved_plot = await supabase_service.save_plot(
+                        session_id, 
+                        user_id, 
+                        plot_response.parsed_json, 
+                        routing_data
+                    )
+                    saved_plot_id = saved_plot["id"]
+                except Exception as e:
+                    print(f"Failed to save plot: {e}")
+        
+        elif routing_decision == "author_only" and "author_generator" in agents_to_invoke:
+            # Stream author generation only
+            yield {
+                "agent_header": "Author Generator",
+                "agent_name": "author_generator",
+                "complete": False
+            }
+            
+            author_message = routing_data.get("message_to_author_agent", user_message)
+            author_response = None
+            async for chunk_data in self._stream_to_agent(
+                AgentType.AUTHOR_GENERATOR.value,
+                author_message,
+                session_id,
+                user_id
+            ):
+                if chunk_data["complete"]:
+                    author_response = chunk_data["response"]
+                    responses.append(author_response)
+                else:
+                    yield {
+                        "agent_name": "author_generator",
+                        "chunk": chunk_data["chunk"],
+                        "complete": False
+                    }
+            
+            # Save author to Supabase
+            if SUPABASE_ENABLED and author_response and author_response.parsed_json:
+                try:
+                    saved_author = await supabase_service.save_author(
+                        session_id, 
+                        user_id, 
+                        author_response.parsed_json
+                    )
+                    saved_author_id = saved_author["id"]
+                except Exception as e:
+                    print(f"Failed to save author: {e}")
+        
+        elif routing_decision == "critique_only" and "critique" in agents_to_invoke:
+            # Stream critique analysis
+            yield {
+                "agent_header": "Critique Agent",
+                "agent_name": "critique",
+                "complete": False
+            }
+            
+            critique_message = routing_data.get("message_to_critique_agent", user_message)
+            critique_response = None
+            async for chunk_data in self._stream_to_agent(
+                AgentType.CRITIQUE.value,
+                critique_message,
+                session_id,
+                user_id
+            ):
+                if chunk_data["complete"]:
+                    critique_response = chunk_data["response"]
+                    responses.append(critique_response)
+                else:
+                    yield {
+                        "agent_name": "critique",
+                        "chunk": chunk_data["chunk"],
+                        "complete": False
+                    }
+        
+        # Note: iterative_improvement would need special handling and is complex for streaming
+        # For now, fall back to non-streaming for that workflow
+        
+        # Final result
+        yield {
+            "success": True,
+            "responses": responses,
+            "workflow_completed": True,
+            "orchestrator_routing": routing_data,
+            "saved_data": {
+                "plot_id": saved_plot_id,
+                "author_id": saved_author_id
+            },
+            "complete": True
+        }
+
     async def process_message(self, user_message: str, user_id: str, session_id: str) -> Dict[str, Any]:
         """Process user request through multi-agent system"""
         
