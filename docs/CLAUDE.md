@@ -202,7 +202,7 @@ npx supabase migration new "world_building_and_characters"
 npx supabase db push --password "USER_PROVIDED_PASSWORD"
 
 # 4. Verify tables created
-python verify_tables_simple.py
+python scripts/database/check_tables.py
 ```
 
 When making changes to database schema (adding tables, normalizing data, etc.), follow this proven workflow:
@@ -243,7 +243,7 @@ When making changes to database schema (adding tables, normalizing data, etc.), 
    ```
 4. **Verify Schema Creation**
    ```bash
-   python verify_tables_simple.py
+   python scripts/database/check_tables.py
    ```
    - Check all tables created successfully
    - Verify foreign key relationships
@@ -313,7 +313,7 @@ When making changes to database schema (adding tables, normalizing data, etc.), 
 1. Create migration: `npx supabase migration new "description"`
 2. Edit the SQL file in `supabase/migrations/`
 3. Apply with password: `npx supabase db push --password "PASSWORD"`
-4. Verify with: `python verify_tables_simple.py`
+4. Verify with: `python scripts/database/check_tables.py`
 
 **Project Configuration:**
 - Project Reference ID: `cfqgzbudjnvtyxrrvvmo` (already linked)

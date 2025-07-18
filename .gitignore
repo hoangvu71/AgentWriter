@@ -115,4 +115,5 @@ service-account-key.json
 .env.local
 .env.production
 secrets/
-credentials/
+credentials/htmlcov/
+.coverage

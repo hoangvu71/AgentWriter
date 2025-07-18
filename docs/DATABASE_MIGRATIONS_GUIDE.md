@@ -41,7 +41,7 @@ npx supabase db push --password "YOUR_DB_PASSWORD"
 
 ### 4. Verify Migration
 ```bash
-python verify_tables_simple.py
+python scripts/database/check_tables.py
 ```
 This script:
 - Connects to Supabase using Python client
@@ -68,7 +68,7 @@ npx supabase migration new "world_building_and_characters"
 npx supabase db push --password "KWMNXOIPRu6Ee8c2"
 
 # 4. Verified tables exist
-python verify_tables_simple.py
+python scripts/database/check_tables.py
 # Result: Both tables created successfully
 ```
 
@@ -142,7 +142,7 @@ npx supabase db push --local
 npx supabase migration list --linked
 
 # Verify tables exist (Python)
-python verify_tables_simple.py
+python scripts/database/check_tables.py
 
 # Check Supabase status
 npx supabase status
