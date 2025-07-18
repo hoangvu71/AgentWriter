@@ -52,7 +52,8 @@
       "Bash(\"C:\\Program Files\\nodejs\\npx.cmd\" supabase status)",
       "Bash(copy migrations008_world_building_and_characters_system.sql supabasemigrations20250718210113_world_building_and_characters.sql /Y)",
       "Bash(move:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(pytest:*)"
     ],
     "deny": []
   }

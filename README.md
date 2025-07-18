@@ -46,6 +46,24 @@ A sophisticated multi-agent system for book writing powered by Google's Agent De
   - Target audience appeal analysis
 - **Links authors to plots and saves to database**
 
+### **🌍 World Building Agent**
+- Creates intricate fictional worlds based on plot requirements:
+  - Geography, climate, and physical environments
+  - Political systems, governments, and power structures
+  - Cultural traditions, religions, and social hierarchies
+  - Economic systems, trade, and resources
+  - Magic systems and supernatural elements (for fantasy)
+- **All world building data stored as structured JSONB in database**
+
+### **👥 Characters Agent**
+- Develops detailed character populations for stories:
+  - Primary protagonists with complete character arcs
+  - Supporting characters with defined roles and relationships
+  - Antagonists with clear motivations and backgrounds
+  - Character relationship networks and dynamics
+  - Character development trajectories throughout the story
+- **Links characters to both plots and world building contexts**
+
 ## 🗄️ Database Persistence (✅ Fully Operational)
 
 ### Current Database Schema:
@@ -53,19 +71,26 @@ A sophisticated multi-agent system for book writing powered by Google's Agent De
 2. **sessions** - Chat session persistence  
 3. **plots** - Generated plot data with normalized foreign keys
 4. **authors** - Author profiles (can have multiple plots)
-5. **orchestrator_decisions** - AI routing analytics
-6. **genres** - Genre definitions with descriptions
-7. **subgenres** - Subgenre categories linked to genres
-8. **microgenres** - Microgenre types linked to subgenres
-9. **tropes** - Story tropes linked to microgenres
-10. **tones** - Tone variations linked to tropes
-11. **target_audiences** - Audience demographics and interests
+5. **world_building** - Fictional world details with JSONB data structures
+6. **characters** - Character populations and relationship networks
+7. **orchestrator_decisions** - AI routing analytics
+8. **genres** - Genre definitions with descriptions
+9. **subgenres** - Subgenre categories linked to genres
+10. **microgenres** - Microgenre types linked to subgenres
+11. **tropes** - Story tropes linked to microgenres
+12. **tones** - Tone variations linked to tropes
+13. **target_audiences** - Audience demographics and interests
+14. **improvement_sessions** - Iterative content enhancement tracking
+15. **improvement_iterations** - Individual critique/enhancement cycles
 
 ### What Gets Saved Automatically:
 - ✅ **Every plot** with complete genre metadata
 - ✅ **Every author** linked to their plots
+- ✅ **World building details** with structured geography, politics, culture
+- ✅ **Character populations** with relationships and development arcs
 - ✅ **User sessions** for conversation tracking
 - ✅ **AI decisions** for system improvement
+- ✅ **Improvement iterations** with critique and enhancement cycles
 - ✅ **Searchable history** of all creations
 
 **📖 See `docs/database_documentation.md` for complete schema details.**
@@ -73,11 +98,14 @@ A sophisticated multi-agent system for book writing powered by Google's Agent De
 ## Features
 
 - **🤖 Multi-Agent Coordination**: Orchestrator routes requests to specialized agents
-- **📊 Sequential Workflows**: Plot → Author → Final Response coordination
+- **📊 Sequential Workflows**: Plot → World Building → Characters → Author coordination
 - **🎭 Genre Specialization**: Comprehensive genre, subgenre, and microgenre support
 - **👥 Target Audience Matching**: Age, orientation, and gender considerations
 - **💾 Database Persistence**: All data automatically saved to Supabase
-- **🔍 Search & Retrieval**: Find past plots and authors easily
+- **🔍 Search & Retrieval**: Find past plots, authors, worlds, and characters easily
+- **📚 Library Interface**: Card-based browsing with search, filter, and detailed modal views
+- **⚙️ Admin Interface**: Manage genres and target audiences with real-time validation
+- **🔄 Iterative Improvement**: Built-in critique, enhancement, and scoring system for content quality
 - **🧠 Memory**: Maintains conversation history and user preferences across agents
 - **🤖 Model Selection**: Choose from 5 different Google AI models:
   - **Gemini 2.0 Flash**: Fast, efficient for general writing tasks
@@ -158,17 +186,28 @@ npx supabase db push
 
 3. **Example interactions**:
    - "Create a fantasy novel, LitRPG, Zombie Apocalypse, survive and family, dark/humour/realistic, Male/Heterosexual/Young Adults. Create author too."
-   - "Generate a plot for a romance novel with enemies-to-lovers trope"
-   - "Create an author profile for a mystery writer targeting middle-aged women"
-   - "I need both a plot and author for a sci-fi thriller"
+   - "Generate a complete story foundation: plot, world, and characters for a space opera"
+   - "Create a romance plot with detailed world building and character relationships"
+   - "I need a mystery plot, then build a world and characters to support it"
+   - "Create author, plot, world building and characters for a cyberpunk thriller"
 
 ## API Endpoints
 
 - `GET /` - Web interface
+- `GET /library` - Content library interface
+- `GET /admin` - Administration interface for genres and audiences
 - `GET /health` - Health check with multi-agent system info
 - `GET /sessions` - List active sessions
 - `GET /sessions/{session_id}` - Get session info
 - `WebSocket /ws/{session_id}` - Multi-agent chat interface
+
+### Content Management
+- `GET /api/plots` - List all plots with metadata and author information
+- `GET /api/authors` - List all authors with plot counts and relationships
+- `GET /api/genres` - List all genres with subgenres and microgenres
+- `GET /api/target-audiences` - List all target audiences
+- `POST /api/genres` - Create new genre with name and description
+- `POST /api/target-audiences` - Create new audience with structured data
 
 ### Multi-Agent System
 - `GET /agents` - List all available agents and their capabilities
@@ -208,26 +247,46 @@ BooksWriter/
 │   │   └── agent_service.py         # Agent service utilities
 │   ├── database/
 │   │   └── supabase_service.py      # Database service layer
+│   ├── services/
+│   │   └── library_service.py       # Library management and content retrieval
 │   ├── api/                    # Future API endpoints
 │   └── utils/                  # Utility functions
-├── tests/unit/                 # All test files
-├── templates/                  # HTML templates
-├── scripts/
-│   ├── setup/                  # Setup automation scripts
-│   └── maintenance/            # Maintenance utilities
+│       └── validation.py       # Input validation and sanitization
+├── tests/                      # Comprehensive test suite
+│   ├── unit/                   # Unit tests for components
+│   ├── integration/            # Integration and system tests
+│   ├── conftest.py             # Pytest configuration and fixtures
+│   └── test_*.py               # Individual test files
+├── scripts/                    # Organized utility scripts
+│   ├── setup/                  # Installation and setup automation
+│   ├── migration/              # Database migration utilities
+│   ├── database/               # Database verification and management
+│   ├── dev/                    # Development tools (port management, etc.)
+│   └── maintenance/            # System maintenance and TDD compliance
+├── templates/                  # HTML templates with full functionality
+│   ├── index.html              # Main application landing page
+│   ├── chat.html               # Interactive chat interface
+│   ├── library.html            # Content library with search/filter
+│   └── admin.html              # Administration interface
+├── static/                     # Frontend assets (CSS, JavaScript)
+│   ├── css/main.css            # Unified CSS with theme support
+│   └── js/                     # JavaScript utilities and interactions
 ├── migrations/                 # Database migration system
 │   ├── 001_initial_schema.sql  # Base schema (✅ Applied)
-│   ├── 002_*.sql              # Additional migrations
-│   └── README.md               # Migration instructions
+│   ├── 008_world_building_and_characters_system.sql  # Latest migration (✅ Applied)
+│   └── applied_migrations.json # Migration tracking
 ├── docs/                       # All documentation
-│   ├── database_documentation.md   # Complete schema reference
-│   ├── setup_documentation.md      # Detailed setup guide
-│   └── CLAUDE.md               # Development guidelines
-├── static/                     # Frontend assets
+│   ├── CLAUDE.md               # AI development guidelines and TDD approach
+│   ├── DATABASE_MIGRATIONS_GUIDE.md  # Migration process documentation
+│   └── database_documentation.md     # Complete schema reference
 ├── config/                     # Configuration files
 │   ├── .env                    # Environment variables  
 │   └── service-account-key.json # Google Cloud credentials
+├── backups/                    # Backup files and version history
+├── supabase/                   # Supabase CLI configuration and migrations
 ├── requirements.txt            # Python dependencies
+├── package.json               # Node.js dependencies
+├── pytest.ini                 # Test configuration with coverage
 └── README.md                   # This file
 ```
 
@@ -235,7 +294,7 @@ BooksWriter/
 
 ### Supabase Dashboard
 - **URL**: https://app.supabase.com/project/YOUR_PROJECT_ID
-- **Tables**: users, sessions, plots, authors, orchestrator_decisions
+- **Tables**: users, sessions, plots, authors, world_building, characters, orchestrator_decisions, improvement_sessions
 - **Status**: ✅ All tables operational with data
 
 ### Connection Details
