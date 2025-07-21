@@ -11,6 +11,7 @@ from ..core.validation import Validator, ValidationError
 from ..core.logging import get_logger
 from ..websocket.connection_manager import ConnectionManager
 from ..agents.agent_factory import AgentFactory
+from ..database.supabase_service import supabase_service
 
 
 class WebSocketHandler:
@@ -80,6 +81,92 @@ class WebSocketHandler:
         # Clean up connection
         self.connection_manager.disconnect(client_id)
     
+    async def _save_agent_response_to_database(
+        self, 
+        agent_name: str, 
+        response_data: Dict[str, Any], 
+        session_id: str, 
+        user_id: str,
+        orchestrator_data: Dict[str, Any] = None
+    ) -> None:
+        """Save agent response to appropriate database table"""
+        try:
+            if agent_name == "plot_generator":
+                await supabase_service.save_plot(
+                    session_id=session_id,
+                    user_id=user_id,
+                    plot_data=response_data,
+                    orchestrator_params=orchestrator_data
+                )
+                
+            elif agent_name == "author_generator":
+                await supabase_service.save_author(
+                    session_id=session_id,
+                    user_id=user_id,
+                    author_data=response_data
+                )
+                
+            elif agent_name == "world_building":
+                # Get plot ID if available from recent plot creation
+                plot_id = await self._get_recent_plot_id(session_id, user_id)
+                await supabase_service.save_world_building(
+                    session_id=session_id,
+                    user_id=user_id,
+                    world_data=response_data,
+                    orchestrator_params=orchestrator_data,
+                    plot_id=plot_id
+                )
+                
+            elif agent_name == "characters":
+                # Get plot and world IDs if available
+                plot_id = await self._get_recent_plot_id(session_id, user_id)
+                world_id = await self._get_recent_world_id(session_id, user_id)
+                await supabase_service.save_characters(
+                    session_id=session_id,
+                    user_id=user_id,
+                    characters_data=response_data,
+                    orchestrator_params=orchestrator_data,
+                    world_id=world_id,
+                    plot_id=plot_id
+                )
+                
+            elif agent_name in ["critique", "enhancement", "scoring"]:
+                # These would need improvement session context
+                # For now, log that they completed
+                self.logger.info(f"Completed {agent_name} analysis - improvement workflow integration needed")
+                
+            else:
+                self.logger.warning(f"No database save method configured for agent: {agent_name}")
+                
+        except Exception as e:
+            self.logger.error(f"Database save error for {agent_name}: {e}")
+            raise
+    
+    async def _get_recent_plot_id(self, session_id: str, user_id: str) -> str:
+        """Get the most recently created plot ID for this session"""
+        try:
+            session_data = await supabase_service.get_session_data(session_id)
+            plots = session_data.get("plots", [])
+            if plots:
+                # Return the most recent plot ID
+                return plots[-1]["id"]
+        except Exception as e:
+            self.logger.warning(f"Could not get recent plot ID: {e}")
+        return None
+    
+    async def _get_recent_world_id(self, session_id: str, user_id: str) -> str:
+        """Get the most recently created world ID for this session"""
+        try:
+            session_data = await supabase_service.get_session_data(session_id)
+            # Would need to add world_building to session data query
+            # For now, try to get from user's recent worlds
+            worlds = await supabase_service.get_user_world_building(user_id, limit=1)
+            if worlds:
+                return worlds[0]["id"]
+        except Exception as e:
+            self.logger.warning(f"Could not get recent world ID: {e}")
+        return None
+    
     async def _process_message(self, client_id: str, session_id: str, message_data: Dict[str, Any]):
         """Process an incoming WebSocket message"""
         message_type = message_data.get("type", "message")
@@ -120,17 +207,49 @@ class WebSocketHandler:
             # Get orchestrator agent
             orchestrator = self.agent_factory.create_agent("orchestrator")
             
-            # Route the request
-            agent_names = await orchestrator.route_request(request)
+            # Send orchestrator header
+            await self.connection_manager.send_json({
+                "type": "stream_chunk",
+                "content": "\n[AI] Orchestrator:\n"
+            }, client_id)
+            
+            # Get orchestrator's full response with reasoning
+            orchestrator_response = await orchestrator.process_request(request)
+            
+            # Send orchestrator's reasoning
+            await self.connection_manager.send_json({
+                "type": "stream_chunk", 
+                "content": orchestrator_response.content
+            }, client_id)
+            
+            # Extract agent names from response
+            agent_names = []
+            if orchestrator_response.parsed_json and "agents_to_invoke" in orchestrator_response.parsed_json:
+                agent_names = orchestrator_response.parsed_json["agents_to_invoke"]
+            else:
+                # Fallback to route_request if parsing failed
+                agent_names = await orchestrator.route_request(request)
             
             # Send routing information
             await self.connection_manager.send_json({
                 "type": "workflow_start",
                 "agents_to_invoke": agent_names,
-                "orchestrator_decision": "Multi-agent workflow initiated"
+                "orchestrator_decision": orchestrator_response.content if orchestrator_response.content else "Multi-agent workflow initiated"
             }, client_id)
             
+            # Save orchestrator decision to database
+            try:
+                if orchestrator_data:
+                    await supabase_service.save_orchestrator_decision(
+                        session_id=validated_session_id,
+                        user_id=validated_user_id,
+                        decision_data=orchestrator_data
+                    )
+            except Exception as e:
+                self.logger.warning(f"Failed to save orchestrator decision: {e}")
+            
             # Process through each agent
+            orchestrator_data = orchestrator_response.parsed_json if orchestrator_response.parsed_json else {}
             for agent_name in agent_names:
                 try:
                     agent = self.agent_factory.create_agent(agent_name)
@@ -161,6 +280,30 @@ class WebSocketHandler:
                                     "json_data": response.parsed_json,
                                     "raw_content": full_response
                                 }, client_id)
+                                
+                                # Save to database
+                                try:
+                                    await self._save_agent_response_to_database(
+                                        agent_name, 
+                                        response.parsed_json, 
+                                        validated_session_id, 
+                                        validated_user_id,
+                                        orchestrator_data
+                                    )
+                                    
+                                    await self.connection_manager.send_json({
+                                        "type": "database_saved",
+                                        "agent": agent_name,
+                                        "message": f"{agent_name.replace('_', ' ').title()} saved to database"
+                                    }, client_id)
+                                    
+                                except Exception as db_error:
+                                    self.logger.error(f"Failed to save {agent_name} to database: {db_error}")
+                                    await self.connection_manager.send_json({
+                                        "type": "database_error", 
+                                        "agent": agent_name,
+                                        "error": f"Failed to save to database: {str(db_error)}"
+                                    }, client_id)
                             break
                 
                 except Exception as e:

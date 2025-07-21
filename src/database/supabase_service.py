@@ -1225,5 +1225,98 @@ class SupabaseService:
             print(f"Error getting content improvement sessions: {e}")
             raise
 
+    # ========== SCHEMA INTROSPECTION ==========
+    
+    async def get_table_schema(self, table_name: str) -> List[Dict[str, Any]]:
+        """Get column information for a specific table"""
+        try:
+            # Query PostgreSQL information_schema for column details
+            query = f"""
+            SELECT 
+                column_name,
+                data_type,
+                is_nullable,
+                column_default,
+                character_maximum_length,
+                numeric_precision,
+                numeric_scale
+            FROM information_schema.columns 
+            WHERE table_name = '{table_name}' 
+            AND table_schema = 'public'
+            ORDER BY ordinal_position;
+            """
+            
+            response = self.client.rpc('exec_sql', {'sql': query}).execute()
+            return response.data
+            
+        except Exception as e:
+            print(f"Error getting table schema for {table_name}: {e}")
+            # Fallback: return hardcoded schema for known tables
+            return self._get_fallback_schema(table_name)
+    
+    def _get_fallback_schema(self, table_name: str) -> List[Dict[str, Any]]:
+        """Fallback schemas for tables when introspection fails"""
+        schemas = {
+            "plots": [
+                {"column_name": "id", "data_type": "uuid", "is_nullable": "NO"},
+                {"column_name": "session_id", "data_type": "uuid", "is_nullable": "NO"},
+                {"column_name": "user_id", "data_type": "uuid", "is_nullable": "NO"},
+                {"column_name": "title", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "plot_summary", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "genre_id", "data_type": "uuid", "is_nullable": "YES"},
+                {"column_name": "subgenre_id", "data_type": "uuid", "is_nullable": "YES"},
+                {"column_name": "microgenre_id", "data_type": "uuid", "is_nullable": "YES"},
+                {"column_name": "trope_id", "data_type": "uuid", "is_nullable": "YES"},
+                {"column_name": "tone_id", "data_type": "uuid", "is_nullable": "YES"},
+                {"column_name": "target_audience_id", "data_type": "uuid", "is_nullable": "YES"},
+                {"column_name": "author_id", "data_type": "uuid", "is_nullable": "YES"},
+                {"column_name": "created_at", "data_type": "timestamp with time zone", "is_nullable": "YES"}
+            ],
+            "authors": [
+                {"column_name": "id", "data_type": "uuid", "is_nullable": "NO"},
+                {"column_name": "session_id", "data_type": "uuid", "is_nullable": "NO"},
+                {"column_name": "user_id", "data_type": "uuid", "is_nullable": "NO"},
+                {"column_name": "author_name", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "pen_name", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "biography", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "writing_style", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "created_at", "data_type": "timestamp with time zone", "is_nullable": "YES"}
+            ],
+            "world_building": [
+                {"column_name": "id", "data_type": "uuid", "is_nullable": "NO"},
+                {"column_name": "session_id", "data_type": "uuid", "is_nullable": "NO"},
+                {"column_name": "user_id", "data_type": "uuid", "is_nullable": "NO"},
+                {"column_name": "plot_id", "data_type": "uuid", "is_nullable": "YES"},
+                {"column_name": "world_name", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "world_type", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "overview", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "geography", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "political_landscape", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "cultural_systems", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "economic_framework", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "historical_timeline", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "power_systems", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "languages_and_communication", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "religious_and_belief_systems", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "unique_elements", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "created_at", "data_type": "timestamp with time zone", "is_nullable": "YES"}
+            ],
+            "characters": [
+                {"column_name": "id", "data_type": "uuid", "is_nullable": "NO"},
+                {"column_name": "session_id", "data_type": "uuid", "is_nullable": "NO"},
+                {"column_name": "user_id", "data_type": "uuid", "is_nullable": "NO"},
+                {"column_name": "world_id", "data_type": "uuid", "is_nullable": "YES"},
+                {"column_name": "plot_id", "data_type": "uuid", "is_nullable": "YES"},
+                {"column_name": "character_count", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "world_context_integration", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "characters", "data_type": "jsonb", "is_nullable": "YES"},
+                {"column_name": "relationship_networks", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "character_dynamics", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "created_at", "data_type": "timestamp with time zone", "is_nullable": "YES"}
+            ]
+        }
+        
+        return schemas.get(table_name, [])
+
 # Global Supabase service instance
 supabase_service = SupabaseService()

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Content Parameters</title>
+</head>
+<body>
+    <h1>Debug Content Parameters</h1>
+    <div id="results"></div>
+
+    <script>
+        // Test the exact same calls the frontend makes
+        async function testEndpoints() {
+            const results = document.getElementById('results');
+            
+            try {
+                // Test genres
+                console.log('Testing /api/genres...');
+                const genresResponse = await fetch('/api/genres');
+                const genresData = await genresResponse.json();
+                results.innerHTML += `<h2>Genres Response:</h2><pre>${JSON.stringify(genresData, null, 2)}</pre>`;
+                
+                if (genresData.success) {
+                    const result = genresData.data || {};
+                    const allGenres = result.genres || [];
+                    results.innerHTML += `<p>Found ${allGenres.length} genres</p>`;
+                    
+                    if (allGenres.length > 0) {
+                        results.innerHTML += `<p>First genre: ${allGenres[0].name}</p>`;
+                    }
+                }
+                
+                // Test target audiences
+                console.log('Testing /api/target-audiences...');
+                const audiencesResponse = await fetch('/api/target-audiences');
+                const audiencesData = await audiencesResponse.json();
+                results.innerHTML += `<h2>Audiences Response:</h2><pre>${JSON.stringify(audiencesData, null, 2)}</pre>`;
+                
+                if (audiencesData.success && audiencesData.data) {
+                    const allAudiences = audiencesData.data;
+                    results.innerHTML += `<p>Found ${allAudiences.length} audiences</p>`;
+                }
+                
+                // Test content selection
+                console.log('Testing /api/content-selection...');
+                const contentResponse = await fetch('/api/content-selection');
+                const contentData = await contentResponse.json();
+                results.innerHTML += `<h2>Content Response:</h2><pre>${JSON.stringify(contentData, null, 2)}</pre>`;
+                
+                if (contentData.success && contentData.data && contentData.data.content) {
+                    const content = contentData.data.content;
+                    results.innerHTML += `<p>Found ${content.length} content items</p>`;
+                }
+                
+            } catch (error) {
+                results.innerHTML += `<h2>Error:</h2><pre>${error}</pre>`;
+                console.error('Error:', error);
+            }
+        }
+        
+        // Run test when page loads
+        window.onload = testEndpoints;
+    </script>
+</body>
+</html>

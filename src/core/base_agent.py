@@ -4,6 +4,7 @@ Base agent implementation for the multi-agent book writing system.
 
 import json
 import re
+import os
 from typing import Dict, Any, Optional, AsyncGenerator
 from google.adk.agents import Agent
 from google.adk.runners import InMemoryRunner
@@ -11,6 +12,7 @@ from google.adk.runners import InMemoryRunner
 from .interfaces import IAgent, AgentRequest, AgentResponse, StreamChunk, ContentType
 from .configuration import Configuration
 from .logging import get_logger
+from .schema_service import schema_service
 
 
 class BaseAgent(IAgent):
@@ -19,18 +21,55 @@ class BaseAgent(IAgent):
     def __init__(self, name: str, description: str, instruction: str, config: Configuration):
         self._name = name
         self._description = description
-        self._instruction = instruction
+        self._base_instruction = instruction
         self._config = config
         self._logger = get_logger(f"agent.{name}")
+        self._dynamic_schema = None
+        
+        # Generate dynamic instruction with schema
+        self._instruction = self._generate_dynamic_instruction()
         
         # Initialize Google ADK agent
         self._agent = Agent(
             name=name,
             model=config.model_name,
-            instruction=instruction,
+            instruction=self._instruction,
             description=description
         )
-        self._runner = InMemoryRunner(self._agent)
+        self._runner = InMemoryRunner(self._agent, app_name=f"{name}_app")
+        self._sessions = {}
+    
+    def _generate_dynamic_instruction(self) -> str:
+        """Generate instruction with dynamic schema based on database structure"""
+        try:
+            # Use fallback schema since database introspection might not be available
+            content_type = schema_service.get_content_type_from_agent(self._name)
+            
+            # Special case for orchestrator - it doesn't need database schema
+            if content_type == "orchestrator":
+                return self._base_instruction
+            
+            # Get fallback schema directly
+            schema = schema_service._get_fallback_json_schema(content_type)
+            
+            if schema:
+                self._dynamic_schema = schema
+                
+                # Generate schema instruction
+                schema_instruction = schema_service.generate_json_schema_instruction(content_type, schema)
+                
+                # Combine base instruction with dynamic schema
+                enhanced_instruction = self._base_instruction + "\n\n" + schema_instruction
+                
+                self._logger.info(f"Generated dynamic instruction with {len(schema)} schema fields for {self._name}")
+                return enhanced_instruction
+            else:
+                self._logger.warning(f"No schema available for {content_type}, using base instruction")
+                return self._base_instruction
+            
+        except Exception as e:
+            self._logger.warning(f"Failed to generate dynamic schema for {self._name}: {e}")
+            return self._base_instruction
     
     @property
     def name(self) -> str:
@@ -44,6 +83,11 @@ class BaseAgent(IAgent):
     def instruction(self) -> str:
         return self._instruction
     
+    @property 
+    def dynamic_schema(self) -> Optional[Dict[str, Any]]:
+        """Get the dynamic schema for this agent"""
+        return self._dynamic_schema
+    
     async def process_request(self, request: AgentRequest) -> AgentResponse:
         """Process a request and return a response"""
         try:
@@ -53,19 +97,46 @@ class BaseAgent(IAgent):
             message = self._prepare_message(request)
             
             # Execute the agent
-            async with self._runner.run(
-                user_id=request.user_id,
-                session_id=request.session_id,
-                new_message=message
-            ) as session:
-                response = await session.send(message, user=request.user_id)
+            try:
+                # Import Google GenAI types
+                from google.genai import types
+                
+                # Ensure session exists
+                await self._ensure_session(request.user_id, request.session_id)
+                
+                # Create proper message content object
+                content = types.Content(
+                    role='user',
+                    parts=[types.Part(text=message)]
+                )
+                
+                # Collect all response chunks
+                content_parts = []
+                async for event in self._runner.run_async(
+                    user_id=request.user_id,
+                    session_id=request.session_id,
+                    new_message=content
+                ):
+                    # Extract text content from events
+                    if hasattr(event, 'content') and event.content:
+                        content_parts.append(str(event.content))
+                    elif hasattr(event, 'text') and event.text:
+                        content_parts.append(event.text)
+                    elif hasattr(event, 'delta') and event.delta:
+                        content_parts.append(event.delta)
+                
+                content = ''.join(content_parts)
+                    
+            except Exception as e:
+                self._logger.error(f"Error generating response: {e}")
+                content = f"Error generating response: {str(e)}"
             
             # Parse the response
-            parsed_response = self._parse_response(response.content)
+            parsed_response = self._parse_response(content)
             
             return AgentResponse(
                 agent_name=self._name,
-                content=response.content,
+                content=content,
                 content_type=self._get_content_type(),
                 parsed_json=parsed_response,
                 metadata=request.metadata or {},
@@ -91,17 +162,48 @@ class BaseAgent(IAgent):
             message = self._prepare_message(request)
             
             # Execute the agent with streaming
-            async with self._runner.run(
-                user_id=request.user_id,
-                session_id=request.session_id,
-                new_message=message
-            ) as session:
-                async for chunk in session.send_streaming(message, user=request.user_id):
-                    yield StreamChunk(
-                        chunk=chunk.content,
-                        agent_name=self._name,
-                        is_complete=False
-                    )
+            try:
+                # Import Google GenAI types
+                from google.genai import types
+                
+                # Ensure session exists
+                await self._ensure_session(request.user_id, request.session_id)
+                
+                # Create proper message content object
+                content = types.Content(
+                    role='user',
+                    parts=[types.Part(text=message)]
+                )
+                
+                async for event in self._runner.run_async(
+                    user_id=request.user_id,
+                    session_id=request.session_id,
+                    new_message=content
+                ):
+                    # Extract text content from events
+                    chunk_text = None
+                    if hasattr(event, 'content') and event.content:
+                        chunk_text = str(event.content)
+                    elif hasattr(event, 'text') and event.text:
+                        chunk_text = event.text
+                    elif hasattr(event, 'delta') and event.delta:
+                        chunk_text = event.delta
+                    
+                    if chunk_text:
+                        yield StreamChunk(
+                            chunk=chunk_text,
+                            agent_name=self._name,
+                            is_complete=False
+                        )
+                        
+            except Exception as e:
+                # Error handling
+                self._logger.error(f"Error in streaming: {e}")
+                yield StreamChunk(
+                    chunk=f"Error: {str(e)}",
+                    agent_name=self._name,
+                    is_complete=True
+                )
             
             # Send completion signal
             yield StreamChunk(
@@ -178,3 +280,19 @@ class BaseAgent(IAgent):
         
         if not request.session_id:
             raise ValueError("Session ID is required")
+    
+    async def _ensure_session(self, user_id: str, session_id: str) -> None:
+        """Ensure a session exists for the user"""
+        if session_id not in self._sessions:
+            try:
+                # Create new session - must match runner's app_name
+                session = await self._runner.session_service.create_session(
+                    app_name=f"{self._name}_app",  # Must match runner app_name
+                    user_id=user_id,
+                    session_id=session_id
+                )
+                self._sessions[session_id] = session
+                self._logger.info(f"Created new session {session_id} for user {user_id}")
+            except Exception as e:
+                self._logger.error(f"Failed to create session: {e}")
+                raise  # Don't continue without session - it's required

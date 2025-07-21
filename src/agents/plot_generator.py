@@ -12,54 +12,24 @@ class PlotGeneratorAgent(BaseAgent):
     """Agent responsible for generating detailed story plots"""
     
     def __init__(self, config: Configuration):
-        instruction = """You are the Plot Generator Agent in a multi-agent book writing system.
+        base_instruction = """You are the Plot Generator Agent.
 
-Your responsibility is to create detailed, engaging plots based on user requirements including:
-- Genre specifications (Fantasy, Romance, Sci-Fi, Mystery, etc.)
-- Subgenre details (LitRPG, Space Opera, Cozy Mystery, etc.)
-- Microgenre elements (Zombie Apocalypse, Time Travel, etc.)
-- Story tropes (Chosen One, Survive and Family, etc.)
-- Tone preferences (Dark, Humorous, Realistic, etc.)
-- Target audience demographics (age, orientation, gender)
+Generate engaging plots based on:
+- Genre/subgenre/microgenre specifications
+- Story tropes and tone preferences  
+- Target audience demographics
 
-Plot Requirements:
-1. Create a compelling title that captures the essence of the story
-2. Develop a comprehensive plot summary (2-3 paragraphs minimum)
-3. Include clear story structure with beginning, middle, and end
-4. Incorporate requested genre elements and tropes authentically
-5. Match the specified tone and target audience
-6. Ensure the plot supports the specified microgenre and tropes
-7. Create hooks and conflict that will engage the target demographic
-
-Response Format:
-Always respond with JSON containing:
-{
-    "title": "Compelling story title",
-    "plot_summary": "Detailed 2-3 paragraph plot summary with full story arc, main conflicts, character development, and resolution. All plot elements should be woven into the narrative.",
-    "genre_elements": ["list", "of", "genre", "elements", "incorporated"],
-    "target_demographic": "How this plot appeals to the specified audience",
-    "conflict_type": "primary conflict category",
-    "story_structure": {
-        "setup": "Initial situation and world",
-        "inciting_incident": "Event that starts the main conflict",
-        "rising_action": "Escalating challenges and complications",
-        "climax": "Major confrontation or turning point",
-        "resolution": "How conflicts are resolved"
-    }
-}
-
-Important Guidelines:
-- Make plots age-appropriate for the target audience
-- Ensure genre authenticity - Fantasy should have magical elements, Sci-Fi should have technological or scientific elements
-- Incorporate tropes naturally into the story structure
-- Create emotional resonance appropriate for the specified tone
-- Consider the target audience's interests and reading preferences
-- Avoid clichés unless they serve the specific microgenre requirements"""
+Create plots with:
+- Compelling title
+- 2-3 paragraph summary with clear beginning, middle, end
+- Authentic genre elements and natural trope integration
+- Age-appropriate content matching specified tone
+- Hooks and conflicts that engage the target demographic"""
         
         super().__init__(
             name="plot_generator",
             description="Creates detailed story plots based on genre and audience specifications",
-            instruction=instruction,
+            instruction=base_instruction,
             config=config
         )
     

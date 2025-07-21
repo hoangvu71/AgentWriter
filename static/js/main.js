@@ -1040,11 +1040,15 @@ let ws = null;
                         
                         if (data.success) {
                             // Store all data globally
-                            allGenres = data.genres || [];
-                            allSubgenres = data.subgenres || [];
-                            allMicrogenres = data.microgenres || [];
-                            allTropes = data.tropes || [];
-                            allTones = data.tones || [];
+                            const result = data.data || {};
+                            allGenres = result.genres || [];
+                            allSubgenres = result.subgenres || [];
+                            allMicrogenres = result.microgenres || [];
+                            allTropes = result.tropes || [];
+                            allTones = result.tones || [];
+                            
+                            console.log('Loaded genres:', allGenres.length);
+                            console.log('Loaded subgenres:', allSubgenres.length);
                             
                             // Populate genre dropdown
                             populateGenreDropdown();
@@ -1058,8 +1062,9 @@ let ws = null;
                     const audiencesResponse = await fetch('/api/target-audiences');
                     if (audiencesResponse.ok) {
                         const audiencesData = await audiencesResponse.json();
-                        if (audiencesData.success && audiencesData.audiences) {
-                            allAudiences = audiencesData.audiences;
+                        if (audiencesData.success && audiencesData.data) {
+                            allAudiences = audiencesData.data;
+                            console.log('Loaded audiences:', allAudiences.length);
                             populateAudienceDropdown();
                         }
                     }
@@ -1073,6 +1078,10 @@ let ws = null;
                 genreSelect.innerHTML = '<option value="">Select Genre...</option>';
                 
                 allGenres.forEach(genre => {
+                    // Skip genres with empty names
+                    if (!genre.name || genre.name.trim() === '') {
+                        return;
+                    }
                     const option = document.createElement('option');
                     option.value = JSON.stringify(genre);
                     option.textContent = genre.name;
@@ -1087,7 +1096,10 @@ let ws = null;
                 allAudiences.forEach(audience => {
                     const option = document.createElement('option');
                     option.value = JSON.stringify(audience);
-                    option.textContent = `${audience.age_group} - ${audience.gender} - ${audience.sexual_orientation}`;
+                    const ageGroup = audience.age_group || 'Unknown';
+                    const gender = audience.gender || 'Any';
+                    const orientation = audience.sexual_orientation || 'Any';
+                    option.textContent = `${ageGroup} - ${gender} - ${orientation}`;
                     audienceSelect.appendChild(option);
                 });
             }
@@ -1406,7 +1418,7 @@ let ws = null;
                         const contentSelect = document.getElementById('contentSelect');
                         contentSelect.innerHTML = '<option value="">Select Content...</option>';
                         
-                        data.content.forEach(item => {
+                        data.data.content.forEach(item => {
                             const option = document.createElement('option');
                             const value = JSON.stringify({
                                 id: item.id,

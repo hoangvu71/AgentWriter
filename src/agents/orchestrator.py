@@ -31,6 +31,13 @@ Routing Logic:
 - If user mentions "improve", "enhance", "critique" with content ID → route to improvement_workflow
 - If user wants multiple things → route to appropriate sequential workflow
 
+Content Parameters Workflows:
+- If CONTENT_TO_IMPROVE is selected (plot/author) + "critique"/"enhance" → improvement_workflow
+- If CONTENT_TO_IMPROVE is plot + "world building" → world_building_from_plot
+- If CONTENT_TO_IMPROVE is plot + "characters" → characters_from_plot_and_world
+- If CONTENT_TO_IMPROVE is plot + "world" + "characters" → world_then_characters_from_plot
+- If genre/audience params selected + "create plot" → plot_generator_with_params
+
 Sequential Workflows:
 1. plot_generator → Basic plot creation
 2. author_generator → Author profile creation
@@ -86,24 +93,92 @@ Be decisive and clear in your routing decisions."""
         return response
     
     def _fallback_routing(self, content: str) -> List[str]:
-        """Simple keyword-based routing fallback"""
+        """Enhanced routing with Content Parameters support"""
         content_lower = content.lower()
+        context = self._extract_context(content)
+        
+        # === CONTENT PARAMETERS WORKFLOWS ===
+        
+        # If user selected content to improve + wants critique/enhance
+        if context.get("has_selected_content") and any(word in content_lower for word in ["critique", "enhance", "improve", "better"]):
+            return ["critique", "enhancement", "scoring"]
+        
+        # If user selected plot + wants world building
+        if context.get("selected_content_type") == "plot" and any(word in content_lower for word in ["world", "setting", "geography", "culture"]):
+            return ["world_building"]
+        
+        # If user selected plot + wants characters
+        if context.get("selected_content_type") == "plot" and any(word in content_lower for word in ["character", "personality", "protagonist"]):
+            # Characters need world context, so build world first
+            return ["world_building", "characters"]
+        
+        # If user selected plot + wants both world and characters
+        if context.get("selected_content_type") == "plot" and any(word in content_lower for word in ["world", "setting"]) and any(word in content_lower for word in ["character", "personality"]):
+            return ["world_building", "characters"]
+        
+        # === PARAMETER-BASED CREATION ===
+        
+        # If user has genre/audience params and wants to create content
+        if context.get("has_parameters") or context.get("uses_parameters"):
+            has_plot = any(word in content_lower for word in ["plot", "story"])
+            has_author = any(word in content_lower for word in ["author", "biography", "writing style"])
+            has_world = any(word in content_lower for word in ["world", "setting", "geography"])
+            has_characters = any(word in content_lower for word in ["character", "personality"])
+            
+            if has_plot and has_author:
+                return ["plot_generator", "author_generator"]
+            elif has_plot and has_world and has_characters:
+                return ["plot_generator", "world_building", "characters"]
+            elif has_plot and has_world:
+                return ["plot_generator", "world_building"]
+            elif has_plot and has_characters:
+                return ["plot_generator", "world_building", "characters"]
+            elif has_plot:
+                return ["plot_generator"]
+            elif has_author:
+                return ["author_generator"]
+        
+        # === REGULAR WORKFLOWS (no Content Parameters) ===
         
         # Check for improvement workflow keywords
         if any(word in content_lower for word in ["improve", "enhance", "critique", "better"]):
             return ["critique", "enhancement", "scoring"]
         
-        # Check for character-related keywords
-        if any(word in content_lower for word in ["character", "personality", "relationship", "protagonist"]):
-            return ["plot_generator", "world_building", "characters"]
+        # Check for combined requests (plot AND author, plot AND world, etc.)
+        has_plot = any(word in content_lower for word in ["plot", "story"])
+        has_author = any(word in content_lower for word in ["author", "biography", "writing style", "pen name"])
+        has_world = any(word in content_lower for word in ["world", "setting", "geography", "culture", "magic"])
+        has_characters = any(word in content_lower for word in ["character", "personality", "relationship", "protagonist"])
         
-        # Check for world building keywords
-        if any(word in content_lower for word in ["world", "setting", "geography", "culture", "magic"]):
+        # Multi-agent workflows
+        if has_plot and has_author and has_world and has_characters:
+            return ["plot_generator", "author_generator", "world_building", "characters"]
+        elif has_plot and has_author and has_world:
+            return ["plot_generator", "author_generator", "world_building"]
+        elif has_plot and has_author:
+            return ["plot_generator", "author_generator"]
+        elif has_plot and has_characters:
+            return ["plot_generator", "world_building", "characters"]
+        elif has_plot and has_world:
             return ["plot_generator", "world_building"]
         
-        # Check for author-related keywords
-        if any(word in content_lower for word in ["author", "biography", "writing style", "pen name"]):
+        # Single agent workflows
+        elif has_characters:
+            # If user already selected content, don't generate new plot
+            if context.get("has_selected_content"):
+                return ["world_building", "characters"]
+            else:
+                return ["plot_generator", "world_building", "characters"]
+        elif has_world:
+            # If user already selected content, don't generate new plot
+            if context.get("has_selected_content"):
+                return ["world_building"]
+            else:
+                return ["plot_generator", "world_building"]
+        elif has_author:
             return ["author_generator"]
+        elif has_plot:
+            return ["plot_generator"]
         
         # Default to plot generation
         return ["plot_generator"]
@@ -113,7 +188,7 @@ Be decisive and clear in your routing decisions."""
         return ContentType.PLOT  # This won't be used
     
     def _extract_context(self, content: str) -> Dict[str, Any]:
-        """Extract context information from the content"""
+        """Extract context information from the content including Content Parameters"""
         context = {}
         
         # Look for content IDs (UUIDs)
@@ -121,6 +196,23 @@ Be decisive and clear in your routing decisions."""
         uuid_matches = re.findall(uuid_pattern, content, re.IGNORECASE)
         if uuid_matches:
             context["content_id"] = uuid_matches[0]
+        
+        # Look for Content Parameters context markers
+        if "CONTENT_TO_IMPROVE:" in content:
+            context["has_selected_content"] = True
+            # Extract content type from the parameters
+            if "CONTENT_TYPE: plot" in content:
+                context["selected_content_type"] = "plot"
+            elif "CONTENT_TYPE: author" in content:
+                context["selected_content_type"] = "author"
+        
+        # Look for Genre/Audience Parameters
+        if "MAIN GENRE:" in content or "SUBGENRE:" in content or "TARGET AUDIENCE:" in content or "DETAILED CONTENT SPECIFICATIONS" in content:
+            context["has_parameters"] = True
+            
+        # Look for parameter-based requests
+        if "based on" in content.lower() and "param" in content.lower():
+            context["uses_parameters"] = True
         
         # Look for content type mentions
         content_types = ["plot", "author", "world", "character", "characters"]

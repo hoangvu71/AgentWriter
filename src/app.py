@@ -13,7 +13,7 @@ from .core.logging import setup_logging, get_logger
 from .websocket.connection_manager import ConnectionManager
 from .websocket.websocket_handler import WebSocketHandler
 from .agents.agent_factory import AgentFactory
-from .routers import plots, authors, websocket, content, admin
+from .routers import plots, authors, websocket, content, admin, models
 
 # Setup logging
 setup_logging()
@@ -124,6 +124,7 @@ app.include_router(plots.router, prefix="/api", tags=["plots"])
 app.include_router(authors.router, prefix="/api", tags=["authors"])
 app.include_router(content.router, prefix="/api", tags=["content"])
 app.include_router(admin.router, prefix="/api", tags=["admin"])
+app.include_router(models.router, prefix="", tags=["models"])
 
 
 def create_app() -> FastAPI:
