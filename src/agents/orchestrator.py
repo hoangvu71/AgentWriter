@@ -104,49 +104,52 @@ Be decisive and clear in your routing decisions."""
         return response
     
     async def _fallback_routing(self, content: str, context: Dict[str, Any]) -> List[str]:
-        """Enhanced routing with Content Parameters and LoreGen support"""
+        """Enhanced routing with structured context analysis"""
         content_lower = content.lower()
-        extracted_context = self._extract_context(content)
-        combined_context = {**extracted_context, **context}
         
-        # === CONTENT PARAMETERS WORKFLOWS ===
+        # Use structured context analysis instead of text parsing
+        from ..core.interfaces import AgentRequest
+        temp_request = AgentRequest(content=content, user_id="routing", session_id="routing", context=context)
+        analyzed_context = self.analyze_request_context(temp_request)
         
-        # If user selected content to improve + wants critique/enhance
-        if context.get("has_selected_content") and any(word in content_lower for word in ["critique", "enhance", "improve", "better"]):
-            return ["critique", "enhancement", "scoring"]
+        # === STRUCTURED CONTEXT ROUTING ===
         
-        # If user selected plot + wants world building
-        if context.get("selected_content_type") == "plot" and any(word in content_lower for word in ["world", "setting", "geography", "culture"]):
-            return ["world_building"]
+        # Priority 1: Content improvement workflow
+        if analyzed_context.get("has_selected_content"):
+            improvement_keywords = ["critique", "enhance", "improve", "better", "fix", "review"]
+            if any(word in content_lower for word in improvement_keywords):
+                return ["critique", "enhancement", "scoring"]
+            
+            # Selected content + specific requests
+            content_type = analyzed_context.get("selected_content_type", "")
+            if content_type == "plot":
+                if any(word in content_lower for word in ["world", "setting", "geography", "culture"]):
+                    return ["world_building"]
+                elif any(word in content_lower for word in ["character", "personality", "protagonist"]):
+                    return ["world_building", "characters"]
         
-        # If user selected plot + wants characters
-        if context.get("selected_content_type") == "plot" and any(word in content_lower for word in ["character", "personality", "protagonist"]):
-            # Characters need world context, so build world first
-            return ["world_building", "characters"]
-        
-        # If user selected plot + wants both world and characters
-        if context.get("selected_content_type") == "plot" and any(word in content_lower for word in ["world", "setting"]) and any(word in content_lower for word in ["character", "personality"]):
-            return ["world_building", "characters"]
-        
-        # === PARAMETER-BASED CREATION ===
-        
-        # If user has genre/audience params and wants to create content
-        if context.get("has_parameters") or context.get("uses_parameters"):
+        # Priority 2: Structured parameter-based routing
+        if analyzed_context.get("has_parameters"):
+            agents = self.determine_agents_from_context(analyzed_context)
+            
+            # Combine with content intent analysis
             has_plot = any(word in content_lower for word in ["plot", "story"])
             has_author = any(word in content_lower for word in ["author", "biography", "writing style"])
             has_world = any(word in content_lower for word in ["world", "setting", "geography"])
             has_characters = any(word in content_lower for word in ["character", "personality"])
             
-            if has_plot and has_author:
-                return ["plot_generator", "author_generator"]
-            elif has_plot and has_world and has_characters:
-                return ["plot_generator", "world_building", "characters"]
-            elif has_plot and has_world:
-                return ["plot_generator", "world_building"]
-            elif has_plot and has_characters:
-                return ["plot_generator", "world_building", "characters"]
-            elif has_plot:
-                return ["plot_generator"]
+            # Refine agents based on explicit content requests
+            if has_author and "author_generator" not in agents:
+                agents.append("author_generator")
+            
+            if has_world and "world_building" not in agents:
+                agents.append("world_building")
+            
+            if has_characters and "characters" not in agents:
+                agents.append("characters")
+            
+            if agents:
+                return agents
             elif has_author:
                 return ["author_generator"]
         
@@ -199,34 +202,54 @@ Be decisive and clear in your routing decisions."""
         """Orchestrator doesn't produce content directly"""
         return ContentType.PLOT  # This won't be used
     
-    def _extract_context(self, content: str) -> Dict[str, Any]:
-        """Extract context information from the content including Content Parameters"""
+    def analyze_request_context(self, request: AgentRequest) -> Dict[str, Any]:
+        """
+        Analyze request context from structured parameters instead of text parsing.
+        Replaces the inefficient _extract_context method with structured data analysis.
+        """
         context = {}
+        content = request.content
+        request_context = request.context or {}
         
-        # Look for content IDs (UUIDs)
+        # Look for content IDs (UUIDs) in content text - keep this as fallback
         uuid_pattern = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
         uuid_matches = re.findall(uuid_pattern, content, re.IGNORECASE)
         if uuid_matches:
             context["content_id"] = uuid_matches[0]
         
-        # Look for Content Parameters context markers
-        if "CONTENT_TO_IMPROVE:" in content:
-            context["has_selected_content"] = True
-            # Extract content type from the parameters
-            if "CONTENT_TYPE: plot" in content:
-                context["selected_content_type"] = "plot"
-            elif "CONTENT_TYPE: author" in content:
-                context["selected_content_type"] = "author"
-        
-        # Look for Genre/Audience Parameters
-        if "MAIN GENRE:" in content or "SUBGENRE:" in content or "TARGET AUDIENCE:" in content or "DETAILED CONTENT SPECIFICATIONS" in content:
+        # NEW: Analyze structured context parameters
+        if request_context:
             context["has_parameters"] = True
+            context["parameter_types"] = request.get_context_types()
             
-        # Look for parameter-based requests
-        if "based on" in content.lower() and "param" in content.lower():
-            context["uses_parameters"] = True
+            # Content improvement workflow
+            if "content_selection" in request_context:
+                context["has_selected_content"] = True
+                content_selection = request_context["content_selection"]
+                context["selected_content_type"] = content_selection.get("type", "unknown")
+                context["content_info"] = content_selection
+                
+            # Genre hierarchy analysis
+            if "genre_hierarchy" in request_context:
+                context["has_genre_context"] = True
+                context["genre_info"] = request_context["genre_hierarchy"]
+                
+                # Determine world-building needs based on genre
+                genre_name = request_context["genre_hierarchy"].get("genre", {}).get("name", "").lower()
+                if genre_name in ["fantasy", "sci-fi", "science fiction", "historical"]:
+                    context["needs_world_building"] = True
+            
+            # Story elements analysis  
+            if "story_elements" in request_context:
+                context["has_story_elements"] = True
+                context["story_elements"] = request_context["story_elements"]
+                
+            # Target audience analysis
+            if "target_audience" in request_context:
+                context["has_audience_context"] = True
+                context["audience_info"] = request_context["target_audience"]
         
-        # Look for cycle/iteration requests
+        # Look for cycle/iteration requests in content text
         cycle_patterns = [
             r'(\d+)\s*(?:cycles?|times?|iterations?)',
             r'(?:run|expand|iterate)\s*(\d+)\s*(?:cycles?|times?)',
@@ -249,22 +272,67 @@ Be decisive and clear in your routing decisions."""
         if cycles_requested > 1:
             context["expansion_cycles"] = cycles_requested
             
-        # Look for content type mentions
-        content_types = ["plot", "author", "world", "character", "characters"]
-        for content_type in content_types:
-            if content_type in content.lower():
-                context["content_type"] = content_type
-                break
-        
-        # Look for genre context
-        if "genre" in content.lower() or "fantasy" in content.lower() or "sci-fi" in content.lower():
-            context["has_genre_context"] = True
-        
-        # Look for audience context
-        if "audience" in content.lower() or "young adult" in content.lower() or "adult" in content.lower():
-            context["has_audience_context"] = True
+        # Fallback content type analysis from text (when no structured context)
+        if not request_context:
+            content_types = ["plot", "author", "world", "character", "characters"]
+            for content_type in content_types:
+                if content_type in content.lower():
+                    context["content_type"] = content_type
+                    break
+            
+            # Fallback genre/audience detection from text
+            if "genre" in content.lower() or "fantasy" in content.lower() or "sci-fi" in content.lower():
+                context["has_genre_context"] = True
+            
+            if "audience" in content.lower() or "young adult" in content.lower() or "adult" in content.lower():
+                context["has_audience_context"] = True
         
         return context
+    
+    def _extract_context(self, content: str) -> Dict[str, Any]:
+        """
+        DEPRECATED: Legacy method for backward compatibility.
+        Use analyze_request_context() for new structured context analysis.
+        """
+        # Create a temporary request for legacy analysis
+        from ..core.interfaces import AgentRequest
+        temp_request = AgentRequest(
+            content=content,
+            user_id="legacy",
+            session_id="legacy"
+        )
+        return self.analyze_request_context(temp_request)
+    
+    def determine_agents_from_context(self, context: Dict[str, Any]) -> List[str]:
+        """
+        Determine agent sequence based on structured context parameters.
+        This replaces the old text-parsing approach with intelligent context analysis.
+        """
+        agents = []
+        
+        # Base agent selection based on parameter types
+        parameter_types = context.get("parameter_types", [])
+        
+        if "genre" in parameter_types or "audience" in parameter_types:
+            agents.append("plot_generator")
+            
+        if "genre" in parameter_types:
+            genre_info = context.get("genre_info", {})
+            genre_name = genre_info.get("genre", {}).get("name", "").lower()
+            
+            # Fantasy, Sci-Fi, Historical genres need rich world-building
+            if genre_name in ["fantasy", "sci-fi", "science fiction", "historical", "steampunk", "cyberpunk"]:
+                agents.append("world_building")
+        
+        if "story_elements" in parameter_types or "audience" in parameter_types:
+            agents.append("characters")
+            
+        # Content improvement workflow
+        if "content_improvement" in parameter_types:
+            agents.extend(["critique", "enhancement", "scoring"])
+        
+        # Remove duplicates while preserving order
+        return list(dict.fromkeys(agents))
     
     # === LOREGEN INTEGRATION METHODS ===
     

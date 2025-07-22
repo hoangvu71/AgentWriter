@@ -221,10 +221,19 @@ class MultiAgentSystem:
                 characters_list = characters_data.get("characters", [])
                 if isinstance(characters_list, str):
                     # If it's a string, try to parse as JSON or treat as single character
-                    import json
+                    from ..utils.json_parser import parse_llm_json
                     try:
-                        characters_list = json.loads(characters_list)
-                    except:
+                        parsed_json = parse_llm_json(characters_list)
+                        if parsed_json and isinstance(parsed_json, dict):
+                            # If we got a dict, look for a characters array within it
+                            characters_list = parsed_json.get("characters", [parsed_json])
+                        elif parsed_json and isinstance(parsed_json, list):
+                            characters_list = parsed_json
+                        else:
+                            # Fallback: treat as description for single character
+                            characters_list = [{"name": "Character", "description": characters_list}]
+                    except (json.JSONDecodeError, TypeError, AttributeError) as e:
+                        # Fallback: treat as description for single character
                         characters_list = [{"name": "Character", "description": characters_list}]
                 
                 characters_entity = Characters(
@@ -757,39 +766,9 @@ Create characters that feel essential to their world and whose stories readers w
             self.runners[agent_type] = InMemoryRunner(agent, app_name="multi_agent_book_system")
     
     def _extract_json_from_response(self, response_text: str) -> Optional[Dict[str, Any]]:
-        """Extract and parse JSON from agent response"""
-        try:
-            # Try to parse the entire response as JSON first
-            return json.loads(response_text.strip())
-        except json.JSONDecodeError:
-            # If that fails, try to find JSON within the response
-            try:
-                # First, try to extract JSON from markdown code blocks
-                json_match = re.search(r'```json\s*\n(.*?)\n```', response_text, re.DOTALL)
-                if json_match:
-                    json_str = json_match.group(1).strip()
-                    return json.loads(json_str)
-                
-                # Try alternative markdown patterns
-                json_match = re.search(r'```json\s*(.*?)```', response_text, re.DOTALL)
-                if json_match:
-                    json_str = json_match.group(1).strip()
-                    return json.loads(json_str)
-                
-                # If no markdown block, look for JSON between braces
-                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-                if json_match:
-                    json_str = json_match.group(0)
-                    return json.loads(json_str)
-            except json.JSONDecodeError as e:
-                # Debug: print the JSON string that failed to parse
-                print(f"JSON parse error: {e}")
-                if 'json_str' in locals():
-                    print(f"Failed JSON string (first 200 chars): {json_str[:200]}")
-                pass
-            
-            # If still no JSON found, return None
-            return None
+        """Extract and parse JSON from agent response using robust parsing"""
+        from ..utils.json_parser import parse_llm_json
+        return parse_llm_json(response_text)
     
     # NOTE: Orchestrator validation removed - handled by dedicated OrchestratorAgent class
     

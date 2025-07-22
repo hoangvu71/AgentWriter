@@ -248,22 +248,14 @@ class BaseAgent(IAgent):
         return "\n".join(formatted_parts)
     
     def _parse_response(self, content: str) -> Optional[Dict[str, Any]]:
-        """Parse JSON from agent response"""
-        try:
-            # Look for JSON blocks in the response
-            json_match = re.search(r'```json\s*(\{.*?\})\s*```', content, re.DOTALL)
-            if json_match:
-                return json.loads(json_match.group(1))
-            
-            # Try to parse the entire content as JSON
-            if content.strip().startswith('{') and content.strip().endswith('}'):
-                return json.loads(content.strip())
-            
-            return None
-            
-        except json.JSONDecodeError:
+        """Parse JSON from agent response using robust parsing"""
+        from ..utils.json_parser import parse_llm_json
+        
+        result = parse_llm_json(content)
+        if result is None:
             self._logger.debug("Could not parse JSON from response")
-            return None
+        
+        return result
     
     def _get_content_type(self) -> ContentType:
         """Get the content type this agent produces"""

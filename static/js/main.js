@@ -916,12 +916,20 @@ let ws = null;
                     messageWrapper.appendChild(avatar);
                     chatContainer.appendChild(messageWrapper);
                     
-                    // Send to server
-                    ws.send(JSON.stringify({
+                    // Send to server with structured context
+                    const contextObject = buildContextObject();
+                    const messagePayload = {
                         type: 'message',
-                        content: message,
+                        content: message,  // Clean user message only
                         user_id: userId
-                    }));
+                    };
+                    
+                    // Add structured context if parameters are selected
+                    if (contextObject) {
+                        messagePayload.context = contextObject;
+                    }
+                    
+                    ws.send(JSON.stringify(messagePayload));
                     
                     // Show typing indicator
                     showTypingIndicator();
@@ -1480,97 +1488,87 @@ let ws = null;
                 loadContent();
             }
             
-            function injectParametersIntoMessage(message) {
-                // Always inject parameters if any are selected
-                if (!selectedGenre && !selectedSubgenre && !selectedMicrogenre && !selectedTrope && !selectedTone && !selectedAudience && !selectedContent) {
-                    return message;
+            /**
+             * Build structured context object from selected parameters.
+             * Replaces the inefficient text injection with clean structured data.
+             * 
+             * @returns {Object|null} Structured context object or null if no parameters
+             */
+            function buildContextObject() {
+                // Check if any parameters are selected
+                if (!selectedGenre && !selectedSubgenre && !selectedMicrogenre && 
+                    !selectedTrope && !selectedTone && !selectedAudience && !selectedContent) {
+                    return null;
                 }
                 
-                let contextText = '\n\n========== DETAILED CONTENT SPECIFICATIONS ==========';
-                contextText += '\nUse these detailed specifications to guide content creation:\n';
+                const context = {};
                 
-                // Selected content for improvement
+                // Content selection for improvement
                 if (selectedContent) {
-                    contextText += '\n--- SELECTED CONTENT FOR IMPROVEMENT ---';
-                    contextText += `\nCONTENT_ID: ${selectedContent.id}`;
-                    contextText += `\nCONTENT_TYPE: ${selectedContent.type}`;
-                    contextText += `\nCONTENT_TITLE: ${selectedContent.title}`;
-                    contextText += '\nNOTE: This content should be fetched from the database for iterative improvement.';
+                    context.content_selection = {
+                        id: selectedContent.id,
+                        type: selectedContent.type,
+                        title: selectedContent.title
+                    };
                 }
                 
-                // Complete Genre Hierarchy with detailed descriptions
-                if (selectedGenre || selectedSubgenre || selectedMicrogenre) {
-                    contextText += '\n--- GENRE HIERARCHY ---';
-                    
-                    if (selectedGenre) {
-                        contextText += `\nMAIN GENRE: ${selectedGenre.name}`;
-                        if (selectedGenre.description) {
-                            contextText += `\n  Description: ${selectedGenre.description}`;
-                        }
-                    }
-                    
-                    if (selectedSubgenre) {
-                        contextText += `\nSUBGENRE: ${selectedSubgenre.name}`;
-                        if (selectedSubgenre.description) {
-                            contextText += `\n  Description: ${selectedSubgenre.description}`;
-                        }
-                    }
-                    
-                    if (selectedMicrogenre) {
-                        contextText += `\nMICROGENRE: ${selectedMicrogenre.name}`;
-                        if (selectedMicrogenre.description) {
-                            contextText += `\n  Description: ${selectedMicrogenre.description}`;
-                        }
-                    }
+                // Genre hierarchy - structured instead of verbose text
+                const genreHierarchy = {};
+                if (selectedGenre) {
+                    genreHierarchy.genre = {
+                        id: selectedGenre.id,
+                        name: selectedGenre.name,
+                        description: selectedGenre.description
+                    };
+                }
+                if (selectedSubgenre) {
+                    genreHierarchy.subgenre = {
+                        id: selectedSubgenre.id,
+                        name: selectedSubgenre.name,
+                        description: selectedSubgenre.description
+                    };
+                }
+                if (selectedMicrogenre) {
+                    genreHierarchy.microgenre = {
+                        id: selectedMicrogenre.id,
+                        name: selectedMicrogenre.name,
+                        description: selectedMicrogenre.description
+                    };
+                }
+                if (Object.keys(genreHierarchy).length > 0) {
+                    context.genre_hierarchy = genreHierarchy;
                 }
                 
-                // Story Elements
-                if (selectedTrope || selectedTone) {
-                    contextText += '\n\n--- STORY ELEMENTS ---';
-                    
-                    if (selectedTrope) {
-                        contextText += `\nTROPE: ${selectedTrope.name}`;
-                        if (selectedTrope.description) {
-                            contextText += `\n  Description: ${selectedTrope.description}`;
-                        }
-                        contextText += '\n  IMPORTANT: Integrate this trope naturally into the story structure.';
-                    }
-                    
-                    if (selectedTone) {
-                        contextText += `\nTONE: ${selectedTone.name}`;
-                        if (selectedTone.description) {
-                            contextText += `\n  Description: ${selectedTone.description}`;
-                        }
-                        contextText += '\n  IMPORTANT: Maintain this tone consistently throughout the content.';
-                    }
-                }
-                
-                // Target Audience Analysis
-                if (selectedAudience) {
-                    contextText += '\n\n--- TARGET AUDIENCE ANALYSIS ---';
-                    contextText += `\nAUDIENCE PROFILE:`;
-                    contextText += `\n  Age Group: ${selectedAudience.age_group}`;
-                    contextText += `\n  Gender: ${selectedAudience.gender}`;
-                    contextText += `\n  Sexual Orientation: ${selectedAudience.sexual_orientation}`;
-                    
-                    // Target audience is defined by the three core demographic fields above
-                    
-                    contextText += '\n  IMPORTANT: Tailor content complexity, themes, and language to this specific audience.';
-                }
-                
-                // Creative Guidelines
-                contextText += '\n\n--- CREATIVE GUIDELINES ---';
-                contextText += '\n• Follow the genre conventions while being original';
-                contextText += '\n• Ensure all story elements work together cohesively';
-                contextText += '\n• Consider the target audience in every creative decision';
-                contextText += '\n• Maintain consistency with the specified tone throughout';
+                // Story elements - structured instead of verbose text
+                const storyElements = {};
                 if (selectedTrope) {
-                    contextText += '\n• Weave the trope into the story naturally, avoiding clichés';
+                    storyElements.trope = {
+                        id: selectedTrope.id,
+                        name: selectedTrope.name,
+                        description: selectedTrope.description
+                    };
+                }
+                if (selectedTone) {
+                    storyElements.tone = {
+                        id: selectedTone.id,
+                        name: selectedTone.name,
+                        description: selectedTone.description
+                    };
+                }
+                if (Object.keys(storyElements).length > 0) {
+                    context.story_elements = storyElements;
                 }
                 
-                contextText += '\n========================================\n';
+                // Target audience - clean structure instead of verbose analysis
+                if (selectedAudience) {
+                    context.target_audience = {
+                        age_group: selectedAudience.age_group,
+                        gender: selectedAudience.gender,
+                        sexual_orientation: selectedAudience.sexual_orientation
+                    };
+                }
                 
-                return message + contextText;
+                return Object.keys(context).length > 0 ? context : null;
             }
             
             // Override the sendMessage function to inject parameters
@@ -1607,15 +1605,21 @@ let ws = null;
                     messageWrapper.appendChild(avatar);
                     chatContainer.appendChild(messageWrapper);
                     
-                    // Inject parameters if referenced
-                    message = injectParametersIntoMessage(message);
-                    
-                    // Send enhanced message to server
-                    ws.send(JSON.stringify({
+                    // Build structured context instead of text injection
+                    const contextObject = buildContextObject();
+                    const messagePayload = {
                         type: 'message',
-                        content: message, // Send enhanced message with parameters
+                        content: message,  // Clean user message only
                         user_id: userId
-                    }));
+                    };
+                    
+                    // Add structured context if parameters are selected
+                    if (contextObject) {
+                        messagePayload.context = contextObject;
+                    }
+                    
+                    // Send message with structured context
+                    ws.send(JSON.stringify(messagePayload));
                     
                     // Show typing indicator
                     showTypingIndicator();

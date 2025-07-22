@@ -157,10 +157,20 @@ class WebSocketHandler:
                 characters_list = characters_data.get("characters", [])
                 if isinstance(characters_list, str):
                     # If it's a string, try to parse as JSON or treat as single character
-                    import json
+                    from ..utils.json_parser import parse_llm_json
                     try:
-                        characters_list = json.loads(characters_list)
-                    except:
+                        parsed_json = parse_llm_json(characters_list)
+                        if parsed_json and isinstance(parsed_json, dict):
+                            # If we got a dict, look for a characters array within it
+                            characters_list = parsed_json.get("characters", [parsed_json])
+                        elif parsed_json and isinstance(parsed_json, list):
+                            characters_list = parsed_json
+                        else:
+                            # Fallback: treat as description for single character
+                            characters_list = [{"name": "Character", "description": characters_list}]
+                    except (json.JSONDecodeError, TypeError, AttributeError) as e:
+                        self.logger.warning(f"Failed to parse characters JSON: {e}")
+                        # Fallback: treat as description for single character
                         characters_list = [{"name": "Character", "description": characters_list}]
                 
                 characters_entity = Characters(
@@ -460,18 +470,27 @@ class WebSocketHandler:
         return None
     
     async def _process_message(self, client_id: str, session_id: str, message_data: Dict[str, Any]):
-        """Process an incoming WebSocket message"""
+        """Process an incoming WebSocket message with structured context support"""
         message_type = message_data.get("type", "message")
         content = message_data.get("content", "")
         user_id = message_data.get("user_id", "anonymous")
+        context = message_data.get("context", {})  # NEW: Extract structured context
         
         try:
+            # Handle legacy format for backward compatibility
+            if not context and "DETAILED CONTENT SPECIFICATIONS" in content:
+                from ..services.context_service import ContextInjectionService
+                context_service = ContextInjectionService(self.logger)
+                context = context_service.create_structured_context(content)
+                content = context_service.remove_legacy_context_injection(content)
+                self.logger.info("Converted legacy context injection to structured format")
+            
             # Validate inputs
             validated_content = self.validator.validate_text(content, max_length=50000)
             validated_user_id = self.validator.validate_alphanumeric(user_id, max_length=50)
             
             if message_type == "message":
-                await self._handle_agent_message(client_id, session_id, validated_user_id, validated_content)
+                await self._handle_agent_message(client_id, session_id, validated_user_id, validated_content, context)
             elif message_type == "search":
                 await self._handle_search_message(client_id, session_id, validated_user_id, validated_content)
             else:
@@ -486,14 +505,15 @@ class WebSocketHandler:
                 "error": str(e)
             }, client_id)
     
-    async def _handle_agent_message(self, client_id: str, session_id: str, user_id: str, content: str):
-        """Handle a message that should be processed by the multi-agent system"""
+    async def _handle_agent_message(self, client_id: str, session_id: str, user_id: str, content: str, context: Dict[str, Any] = None):
+        """Handle a message that should be processed by the multi-agent system with structured context"""
         try:
-            # Create agent request
+            # Create agent request with structured context
             request = AgentRequest(
                 content=content,
                 user_id=user_id,
-                session_id=session_id
+                session_id=session_id,
+                context=context or {}  # Include structured context
             )
             
             # Get orchestrator agent

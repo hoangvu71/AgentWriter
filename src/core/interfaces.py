@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional, AsyncGenerator, Protocol
 from dataclasses import dataclass
 from enum import Enum
+from datetime import datetime
 
 
 class ContentType(Enum):
@@ -21,12 +22,48 @@ class ContentType(Enum):
 
 @dataclass
 class AgentRequest:
-    """Base request structure for all agents"""
+    """Base request structure for all agents with structured context support"""
     content: str
     user_id: str
     session_id: str
     context: Optional[Dict[str, Any]] = None
     metadata: Optional[Dict[str, Any]] = None
+    timestamp: Optional[datetime] = None
+    
+    def __post_init__(self):
+        """Initialize context and timestamp if not provided"""
+        if self.context is None:
+            self.context = {}
+        if self.metadata is None:
+            self.metadata = {}
+        if self.timestamp is None:
+            from datetime import datetime
+            self.timestamp = datetime.now()
+    
+    def has_context_parameters(self) -> bool:
+        """Check if request has structured context parameters"""
+        return bool(self.context and any(
+            key in self.context for key in [
+                'genre_hierarchy', 'story_elements', 'target_audience', 'content_selection'
+            ]
+        ))
+    
+    def get_context_types(self) -> List[str]:
+        """Get list of context parameter types present in request"""
+        if not self.context:
+            return []
+            
+        types = []
+        if 'genre_hierarchy' in self.context:
+            types.append('genre')
+        if 'story_elements' in self.context:
+            types.append('story_elements')
+        if 'target_audience' in self.context:
+            types.append('audience')
+        if 'content_selection' in self.context:
+            types.append('content_improvement')
+            
+        return types
 
 
 @dataclass
