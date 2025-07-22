@@ -394,7 +394,34 @@ class SupabaseService:
             raise
     
     async def get_plot_with_author(self, plot_id: str) -> Dict[str, Any]:
-        """Get plot with associated author"""
+        """Get plot with associated author using efficient join"""
+        try:
+            # Single query to get plot with author
+            plot_response = self.client.table("plots").select("""
+                *,
+                author:authors!author_id(*)
+            """).eq("id", plot_id).execute()
+            
+            if not plot_response.data:
+                return {"plot": None, "author": None}
+            
+            plot_data = plot_response.data[0]
+            
+            # Extract author from nested data
+            author_data = plot_data.pop("author", None)
+            
+            return {
+                "plot": plot_data,
+                "author": author_data
+            }
+            
+        except Exception as e:
+            print(f"Error getting plot with author: {e}")
+            # Fallback to individual queries if join fails
+            return await self._get_plot_with_author_fallback(plot_id)
+    
+    async def _get_plot_with_author_fallback(self, plot_id: str) -> Dict[str, Any]:
+        """Fallback method for getting plot with author using individual queries"""
         try:
             # Get plot
             plot_response = self.client.table("plots").select("*").eq("id", plot_id).execute()
@@ -417,7 +444,7 @@ class SupabaseService:
             }
             
         except Exception as e:
-            print(f"Error getting plot with author: {e}")
+            print(f"Error in plot with author fallback: {e}")
             raise
     
     async def search_plots(self, user_id: str, search_term: str, limit: int = 20) -> List[Dict[str, Any]]:
@@ -467,7 +494,93 @@ class SupabaseService:
             raise
     
     def get_all_plots_with_metadata(self) -> List[Dict[str, Any]]:
-        """Get all plots with normalized metadata"""
+        """Get all plots with normalized metadata using efficient joins"""
+        try:
+            # Single query with all joins using Supabase's foreign key relationships
+            # The syntax is: foreign_key_column:table_name(columns)
+            plots_response = self.client.table("plots").select("""
+                *,
+                genre:genres!genre_id(name, description),
+                subgenre:subgenres!subgenre_id(name, description),
+                microgenre:microgenres!microgenre_id(name, description),
+                trope:tropes!trope_id(name, description),
+                tone:tones!tone_id(name, description),
+                target_audience:target_audiences!target_audience_id(age_group, gender, sexual_orientation)
+            """).order("created_at", desc=True).execute()
+            
+            plots = []
+            for plot in plots_response.data:
+                # Create flattened plot with base fields
+                flattened_plot = {
+                    "id": plot["id"],
+                    "session_id": plot["session_id"],
+                    "user_id": plot["user_id"],
+                    "title": plot["title"],
+                    "plot_summary": plot["plot_summary"],
+                    "genre_id": plot["genre_id"],
+                    "subgenre_id": plot["subgenre_id"],
+                    "microgenre_id": plot["microgenre_id"],
+                    "trope_id": plot["trope_id"],
+                    "tone_id": plot["tone_id"],
+                    "target_audience_id": plot["target_audience_id"],
+                    "author_id": plot["author_id"],
+                    "created_at": plot["created_at"],
+                    "updated_at": plot.get("updated_at")
+                }
+                
+                # Extract nested genre data
+                if plot.get("genre"):
+                    flattened_plot["genre_name"] = plot["genre"]["name"]
+                else:
+                    flattened_plot["genre_name"] = None
+                
+                # Extract nested subgenre data
+                if plot.get("subgenre"):
+                    flattened_plot["subgenre_name"] = plot["subgenre"]["name"]
+                else:
+                    flattened_plot["subgenre_name"] = None
+                
+                # Extract nested microgenre data
+                if plot.get("microgenre"):
+                    flattened_plot["microgenre_name"] = plot["microgenre"]["name"]
+                else:
+                    flattened_plot["microgenre_name"] = None
+                
+                # Extract nested trope data
+                if plot.get("trope"):
+                    flattened_plot["trope_name"] = plot["trope"]["name"]
+                else:
+                    flattened_plot["trope_name"] = None
+                
+                # Extract nested tone data
+                if plot.get("tone"):
+                    flattened_plot["tone_name"] = plot["tone"]["name"]
+                else:
+                    flattened_plot["tone_name"] = None
+                
+                # Extract nested target audience data
+                if plot.get("target_audience"):
+                    audience = plot["target_audience"]
+                    flattened_plot["target_audience_age_group"] = audience["age_group"]
+                    flattened_plot["target_audience_gender"] = audience["gender"]
+                    flattened_plot["target_audience_sexual_orientation"] = audience["sexual_orientation"]
+                else:
+                    flattened_plot["target_audience_age_group"] = None
+                    flattened_plot["target_audience_gender"] = None
+                    flattened_plot["target_audience_sexual_orientation"] = None
+                
+                plots.append(flattened_plot)
+            
+            return plots
+            
+        except Exception as e:
+            print(f"Error getting all plots with metadata: {e}")
+            # Fallback to the old method if joins fail
+            print("Falling back to individual queries method...")
+            return self._get_all_plots_with_metadata_fallback()
+    
+    def _get_all_plots_with_metadata_fallback(self) -> List[Dict[str, Any]]:
+        """Fallback method using individual queries (less efficient but more compatible)"""
         try:
             # Get all plots first
             plots_response = self.client.table("plots").select("*").order("created_at", desc=True).execute()
@@ -549,7 +662,7 @@ class SupabaseService:
             return plots
             
         except Exception as e:
-            print(f"Error getting all plots: {e}")
+            print(f"Error in fallback method: {e}")
             raise
     
     async def get_all_authors(self) -> List[Dict[str, Any]]:
@@ -768,7 +881,62 @@ class SupabaseService:
             return None
     
     async def get_all_genres(self) -> List[Dict[str, Any]]:
-        """Get all genres with their hierarchical data"""
+        """Get all genres with their hierarchical data using efficient joins"""
+        try:
+            # Single query to get all genres with nested subgenres and microgenres
+            genres_response = self.client.table("genres").select("""
+                *,
+                subgenres (
+                    *,
+                    microgenres (
+                        *
+                    )
+                )
+            """).order("name").execute()
+            
+            genres = []
+            for genre in genres_response.data:
+                genre_data = {
+                    "id": genre["id"],
+                    "name": genre["name"],
+                    "description": genre.get("description", ""),
+                    "subgenres": []
+                }
+                
+                # Process nested subgenres
+                if genre.get("subgenres"):
+                    for subgenre in sorted(genre["subgenres"], key=lambda x: x.get("name", "")):
+                        subgenre_data = {
+                            "id": subgenre["id"],
+                            "name": subgenre["name"],
+                            "description": subgenre.get("description", ""),
+                            "microgenres": []
+                        }
+                        
+                        # Process nested microgenres
+                        if subgenre.get("microgenres"):
+                            for microgenre in sorted(subgenre["microgenres"], key=lambda x: x.get("name", "")):
+                                microgenre_data = {
+                                    "id": microgenre["id"],
+                                    "name": microgenre["name"],
+                                    "description": microgenre.get("description", "")
+                                }
+                                subgenre_data["microgenres"].append(microgenre_data)
+                        
+                        genre_data["subgenres"].append(subgenre_data)
+                
+                genres.append(genre_data)
+            
+            return genres
+            
+        except Exception as e:
+            print(f"Error getting all genres with joins: {e}")
+            # Fallback to the old method if joins fail
+            print("Falling back to individual queries method...")
+            return await self._get_all_genres_fallback()
+    
+    async def _get_all_genres_fallback(self) -> List[Dict[str, Any]]:
+        """Fallback method for getting genres using individual queries"""
         try:
             # Get all genres
             genres_response = self.client.table("genres").select("*").order("name").execute()
@@ -811,7 +979,7 @@ class SupabaseService:
             return genres
             
         except Exception as e:
-            print(f"Error getting all genres: {e}")
+            print(f"Error in genre fallback method: {e}")
             return []
     
     async def create_genre(self, name: str, description: str) -> Dict[str, Any]:
@@ -1201,7 +1369,79 @@ class SupabaseService:
         self,
         improvement_session_id: str
     ) -> Dict[str, Any]:
-        """Get complete improvement session with all iterations"""
+        """Get complete improvement session with all iterations using efficient joins"""
+        try:
+            # Get improvement session with all nested iterations and their data
+            session_response = self.client.table("improvement_sessions").select("""
+                *,
+                iterations (
+                    *,
+                    critiques (*),
+                    enhancements (*),
+                    scores (*)
+                )
+            """).eq("id", improvement_session_id).execute()
+            
+            if not session_response.data:
+                return {"session": None, "iterations": []}
+            
+            session_data = session_response.data[0]
+            
+            # Process nested iterations
+            iterations = []
+            if session_data.get("iterations"):
+                for iteration in sorted(session_data["iterations"], key=lambda x: x.get("iteration_number", 0)):
+                    # Extract nested data
+                    critique_data = iteration.get("critiques", [None])[0]  # Get first (should be only one)
+                    enhancement_data = iteration.get("enhancements", [None])[0]
+                    score_data = iteration.get("scores", [None])[0]
+                    
+                    # Create clean iteration object
+                    iteration_clean = {
+                        "id": iteration["id"],
+                        "improvement_session_id": iteration["improvement_session_id"],
+                        "iteration_number": iteration["iteration_number"],
+                        "content": iteration["content"],
+                        "created_at": iteration["created_at"],
+                        "critique": critique_data,
+                        "enhancement": enhancement_data,
+                        "score": score_data
+                    }
+                    
+                    iterations.append(iteration_clean)
+            
+            # Remove nested iterations from session data
+            session_clean = {
+                "id": session_data["id"],
+                "user_id": session_data["user_id"],
+                "session_id": session_data["session_id"],
+                "original_content": session_data["original_content"],
+                "content_type": session_data["content_type"],
+                "target_score": session_data["target_score"],
+                "max_iterations": session_data["max_iterations"],
+                "status": session_data["status"],
+                "created_at": session_data["created_at"],
+                "completed_at": session_data.get("completed_at"),
+                "final_content": session_data.get("final_content"),
+                "final_score": session_data.get("final_score"),
+                "completion_reason": session_data.get("completion_reason")
+            }
+            
+            return {
+                "session": session_clean,
+                "iterations": iterations
+            }
+            
+        except Exception as e:
+            print(f"Error getting improvement session with iterations: {e}")
+            # Fallback to individual queries
+            return await self._get_improvement_session_with_iterations_fallback(improvement_session_id)
+
+    async def _get_improvement_session_with_iterations_fallback(
+        self,
+        improvement_session_id: str
+    ) -> Dict[str, Any]:
+        """Fallback method using individual queries for improvement sessions"""
         try:
             # Get improvement session
             session_response = self.client.table("improvement_sessions").select("*").eq("id", improvement_session_id).execute()
@@ -1246,7 +1486,7 @@ class SupabaseService:
             }
             
         except Exception as e:
-            print(f"Error getting improvement session with iterations: {e}")
+            print(f"Error in improvement session fallback: {e}")
             raise
 
     async def get_user_improvement_sessions(
