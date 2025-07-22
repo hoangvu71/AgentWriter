@@ -21,7 +21,8 @@ class SchemaService:
             "characters": "characters",
             "critique": "critiques",
             "enhancement": "enhancements",
-            "scoring": "scores"
+            "scoring": "scores",
+            "loregen": None  # LoreGen doesn't map to a database table
         }
         
         # System columns to exclude from agent JSON schemas
@@ -190,58 +191,13 @@ class SchemaService:
                 },
                 "world_type": {
                     "type": "string",
-                    "description": "Type of world (fantasy, sci-fi, contemporary, etc.)",
+                    "description": "Type of world (high_fantasy, urban_fantasy, science_fiction, historical_fiction, contemporary, dystopian, other)",
                     "required": True
                 },
-                "overview": {
+                "world_content": {
                     "type": "string",
-                    "description": "General overview of the world and its key features",
+                    "description": "Complete world building content as a single comprehensive string. Create whatever depth and scope the story requires, structured however works best for the genre and narrative.",
                     "required": True
-                },
-                "geography": {
-                    "type": "string",
-                    "description": "Physical geography and locations within the world",
-                    "required": False
-                },
-                "political_landscape": {
-                    "type": "string",
-                    "description": "Government systems and political structures",
-                    "required": False
-                },
-                "cultural_systems": {
-                    "type": "string",
-                    "description": "Cultural norms, traditions, and social structures",
-                    "required": False
-                },
-                "economic_framework": {
-                    "type": "string",
-                    "description": "Economic systems and trade relationships",
-                    "required": False
-                },
-                "historical_timeline": {
-                    "type": "string",
-                    "description": "Key historical events and timeline",
-                    "required": False
-                },
-                "power_systems": {
-                    "type": "string",
-                    "description": "Magic systems, technology, or supernatural elements",
-                    "required": False
-                },
-                "languages_and_communication": {
-                    "type": "string",
-                    "description": "Languages spoken and communication methods",
-                    "required": False
-                },
-                "religious_and_belief_systems": {
-                    "type": "string",
-                    "description": "Religions, belief systems, and mythologies",
-                    "required": False
-                },
-                "unique_elements": {
-                    "type": "string",
-                    "description": "Unique aspects that distinguish this world",
-                    "required": False
                 }
             },
             "characters": {
@@ -361,6 +317,33 @@ class SchemaService:
                     "description": "Specific suggestions for improvement",
                     "required": False
                 }
+            },
+            "loregen": {
+                "world_name": {
+                    "type": "string",
+                    "description": "Original world name",
+                    "required": True
+                },
+                "world_type": {
+                    "type": "string",
+                    "description": "Original world type",
+                    "required": True
+                },
+                "world_content": {
+                    "type": "string",
+                    "description": "Complete expanded content (original + all expansions integrated)",
+                    "required": True
+                },
+                "expanded_areas_count": {
+                    "type": "number",
+                    "description": "Number of sparse areas that were expanded",
+                    "required": True
+                },
+                "processing_time_seconds": {
+                    "type": "number",
+                    "description": "Time taken to process the expansion in seconds",
+                    "required": True
+                }
             }
         }
         
@@ -407,7 +390,8 @@ class SchemaService:
             "critique": "critique",
             "enhancement": "enhancement",
             "scoring": "scoring",
-            "orchestrator": "orchestrator"  # Special case - doesn't need database schema
+            "orchestrator": "orchestrator",  # Special case - doesn't need database schema
+            "loregen": "loregen"  # LoreGen has its own custom schema
         }
         
         return agent_mappings.get(agent_name, "plot")

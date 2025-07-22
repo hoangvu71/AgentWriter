@@ -13,6 +13,7 @@ from .characters import CharactersAgent
 from .critique import CritiqueAgent
 from .enhancement import EnhancementAgent
 from .scoring import ScoringAgent
+from .loregen import LoreGenAgent
 
 
 class AgentFactory(IAgentFactory):
@@ -29,6 +30,7 @@ class AgentFactory(IAgentFactory):
             "critique": CritiqueAgent,
             "enhancement": EnhancementAgent,
             "scoring": ScoringAgent,
+            "loregen": LoreGenAgent,
         }
         self._agent_cache: Dict[str, IAgent] = {}
     

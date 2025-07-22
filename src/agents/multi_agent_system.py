@@ -516,59 +516,7 @@ Required JSON format:
 {
     "world_name": "distinctive world name",
     "world_type": "high_fantasy|urban_fantasy|science_fiction|historical_fiction|contemporary|dystopian|other",
-    "overview": "comprehensive 2-3 paragraph world summary covering scope, tone, central conflicts",
-    "geography": {
-        "continents": ["continent descriptions with key features"],
-        "major_regions": ["detailed regional descriptions"],
-        "climate_zones": ["climate patterns and their effects"],
-        "natural_resources": ["resources and their strategic importance"]
-    },
-    "political_landscape": {
-        "major_powers": ["governing bodies, kingdoms, empires with power structures"],
-        "conflicts": ["current tensions, wars, political disputes"],
-        "alliances": ["partnerships, trade agreements, mutual defense pacts"],
-        "power_dynamics": "how political forces interact and compete"
-    },
-    "cultural_systems": {
-        "major_cultures": ["distinct cultural groups with detailed customs"],
-        "social_hierarchies": ["class systems, status structures"],
-        "traditions": ["important customs, festivals, rituals"],
-        "values_and_beliefs": ["core cultural values that drive behavior"]
-    },
-    "economic_framework": {
-        "currency_systems": ["monetary systems, exchange rates"],
-        "trade_networks": ["major trade routes and commercial relationships"],
-        "key_industries": ["primary economic activities and their importance"],
-        "economic_disparities": "wealth distribution and class differences"
-    },
-    "historical_timeline": {
-        "ancient_era": "foundational events that shaped the world",
-        "classical_period": "major developments in politics, culture, technology",
-        "recent_history": "events within living memory that affect current state",
-        "current_era": "present day situation and immediate challenges"
-    },
-    "power_systems": {
-        "magic_or_technology": "detailed explanation of supernatural/advanced systems",
-        "rules_and_limitations": "how these systems work and their constraints",
-        "accessibility": "who can use these powers and how they're distributed",
-        "societal_impact": "how these systems affect daily life and power structures"
-    },
-    "languages_and_communication": {
-        "major_languages": ["primary languages with geographic/cultural associations"],
-        "naming_conventions": ["how places, people, organizations are named"],
-        "communication_systems": ["how information travels across the world"]
-    },
-    "religious_and_belief_systems": {
-        "major_religions": ["dominant belief systems with core tenets"],
-        "pantheons_or_deities": ["spiritual entities and their domains"],
-        "religious_institutions": ["organized religious power structures"],
-        "spiritual_conflicts": ["religious tensions and theological disputes"]
-    },
-    "unique_elements": {
-        "distinctive_features": ["what makes this world unique and memorable"],
-        "mysterious_elements": ["unexplained phenomena that add intrigue"],
-        "evolving_dynamics": ["ongoing changes that create story opportunities"]
-    }
+    "world_content": "Complete world building content as a single comprehensive string. Create whatever depth and scope the story requires, structured however works best for the genre and narrative. Include geography, politics, culture, history, magic systems, languages, religions, and unique elements - all woven into a cohesive world description that serves the plot."
 }
 
 Create worlds that feel lived-in, logical, and full of story potential. Always return valid JSON only.""",
@@ -769,10 +717,7 @@ Create characters that feel essential to their world and whose stories readers w
     def _validate_world_building_response(self, json_data: Dict[str, Any]) -> bool:
         """Validate world building agent JSON response structure"""
         required_fields = [
-            "world_name", "world_type", "overview", "geography", 
-            "political_landscape", "cultural_systems", "economic_framework",
-            "historical_timeline", "power_systems", "languages_and_communication",
-            "religious_and_belief_systems", "unique_elements"
+            "world_name", "world_type", "world_content"
         ]
         return all(field in json_data for field in required_fields)
     

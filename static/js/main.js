@@ -1059,14 +1059,28 @@ let ws = null;
                     }
                     
                     // Load audiences separately
+                    console.log('Loading target audiences...');
                     const audiencesResponse = await fetch('/api/target-audiences');
+                    console.log('Audience response status:', audiencesResponse.status);
                     if (audiencesResponse.ok) {
                         const audiencesData = await audiencesResponse.json();
+                        console.log('Audience data:', audiencesData);
                         if (audiencesData.success && audiencesData.data) {
                             allAudiences = audiencesData.data;
                             console.log('Loaded audiences:', allAudiences.length);
                             populateAudienceDropdown();
+                            // Try again after a short delay in case of DOM timing issues
+                            setTimeout(() => {
+                                if (document.getElementById('audienceSelect').options.length <= 1) {
+                                    console.log('Retrying audience dropdown population...');
+                                    populateAudienceDropdown();
+                                }
+                            }, 100);
+                        } else {
+                            console.error('Audience data not in expected format:', audiencesData);
                         }
+                    } else {
+                        console.error('Failed to load audiences:', audiencesResponse.status, audiencesResponse.statusText);
                     }
                 } catch (error) {
                     console.error('Error loading parameters:', error);
@@ -1090,7 +1104,16 @@ let ws = null;
             }
             
             function populateAudienceDropdown() {
+                console.log('populateAudienceDropdown called with', allAudiences.length, 'audiences');
                 const audienceSelect = document.getElementById('audienceSelect');
+                if (!audienceSelect) {
+                    console.error('audienceSelect element not found!');
+                    return;
+                }
+                
+                // Log current state before clearing
+                console.log('Current audience dropdown options before clear:', audienceSelect.options.length);
+                
                 audienceSelect.innerHTML = '<option value="">Select Audience...</option>';
                 
                 allAudiences.forEach(audience => {
@@ -1102,10 +1125,15 @@ let ws = null;
                     option.textContent = `${ageGroup} - ${gender} - ${orientation}`;
                     audienceSelect.appendChild(option);
                 });
+                console.log('Audience dropdown populated. Total options:', audienceSelect.options.length);
             }
             
             function buildCompletePackages() {
                 const packageSelect = document.getElementById('completePackageSelect');
+                if (!packageSelect) {
+                    console.warn('completePackageSelect element not found, skipping package building');
+                    return;
+                }
                 packageSelect.innerHTML = '<option value="">Choose a Complete Genre Package...</option>';
                 
                 // Build packages for complete chains: Genre -> Subgenre -> Microgenre -> Trope -> Tone
@@ -1139,6 +1167,10 @@ let ws = null;
             // Complete package selection
             function selectCompletePackage() {
                 const packageSelect = document.getElementById('completePackageSelect');
+                if (!packageSelect) {
+                    console.warn('completePackageSelect element not found');
+                    return;
+                }
                 
                 if (packageSelect.value) {
                     const packageData = JSON.parse(packageSelect.value);
@@ -1338,7 +1370,10 @@ let ws = null;
                 
                 // Reset all dropdowns
                 document.getElementById('genreSelect').value = '';
-                document.getElementById('completePackageSelect').value = '';
+                const completePackageEl = document.getElementById('completePackageSelect');
+                if (completePackageEl) {
+                    completePackageEl.value = '';
+                }
                 populateSubgenreDropdown();
                 updateContext();
             }
@@ -1600,4 +1635,26 @@ let ws = null;
                 loadModels();
                 loadParameters();
                 loadContent();
+                
+                // Debug: Monitor changes to audience dropdown
+                const audienceSelect = document.getElementById('audienceSelect');
+                if (audienceSelect) {
+                    const observer = new MutationObserver((mutations) => {
+                        mutations.forEach((mutation) => {
+                            console.log('Audience dropdown modified:', {
+                                type: mutation.type,
+                                addedNodes: mutation.addedNodes.length,
+                                removedNodes: mutation.removedNodes.length,
+                                target: mutation.target,
+                                currentOptions: audienceSelect.options.length
+                            });
+                        });
+                    });
+                    
+                    observer.observe(audienceSelect, {
+                        childList: true,
+                        subtree: true,
+                        attributes: false
+                    });
+                }
             };

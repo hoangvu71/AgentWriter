@@ -130,10 +130,56 @@ class WebSocketHandler:
                     plot_id=plot_id
                 )
                 
-            elif agent_name in ["critique", "enhancement", "scoring"]:
-                # These would need improvement session context
-                # For now, log that they completed
-                self.logger.info(f"Completed {agent_name} analysis - improvement workflow integration needed")
+            elif agent_name == "critique":
+                # For critique, we'll create a basic improvement iteration
+                try:
+                    await supabase_service.save_critique_data(
+                        iteration_id=f"{session_id}_{user_id}_{agent_name}",
+                        critique_json=response_data,
+                        agent_response=str(response_data)
+                    )
+                    self.logger.info(f"Saved {agent_name} to database")
+                except Exception as e:
+                    self.logger.error(f"Error saving {agent_name}: {e}")
+                    
+            elif agent_name == "enhancement":
+                # For enhancement, we'll create a basic improvement iteration
+                try:
+                    await supabase_service.save_enhancement_data(
+                        iteration_id=f"{session_id}_{user_id}_{agent_name}",
+                        enhanced_content=response_data.get("enhanced_content", ""),
+                        changes_made=response_data.get("improvements_made", {}),
+                        rationale=response_data.get("enhancement_rationale", ""),
+                        confidence_score=8  # Default confidence score
+                    )
+                    self.logger.info(f"Saved {agent_name} to database")
+                except Exception as e:
+                    self.logger.error(f"Error saving {agent_name}: {e}")
+                    
+            elif agent_name == "scoring":
+                # For scoring, save scoring data
+                try:
+                    category_scores = {
+                        "content_quality": float(response_data.get("content_quality_score", 0)),
+                        "structure": float(response_data.get("structure_score", 0)),
+                        "writing_style": float(response_data.get("writing_style_score", 0)),
+                        "genre_appropriateness": float(response_data.get("genre_appropriateness_score", 0)),
+                        "technical_execution": float(response_data.get("technical_execution_score", 0))
+                    }
+                    
+                    await supabase_service.save_score_data(
+                        iteration_id=f"{session_id}_{user_id}_{agent_name}",
+                        overall_score=float(response_data.get("overall_score", 0)),
+                        category_scores=category_scores,
+                        score_rationale=response_data.get("scoring_rationale", ""),
+                        improvement_trajectory="Initial scoring",
+                        recommendations=response_data.get("improvement_suggestions", "")
+                    )
+                    self.logger.info(f"Saved {agent_name} to database")
+                except (ValueError, TypeError) as e:
+                    self.logger.error(f"Error parsing scores for {agent_name}: {e}")
+                except Exception as e:
+                    self.logger.error(f"Error saving {agent_name}: {e}")
                 
             else:
                 self.logger.warning(f"No database save method configured for agent: {agent_name}")
@@ -213,43 +259,54 @@ class WebSocketHandler:
                 "content": "\n[AI] Orchestrator:\n"
             }, client_id)
             
-            # Get orchestrator's full response with reasoning
-            orchestrator_response = await orchestrator.process_request(request)
+            # Check for direct routing first (e.g., LoreGen)
+            agent_names = await orchestrator.route_request(request)
+            orchestrator_response = None
+            orchestrator_data = {}
             
-            # Send orchestrator's reasoning
-            await self.connection_manager.send_json({
-                "type": "stream_chunk", 
-                "content": orchestrator_response.content
-            }, client_id)
-            
-            # Extract agent names from response
-            agent_names = []
-            if orchestrator_response.parsed_json and "agents_to_invoke" in orchestrator_response.parsed_json:
-                agent_names = orchestrator_response.parsed_json["agents_to_invoke"]
+            if agent_names == ['loregen']:
+                # Direct LoreGen routing - skip orchestrator reasoning
+                await self.connection_manager.send_json({
+                    "type": "stream_chunk", 
+                    "content": "LoreGen request detected - routing to RAG-based world building expansion.\n"
+                }, client_id)
+                orchestrator_decision = "LoreGen request detected - routing to RAG-based world building expansion."
             else:
-                # Fallback to route_request if parsing failed
-                agent_names = await orchestrator.route_request(request)
+                # Normal orchestrator processing with reasoning
+                orchestrator_response = await orchestrator.process_request(request)
+                
+                # Send orchestrator's reasoning
+                await self.connection_manager.send_json({
+                    "type": "stream_chunk", 
+                    "content": orchestrator_response.content
+                }, client_id)
+                
+                # Extract agent names from response if route_request didn't provide them
+                if orchestrator_response.parsed_json and "agents_to_invoke" in orchestrator_response.parsed_json:
+                    agent_names = orchestrator_response.parsed_json["agents_to_invoke"]
+                
+                orchestrator_decision = orchestrator_response.content if orchestrator_response.content else "Multi-agent workflow initiated"
+                orchestrator_data = orchestrator_response.parsed_json if orchestrator_response.parsed_json else {}
             
             # Send routing information
             await self.connection_manager.send_json({
                 "type": "workflow_start",
                 "agents_to_invoke": agent_names,
-                "orchestrator_decision": orchestrator_response.content if orchestrator_response.content else "Multi-agent workflow initiated"
+                "orchestrator_decision": orchestrator_decision
             }, client_id)
             
             # Save orchestrator decision to database
             try:
                 if orchestrator_data:
                     await supabase_service.save_orchestrator_decision(
-                        session_id=validated_session_id,
-                        user_id=validated_user_id,
+                        session_id=session_id,
+                        user_id=user_id,
                         decision_data=orchestrator_data
                     )
             except Exception as e:
                 self.logger.warning(f"Failed to save orchestrator decision: {e}")
             
             # Process through each agent
-            orchestrator_data = orchestrator_response.parsed_json if orchestrator_response.parsed_json else {}
             for agent_name in agent_names:
                 try:
                     agent = self.agent_factory.create_agent(agent_name)
@@ -260,51 +317,124 @@ class WebSocketHandler:
                         "content": f"\n[AI] {agent.name.replace('_', ' ').title()}:\n"
                     }, client_id)
                     
-                    # Process with streaming
-                    full_response = ""
-                    async for chunk in agent.process_request_streaming(request):
-                        if chunk.chunk:
-                            full_response += chunk.chunk
+                    # LoreGen supports multiple cycles for iterative expansion
+                    if agent_name == "loregen":
+                        # Check if multiple cycles were requested
+                        cycles_requested = request.context.get('expansion_cycles', 1) if request.context else 1
+                        
+                        if cycles_requested > 1:
                             await self.connection_manager.send_json({
                                 "type": "stream_chunk",
-                                "content": chunk.chunk
+                                "content": f"Running {cycles_requested} cycles of iterative expansion...\n\n"
                             }, client_id)
                         
-                        if chunk.is_complete:
-                            # Try to extract structured data
-                            response = await agent.process_request(request)
-                            if response.parsed_json:
+                        final_response = None
+                        for cycle in range(cycles_requested):
+                            if cycles_requested > 1:
                                 await self.connection_manager.send_json({
-                                    "type": "structured_response",
+                                    "type": "stream_chunk",
+                                    "content": f"--- Cycle {cycle + 1}/{cycles_requested} ---\n"
+                                }, client_id)
+                            
+                            response = await agent.process_request(request)
+                            final_response = response  # Keep the last response
+                            
+                            # Send cycle response content
+                            await self.connection_manager.send_json({
+                                "type": "stream_chunk",
+                                "content": response.content + "\n"
+                            }, client_id)
+                            
+                            if cycles_requested > 1 and cycle < cycles_requested - 1:
+                                await self.connection_manager.send_json({
+                                    "type": "stream_chunk",
+                                    "content": "Preparing next cycle...\n\n"
+                                }, client_id)
+                        
+                        # Send final structured response (from last cycle)
+                        if final_response and final_response.parsed_json:
+                            # Update the response to include cycle information
+                            final_json = final_response.parsed_json.copy()
+                            if cycles_requested > 1:
+                                final_json['total_cycles_completed'] = cycles_requested
+                                
+                            await self.connection_manager.send_json({
+                                "type": "structured_response",
+                                "agent": agent_name,
+                                "json_data": final_json,
+                                "raw_content": final_response.content
+                            }, client_id)
+                            
+                            # Save to database (only final result)
+                            try:
+                                await self._save_agent_response_to_database(
+                                    agent_name, 
+                                    final_json, 
+                                    session_id, 
+                                    user_id,
+                                    orchestrator_data
+                                )
+                                
+                                await self.connection_manager.send_json({
+                                    "type": "database_saved",
                                     "agent": agent_name,
-                                    "json_data": response.parsed_json,
-                                    "raw_content": full_response
+                                    "message": f"{agent_name.replace('_', ' ').title()} saved to database"
                                 }, client_id)
                                 
-                                # Save to database
-                                try:
-                                    await self._save_agent_response_to_database(
-                                        agent_name, 
-                                        response.parsed_json, 
-                                        validated_session_id, 
-                                        validated_user_id,
-                                        orchestrator_data
-                                    )
-                                    
+                            except Exception as db_error:
+                                self.logger.error(f"Failed to save {agent_name} to database: {db_error}")
+                                await self.connection_manager.send_json({
+                                    "type": "database_error", 
+                                    "agent": agent_name,
+                                    "error": f"Failed to save to database: {str(db_error)}"
+                                }, client_id)
+                    
+                    else:
+                        # Process with streaming for other agents
+                        full_response = ""
+                        async for chunk in agent.process_request_streaming(request):
+                            if chunk.chunk:
+                                full_response += chunk.chunk
+                                await self.connection_manager.send_json({
+                                    "type": "stream_chunk",
+                                    "content": chunk.chunk
+                                }, client_id)
+                            
+                            if chunk.is_complete:
+                                # Try to extract structured data
+                                response = await agent.process_request(request)
+                                if response.parsed_json:
                                     await self.connection_manager.send_json({
-                                        "type": "database_saved",
+                                        "type": "structured_response",
                                         "agent": agent_name,
-                                        "message": f"{agent_name.replace('_', ' ').title()} saved to database"
+                                        "json_data": response.parsed_json,
+                                        "raw_content": full_response
                                     }, client_id)
                                     
-                                except Exception as db_error:
-                                    self.logger.error(f"Failed to save {agent_name} to database: {db_error}")
-                                    await self.connection_manager.send_json({
-                                        "type": "database_error", 
-                                        "agent": agent_name,
-                                        "error": f"Failed to save to database: {str(db_error)}"
-                                    }, client_id)
-                            break
+                                    # Save to database
+                                    try:
+                                        await self._save_agent_response_to_database(
+                                            agent_name, 
+                                            response.parsed_json, 
+                                            session_id, 
+                                            user_id,
+                                            orchestrator_data
+                                        )
+                                        
+                                        await self.connection_manager.send_json({
+                                            "type": "database_saved",
+                                            "agent": agent_name,
+                                            "message": f"{agent_name.replace('_', ' ').title()} saved to database"
+                                        }, client_id)
+                                        
+                                    except Exception as db_error:
+                                        self.logger.error(f"Failed to save {agent_name} to database: {db_error}")
+                                        await self.connection_manager.send_json({
+                                            "type": "database_error", 
+                                            "agent": agent_name,
+                                            "error": f"Failed to save to database: {str(db_error)}"
+                                        }, client_id)
+                                break
                 
                 except Exception as e:
                     self.logger.error(f"Error processing with agent {agent_name}: {e}", error=e)

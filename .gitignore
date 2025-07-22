@@ -115,5 +115,15 @@ service-account-key.json
 .env.local
 .env.production
 secrets/
-credentials/htmlcov/
+credentials/
+
+# Coverage reports
+htmlcov/
 .coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# Test debug files
+test_*_debug.html
+*_debug.html

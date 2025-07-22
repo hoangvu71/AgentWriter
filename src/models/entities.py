@@ -82,29 +82,17 @@ class Author:
 
 @dataclass
 class WorldBuilding:
-    """World building entity - matches world_building table from migration 008"""
+    """World building entity - matches simplified world_building table schema"""
     id: Optional[str] = None  # UUID
     session_id: str = ""  # UUID - references sessions.id
     user_id: str = ""  # UUID - references users.id
     plot_id: Optional[str] = None  # UUID - references plots.id (nullable)
     world_name: str = ""  # TEXT
-    world_type: WorldType = WorldType.OTHER  # TEXT with CHECK constraint
-    overview: str = ""  # TEXT
-    
-    # JSONB fields for complex world data
-    geography: Dict[str, Any] = field(default_factory=dict)  # JSONB
-    political_landscape: Dict[str, Any] = field(default_factory=dict)  # JSONB
-    cultural_systems: Dict[str, Any] = field(default_factory=dict)  # JSONB
-    economic_framework: Dict[str, Any] = field(default_factory=dict)  # JSONB
-    historical_timeline: Dict[str, Any] = field(default_factory=dict)  # JSONB
-    power_systems: Dict[str, Any] = field(default_factory=dict)  # JSONB
-    languages_and_communication: Dict[str, Any] = field(default_factory=dict)  # JSONB
-    religious_and_belief_systems: Dict[str, Any] = field(default_factory=dict)  # JSONB
-    unique_elements: Dict[str, Any] = field(default_factory=dict)  # JSONB
+    world_type: str = ""  # TEXT - Type of world (high_fantasy, urban_fantasy, science_fiction, etc.)
+    world_content: str = ""  # TEXT - Complete world building content as single comprehensive string
     
     # Timestamps
     created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
 
 
 @dataclass

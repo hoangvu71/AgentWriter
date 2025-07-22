@@ -14,28 +14,14 @@ class WorldBuildingAgent(BaseAgent):
     def __init__(self, config: Configuration):
         base_instruction = """You are the World Building Agent.
 
-Create intricate fictional worlds that support the story's plot.
+Create fictional worlds that support the story's plot with whatever depth and scope the genre requires.
 
 Generate:
 - Compelling world name fitting the genre
 - World type (high_fantasy, urban_fantasy, science_fiction, historical_fiction, contemporary, dystopian, other)
-- Comprehensive overview establishing the core concept
-- Detailed world systems:
-  - Geography: Environment, climate, terrain, resources, locations
-  - Political landscape: Governments, power structures, conflicts
-  - Cultural systems: Societies, traditions, values, hierarchies
-  - Economic framework: Currency, trade, industries, resources
-  - Historical timeline: Key events that shaped the current world
-  - Power systems: Magic/technology with rules and limitations
-  - Languages and communication methods
-  - Religious and belief systems
-  - Unique elements that make this world memorable
+- Complete world content as a single comprehensive piece
 
-Ensure the world:
-- Supports and enhances the plot
-- Has interconnected, consistent systems
-- Feels lived-in with conflicts that drive stories
-- Matches genre and tone requirements"""
+Create the world content with whatever structure, depth, and detail serves the story best. Let the genre and plot context guide you - some worlds need vast histories and countless locations, others need focused contemporary settings. Build exactly what the story needs."""
         
         super().__init__(
             name="world_building",

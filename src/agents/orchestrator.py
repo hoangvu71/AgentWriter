@@ -3,7 +3,8 @@ Orchestrator agent for routing and coordinating multi-agent workflows.
 """
 
 import re
-from typing import List, Dict, Any, AsyncGenerator
+import time
+from typing import List, Dict, Any, AsyncGenerator, Optional
 from ..core.interfaces import IOrchestrator, AgentRequest, AgentResponse, ContentType
 from ..core.base_agent import BaseAgent
 from ..core.configuration import Configuration
@@ -72,6 +73,16 @@ Be decisive and clear in your routing decisions."""
     async def route_request(self, request: AgentRequest) -> List[str]:
         """Determine which agents should handle the request"""
         try:
+            # Check for LoreGen request first
+            if await self._is_loregen_request(request.content):
+                # Extract context and add to request for LoreGen processing
+                extracted_context = self._extract_context(request.content)
+                if request.context:
+                    request.context.update(extracted_context)
+                else:
+                    request.context = extracted_context
+                return ['loregen']
+            
             # Process the request to get routing decision
             response = await self.process_request(request)
             
@@ -79,11 +90,11 @@ Be decisive and clear in your routing decisions."""
                 return response.parsed_json.get("agents_to_invoke", [])
             
             # Fallback to simple keyword matching
-            return self._fallback_routing(request.content)
+            return await self._fallback_routing(request.content, request.context or {})
             
         except Exception as e:
             self._logger.error(f"Error in routing request: {e}", error=e)
-            return self._fallback_routing(request.content)
+            return await self._fallback_routing(request.content, request.context or {})
     
     async def coordinate_workflow(self, request: AgentRequest, agent_names: List[str]) -> AgentResponse:
         """Coordinate execution across multiple agents"""
@@ -92,10 +103,11 @@ Be decisive and clear in your routing decisions."""
         response = await self.process_request(request)
         return response
     
-    def _fallback_routing(self, content: str) -> List[str]:
-        """Enhanced routing with Content Parameters support"""
+    async def _fallback_routing(self, content: str, context: Dict[str, Any]) -> List[str]:
+        """Enhanced routing with Content Parameters and LoreGen support"""
         content_lower = content.lower()
-        context = self._extract_context(content)
+        extracted_context = self._extract_context(content)
+        combined_context = {**extracted_context, **context}
         
         # === CONTENT PARAMETERS WORKFLOWS ===
         
@@ -214,6 +226,29 @@ Be decisive and clear in your routing decisions."""
         if "based on" in content.lower() and "param" in content.lower():
             context["uses_parameters"] = True
         
+        # Look for cycle/iteration requests
+        cycle_patterns = [
+            r'(\d+)\s*(?:cycles?|times?|iterations?)',
+            r'(?:run|expand|iterate)\s*(\d+)\s*(?:cycles?|times?)',
+            r'(?:cycles?|iterations?).*?(\d+)',
+            r'(\d+)x\s*expansion'
+        ]
+        
+        cycles_requested = 1  # Default to 1 cycle
+        for pattern in cycle_patterns:
+            match = re.search(pattern, content, re.IGNORECASE)
+            if match:
+                try:
+                    cycles_requested = int(match.group(1))
+                    # Limit to reasonable range
+                    cycles_requested = max(1, min(cycles_requested, 10))
+                    break
+                except (ValueError, IndexError):
+                    continue
+        
+        if cycles_requested > 1:
+            context["expansion_cycles"] = cycles_requested
+            
         # Look for content type mentions
         content_types = ["plot", "author", "world", "character", "characters"]
         for content_type in content_types:
@@ -230,3 +265,132 @@ Be decisive and clear in your routing decisions."""
             context["has_audience_context"] = True
         
         return context
+    
+    # === LOREGEN INTEGRATION METHODS ===
+    
+    async def _is_loregen_request(self, message: str) -> bool:
+        """
+        Detect if this is a LoreGen request for world building expansion.
+        """
+        message_lower = message.lower()
+        
+        # Primary LoreGen patterns - order matters, check specific first
+        loregen_patterns = [
+            "use this plot's worldbuilding and expand",
+            "use this plot and expand", 
+            "take this plot's worldbuilding and expand",
+            "use the world building of this plot and expand"
+        ]
+        
+        # Flexible LoreGen patterns (with cycles support)
+        flexible_patterns = [
+            r"expand.*plot.*worldbuilding",
+            r"expand.*plot.*world building", 
+            r"expand.*worldbuilding.*plot",
+            r"expand.*world building.*plot",
+            r"worldbuilding.*expand",
+            r"world building.*expand",
+            r"lore.*expand",
+            r"expand.*lore",
+            r"cycles.*lore.*expansion",
+            r"cycles.*worldbuilding",
+            r"cycles.*world building",
+            r"iterate.*worldbuilding",
+            r"iterate.*world building",
+            r"iterate.*lore",
+            r"expansion.*plot",
+            r"expand.*worldbuilding.*cycles",
+            r"expand.*world building.*cycles"
+        ]
+        
+        # Check for exact pattern matches first
+        for pattern in loregen_patterns:
+            if pattern in message_lower:
+                self._logger.info(f"LoreGen exact pattern matched: '{pattern}'")
+                return True
+        
+        # Check flexible patterns (with regex)
+        import re
+        for pattern in flexible_patterns:
+            if re.search(pattern, message_lower):
+                self._logger.info(f"LoreGen flexible pattern matched: '{pattern}'")
+                return True
+        
+        # Check for keyword combinations (fallback)
+        has_plot = "plot" in message_lower
+        has_expand = any(word in message_lower for word in ["expand", "expansion", "generate more"])
+        has_worldbuilding = any(word in message_lower for word in ["worldbuilding", "world building", "world", "lore"])
+        has_use = "use" in message_lower
+        
+        # LoreGen requires all key components (legacy detection)
+        if has_plot and has_expand and has_worldbuilding and has_use:
+            self._logger.info("LoreGen keyword combination matched")
+            return True
+        
+        return False
+    
+    def _extract_plot_id(self, request: AgentRequest) -> Optional[str]:
+        """Extract plot_id from request context"""
+        if not request.context:
+            return None
+        # Try plot_id first, then fall back to content_id for plot-type content
+        return request.context.get('plot_id') or request.context.get('content_id')
+    
+    async def _enrich_loregen_request(self, request: AgentRequest) -> AgentRequest:
+        """
+        Enrich LoreGen request with additional context for processing.
+        """
+        enriched_context = dict(request.context) if request.context else {}
+        
+        # Add LoreGen-specific context
+        enriched_context.update({
+            'loregen_request': True,
+            'processing_timestamp': time.time(),
+            'expansion_type': 'full_world_expansion'
+        })
+        
+        return AgentRequest(
+            message=request.message,
+            user_id=request.user_id,
+            session_id=request.session_id,
+            context=enriched_context
+        )
+    
+    async def _validate_loregen_request(self, plot_id: str) -> bool:
+        """
+        Validate that LoreGen request can be processed.
+        Checks if plot exists and has world building content.
+        """
+        if not plot_id:
+            return False
+        
+        try:
+            # Check if database service is available
+            if hasattr(self, '_database_service') and self._database_service:
+                plot_exists = await self._database_service.plot_exists(plot_id)
+                has_world_building = await self._database_service.has_world_building(plot_id)
+                return plot_exists and has_world_building
+            
+            # If no database service, assume valid (will be caught by LoreGen agent)
+            return True
+            
+        except Exception as e:
+            self._logger.warning(f"Could not validate LoreGen request: {e}")
+            return True  # Allow processing, let LoreGen handle validation
+    
+    async def _determine_routing(self, message: str, context: Dict[str, Any]) -> List[str]:
+        """
+        Determine routing with LoreGen support integration.
+        """
+        # Check for LoreGen first
+        if await self._is_loregen_request(message):
+            # Map content_id to plot_id if it's a plot type content
+            plot_id = context.get('plot_id') or context.get('content_id')
+            if await self._validate_loregen_request(plot_id):
+                return ['loregen']
+            else:
+                # Invalid LoreGen request, fall through to normal routing
+                pass
+        
+        # Use existing fallback routing
+        return await self._fallback_routing(message, context)

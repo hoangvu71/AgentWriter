@@ -176,16 +176,7 @@ class SupabaseService:
                 "plot_id": plot_id,  # Foreign key to plots table
                 "world_name": world_data.get("world_name"),
                 "world_type": world_data.get("world_type"),
-                "overview": world_data.get("overview"),
-                "geography": world_data.get("geography"),
-                "political_landscape": world_data.get("political_landscape"),
-                "cultural_systems": world_data.get("cultural_systems"),
-                "economic_framework": world_data.get("economic_framework"),
-                "historical_timeline": world_data.get("historical_timeline"),
-                "power_systems": world_data.get("power_systems"),
-                "languages_and_communication": world_data.get("languages_and_communication"),
-                "religious_and_belief_systems": world_data.get("religious_and_belief_systems"),
-                "unique_elements": world_data.get("unique_elements"),
+                "world_content": world_data.get("world_content"),
                 "created_at": datetime.utcnow().isoformat()
             }
             
@@ -280,6 +271,76 @@ class SupabaseService:
         except Exception as e:
             print(f"Error getting plot by ID: {e}")
             return None
+    
+    async def get_world_building_by_plot(self, plot_id: str) -> Optional[Dict[str, Any]]:
+        """Get world building associated with a plot"""
+        try:
+            response = self.client.table("world_building").select("*").eq("plot_id", plot_id).execute()
+            # Return the first (and should be only) world building for this plot
+            return response.data[0] if response.data else None
+            
+        except Exception as e:
+            print(f"Error getting world building by plot: {e}")
+            return None
+    
+    async def save_rag_corpus(self, vertex_corpus_id: str, plot_id: str, corpus_name: str) -> Dict[str, Any]:
+        """Save RAG corpus information"""
+        try:
+            data = {
+                "vertex_corpus_id": vertex_corpus_id,  # Fixed: use vertex_corpus_id
+                "plot_id": plot_id,
+                "corpus_name": corpus_name,
+                "status": "active"
+            }
+            
+            response = self.client.table("rag_corpus").insert(data).execute()
+            return response.data[0] if response.data else None
+            
+        except Exception as e:
+            print(f"Error saving RAG corpus: {e}")
+            raise
+    
+    async def save_rag_chunks(self, corpus_uuid: str, chunks: List[Dict[str, Any]], source_type: str = "world_building", source_id: str = None) -> List[Dict[str, Any]]:
+        """Save RAG chunks to database"""
+        try:
+            chunk_records = []
+            for i, chunk in enumerate(chunks):
+                record = {
+                    "corpus_id": corpus_uuid,  # This is the UUID from rag_corpus.id
+                    "chunk_text": chunk['text'],
+                    "chunk_metadata": chunk.get('metadata', {}),
+                    "chunk_order": i,  # Fixed: use chunk_order not chunk_index
+                    "source_type": source_type,
+                    "source_id": source_id
+                }
+                chunk_records.append(record)
+            
+            response = self.client.table("rag_chunks").insert(chunk_records).execute()
+            return response.data
+            
+        except Exception as e:
+            print(f"Error saving RAG chunks: {e}")
+            raise
+    
+    async def get_rag_corpus_by_plot(self, plot_id: str) -> Optional[Dict[str, Any]]:
+        """Get existing RAG corpus for a plot"""
+        try:
+            response = self.client.table("rag_corpus").select("*").eq("plot_id", plot_id).execute()
+            return response.data[0] if response.data else None
+            
+        except Exception as e:
+            print(f"Error getting RAG corpus by plot: {e}")
+            return None
+    
+    async def get_rag_chunks_by_corpus(self, corpus_id: str) -> List[Dict[str, Any]]:
+        """Get all chunks for a corpus"""
+        try:
+            response = self.client.table("rag_chunks").select("*").eq("corpus_id", corpus_id).order("chunk_order").execute()
+            return response.data
+            
+        except Exception as e:
+            print(f"Error getting RAG chunks: {e}")
+            return []
     
     async def get_world_building_by_id(self, world_id: str) -> Dict[str, Any]:
         """Get world building by ID"""
@@ -1289,16 +1350,7 @@ class SupabaseService:
                 {"column_name": "plot_id", "data_type": "uuid", "is_nullable": "YES"},
                 {"column_name": "world_name", "data_type": "text", "is_nullable": "YES"},
                 {"column_name": "world_type", "data_type": "text", "is_nullable": "YES"},
-                {"column_name": "overview", "data_type": "text", "is_nullable": "YES"},
-                {"column_name": "geography", "data_type": "text", "is_nullable": "YES"},
-                {"column_name": "political_landscape", "data_type": "text", "is_nullable": "YES"},
-                {"column_name": "cultural_systems", "data_type": "text", "is_nullable": "YES"},
-                {"column_name": "economic_framework", "data_type": "text", "is_nullable": "YES"},
-                {"column_name": "historical_timeline", "data_type": "text", "is_nullable": "YES"},
-                {"column_name": "power_systems", "data_type": "text", "is_nullable": "YES"},
-                {"column_name": "languages_and_communication", "data_type": "text", "is_nullable": "YES"},
-                {"column_name": "religious_and_belief_systems", "data_type": "text", "is_nullable": "YES"},
-                {"column_name": "unique_elements", "data_type": "text", "is_nullable": "YES"},
+                {"column_name": "world_content", "data_type": "text", "is_nullable": "NO"},
                 {"column_name": "created_at", "data_type": "timestamp with time zone", "is_nullable": "YES"}
             ],
             "characters": [

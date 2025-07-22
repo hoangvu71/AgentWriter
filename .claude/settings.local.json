@@ -54,7 +54,8 @@
       "Bash(move:*)",
       "Bash(cp:*)",
       "Bash(pytest:*)",
-      "WebFetch(domain:google.github.io)"
+      "WebFetch(domain:google.github.io)",
+      "Bash(del demo_expansion_viewer.py)"
     ],
     "deny": []
   }
