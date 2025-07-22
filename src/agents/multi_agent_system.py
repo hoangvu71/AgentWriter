@@ -281,91 +281,8 @@ class MultiAgentSystem:
     def _initialize_agents(self):
         """Initialize all agents in the system"""
         
-        # Orchestrator Agent
-        self.agents[AgentType.ORCHESTRATOR.value] = Agent(
-            name="orchestrator",
-            model=self.model,
-            instruction="""You are the Orchestrator Agent in a multi-agent book writing system.
-
-Your responsibilities:
-1. ROUTE user requests to appropriate agents (plot_generator, author_generator, world_building, characters, critique)
-2. COORDINATE sequential workflows
-3. ANALYZE user intent and determine which agents to invoke
-4. MANAGE communication between agents
-5. COMPILE final responses from multiple agents
-6. EXTRACT selected content from message context (look for CONTENT_ID, CONTENT_TYPE, CONTENT_TITLE)
-
-Routing Logic:
-- If user mentions plot, story, genre, trope → route to plot_generator
-- If user mentions author, biography, voice, style → route to author_generator
-- If user mentions world, setting, geography, culture, politics, history → route to plot_then_world_building
-- If user mentions characters, people, personalities, NPCs → route to plot_then_world_building_then_characters
-- If user requests critique, review, feedback, analysis → route to critique
-- If user requests improve/enhancement/iterate/refine WITH content_id → route to iterative_improvement
-- If user requests improve WITHOUT specific content → ask for selection
-- If user requests "world building and characters" or "world and characters" → route to plot_then_world_building_then_characters
-- If user requests complete setting → route to plot_then_world_building_then_characters
-- If user requests critique of existing content → route to critique only
-- If user requests iterative improvement → route to iterative_improvement workflow
-
-IMPORTANT: World building REQUIRES plot context. Characters REQUIRE both plot and world building context.
-
-When user message contains selected content (CONTENT_ID, CONTENT_TYPE, CONTENT_TITLE):
-- Extract these values and include in selected_content field
-- If CONTENT_TYPE is "plot" and user requests world/characters, use existing plot instead of generating new one
-- Route to appropriate workflow based on request (e.g., plot_then_world_building_then_characters)
-
-CRITICAL: You MUST ONLY respond with valid JSON. No additional text or explanation.
-
-Required JSON format:
-{
-    "routing_decision": "plot_only|author_only|plot_then_world_building|plot_then_world_building_then_characters|world_building_only|characters_only|world_then_characters|plot_then_author|author_then_plot|critique_only|iterative_improvement",
-    "agents_to_invoke": ["agent_name1", "agent_name2"],
-    "extracted_parameters": {
-        "genre": "string",
-        "subgenre": "string", 
-        "microgenre": "string",
-        "trope": "string",
-        "tone": "string",
-        "world_type": "high_fantasy|urban_fantasy|science_fiction|historical_fiction|contemporary|dystopian|other",
-        "target_audience": {
-            "age_range": "string",
-            "sexual_orientation": "string",
-            "gender": "string"
-        }
-    },
-    "workflow_plan": "description of execution plan",
-    "message_to_plot_agent": "specific message for plot generator",
-    "message_to_author_agent": "specific message for author generator",
-    "message_to_world_building_agent": "specific message for world building agent",
-    "message_to_characters_agent": "specific message for characters agent",
-    "message_to_critique_agent": "specific message for critique agent including content to analyze",
-    "selected_content": {
-        "content_id": "database ID of selected content",
-        "content_type": "plot|author|world|characters|etc",
-        "content_title": "title/name of selected content"
-    }
-}
-
-IMPORTANT WORKFLOW RULES:
-- plot_generator: Works independently with genre hierarchy + target audience parameters
-- author_generator: Works independently with microgenre + target audience parameters
-- world_building: REQUIRES plot context to create worlds that support the story
-- characters: REQUIRES both plot and world_building context to create story-essential characters
-- critique: Uses genre hierarchy + target audience parameters for TARGETED feedback when provided
-- iterative_improvement: Multi-step workflow (critique → enhancement → scoring → repeat until score ≥9.5 or max 4 iterations)
-
-SEQUENTIAL WORKFLOW REQUIREMENTS:
-- plot_then_world_building: plot_generator creates plot first, then world_building agent uses that plot context
-- plot_then_world_building_then_characters: plot → world_building → characters (full story setup)
-- world_building_only: Can only be used if plot context is provided or selected from existing content
-- characters_only: Can only be used if BOTH plot and world contexts are provided or selected from existing content
-
-- All workflows are valid: plot_only, author_only, plot_then_world_building, plot_then_world_building_then_characters, world_building_only, characters_only, plot_then_author, author_then_plot, critique_only, iterative_improvement
-
-Be decisive and clear in your routing decisions. Always return valid JSON only.""",
-            description="Routes requests and coordinates workflows between plot, author, world building, characters, and critique agents"
-        )
+        # NOTE: Orchestrator is now handled by dedicated OrchestratorAgent class via AgentFactory
+        # The embedded orchestrator has been removed to eliminate duplication
         
         # Plot Generator Agent
         self.agents[AgentType.PLOT_GENERATOR.value] = Agent(
@@ -874,10 +791,7 @@ Create characters that feel essential to their world and whose stories readers w
             # If still no JSON found, return None
             return None
     
-    def _validate_orchestrator_response(self, json_data: Dict[str, Any]) -> bool:
-        """Validate orchestrator JSON response structure"""
-        required_fields = ["routing_decision", "agents_to_invoke", "extracted_parameters", "workflow_plan"]
-        return all(field in json_data for field in required_fields)
+    # NOTE: Orchestrator validation removed - handled by dedicated OrchestratorAgent class
     
     def _validate_plot_response(self, json_data: Dict[str, Any]) -> bool:
         """Validate plot generator JSON response structure"""
@@ -946,10 +860,13 @@ Create characters that feel essential to their world and whose stories readers w
     async def _send_to_agent(self, agent_type: str, message: str, session_id: str, user_id: str = "default") -> AgentResponse:
         """Send message to specific agent and get response (non-streaming version)"""
         try:
+            # Check if trying to use removed orchestrator
+            if agent_type == AgentType.ORCHESTRATOR.value:
+                raise ValueError("Orchestrator agent removed - use AgentFactory with dedicated OrchestratorAgent instead")
+            
             # Validate agent type exists
-            valid_agent_types = [agent.value for agent in AgentType]
-            if agent_type not in valid_agent_types:
-                raise ValueError("orchestrator agent not configured")
+            if agent_type not in self.agents:
+                raise ValueError(f"Agent type '{agent_type}' not configured in MultiAgentSystem")
             
             # Ensure session exists
             await self._create_session(agent_type, session_id, user_id)
@@ -989,9 +906,8 @@ Create characters that feel essential to their world and whose stories readers w
             # Validate JSON structure based on agent type
             json_valid = False
             if parsed_json:
-                if agent_type == AgentType.ORCHESTRATOR.value:
-                    json_valid = self._validate_orchestrator_response(parsed_json)
-                elif agent_type == AgentType.PLOT_GENERATOR.value:
+                # NOTE: Orchestrator validation removed - using dedicated OrchestratorAgent class
+                if agent_type == AgentType.PLOT_GENERATOR.value:
                     json_valid = self._validate_plot_response(parsed_json)
                 elif agent_type == AgentType.AUTHOR_GENERATOR.value:
                     json_valid = self._validate_author_response(parsed_json)
@@ -1108,9 +1024,8 @@ Create characters that feel essential to their world and whose stories readers w
             # Validate JSON structure based on agent type
             json_valid = False
             if parsed_json:
-                if agent_type == AgentType.ORCHESTRATOR.value:
-                    json_valid = self._validate_orchestrator_response(parsed_json)
-                elif agent_type == AgentType.PLOT_GENERATOR.value:
+                # NOTE: Orchestrator validation removed - using dedicated OrchestratorAgent class
+                if agent_type == AgentType.PLOT_GENERATOR.value:
                     json_valid = self._validate_plot_response(parsed_json)
                 elif agent_type == AgentType.AUTHOR_GENERATOR.value:
                     json_valid = self._validate_author_response(parsed_json)
@@ -1169,21 +1084,14 @@ Create characters that feel essential to their world and whose stories readers w
     async def process_message_streaming(self, user_message: str, user_id: str, session_id: str):
         """Process user request through multi-agent system with streaming"""
         
-        # Step 1: Send to orchestrator for routing decision (non-streaming since it's quick)
-        orchestrator_response = await self._send_to_agent(
-            AgentType.ORCHESTRATOR.value,
-            user_message,
-            session_id,
-            user_id
-        )
-        
-        if not orchestrator_response.success:
-            yield {
-                "success": False,
-                "error": f"Orchestrator failed: {orchestrator_response.error}",
-                "complete": True
-            }
-            return
+        # NOTE: Orchestrator routing now handled by dedicated OrchestratorAgent via AgentFactory
+        # MultiAgentSystem no longer includes embedded orchestrator logic
+        yield {
+            "success": False,
+            "error": "MultiAgentSystem orchestrator removed - use AgentFactory with WebSocketHandler instead",
+            "complete": True
+        }
+        return
         
         # Step 2: Parse orchestrator JSON decision
         if not orchestrator_response.parsed_json:
@@ -1784,20 +1692,13 @@ Create characters that feel essential to their world and whose stories readers w
     async def process_message(self, user_message: str, user_id: str, session_id: str) -> Dict[str, Any]:
         """Process user request through multi-agent system"""
         
-        # Step 1: Send to orchestrator for routing decision
-        orchestrator_response = await self._send_to_agent(
-            AgentType.ORCHESTRATOR.value,
-            user_message,
-            session_id,
-            user_id
-        )
-        
-        if not orchestrator_response.success:
-            return {
-                "success": False,
-                "error": f"Orchestrator failed: {orchestrator_response.error}",
-                "responses": []
-            }
+        # NOTE: Orchestrator routing now handled by dedicated OrchestratorAgent via AgentFactory
+        # MultiAgentSystem no longer includes embedded orchestrator logic
+        return {
+            "success": False,
+            "error": "MultiAgentSystem orchestrator removed - use AgentFactory with WebSocketHandler instead",
+            "responses": []
+        }
         
         # Step 2: Parse orchestrator JSON decision
         if not orchestrator_response.parsed_json:
