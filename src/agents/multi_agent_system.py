@@ -140,6 +140,26 @@ class MultiAgentSystem:
         # Fallback to original method
         return await supabase_service.save_characters(session_id, user_id, characters_data, orchestrator_params, world_id, plot_id)
     
+    async def _save_critique_data(self, iteration_id: str, critique_json: Dict[str, Any], agent_response: str) -> None:
+        """Helper method to save critique data using repository if available, fallback to supabase_service"""
+        # TODO: Implement repository-based saving when critique repository is available
+        # For now, fallback to original method
+        return await supabase_service.save_critique_data(iteration_id, critique_json, agent_response)
+    
+    async def _save_enhancement_data(self, iteration_id: str, enhanced_content: str, changes_made: Dict[str, Any], 
+                                   rationale: str, confidence_score: float) -> None:
+        """Helper method to save enhancement data using repository if available, fallback to supabase_service"""
+        # TODO: Implement repository-based saving when enhancement repository is available
+        # For now, fallback to original method
+        return await supabase_service.save_enhancement_data(iteration_id, enhanced_content, changes_made, rationale, confidence_score)
+    
+    async def _save_score_data(self, iteration_id: str, overall_score: float, category_scores: Dict[str, Any], 
+                             score_rationale: str, improvement_trajectory: str, recommendations: str) -> None:
+        """Helper method to save score data using repository if available, fallback to supabase_service"""
+        # TODO: Implement repository-based saving when scoring repository is available
+        # For now, fallback to original method
+        return await supabase_service.save_score_data(iteration_id, overall_score, category_scores, score_rationale, improvement_trajectory, recommendations)
+    
     def _initialize_agents(self):
         """Initialize all agents in the system"""
         
@@ -1433,7 +1453,7 @@ Create characters that feel essential to their world and whose stories readers w
                         
                         if SUPABASE_ENABLED and plot_response.success and plot_response.parsed_json:
                             try:
-                                saved_plot = await supabase_service.save_plot(
+                                saved_plot = await self._save_plot_data(
                                     session_id, 
                                     user_id, 
                                     plot_response.parsed_json, 
@@ -1479,7 +1499,7 @@ Create characters that feel essential to their world and whose stories readers w
                         # Save world building to database
                         if SUPABASE_ENABLED and world_response.success and world_response.parsed_json:
                             try:
-                                saved_world = await supabase_service.save_world_building(
+                                saved_world = await self._save_world_building_data(
                                     session_id, 
                                     user_id, 
                                     world_response.parsed_json, 
@@ -1526,7 +1546,7 @@ Create characters that feel essential to their world and whose stories readers w
                             # Save characters to database with both plot and world references
                             if SUPABASE_ENABLED and characters_response.success and characters_response.parsed_json:
                                 try:
-                                    saved_characters = await supabase_service.save_characters(
+                                    saved_characters = await self._save_characters_data(
                                         session_id, 
                                         user_id, 
                                         characters_response.parsed_json, 
@@ -1568,7 +1588,7 @@ Create characters that feel essential to their world and whose stories readers w
                     saved_world_id = None
                     if SUPABASE_ENABLED and world_response.success and world_response.parsed_json:
                         try:
-                            saved_world = await supabase_service.save_world_building(
+                            saved_world = await self._save_world_building_data(
                                 session_id, 
                                 user_id, 
                                 world_response.parsed_json, 
@@ -1609,7 +1629,7 @@ Create characters that feel essential to their world and whose stories readers w
                         # Save characters to database with world reference
                         if SUPABASE_ENABLED and characters_response.success and characters_response.parsed_json:
                             try:
-                                saved_characters = await supabase_service.save_characters(
+                                saved_characters = await self._save_characters_data(
                                     session_id, 
                                     user_id, 
                                     characters_response.parsed_json, 
@@ -1699,7 +1719,7 @@ Create characters that feel essential to their world and whose stories readers w
             # Save plot without author assignment first
             if SUPABASE_ENABLED and plot_response.parsed_json:
                 try:
-                    saved_plot = await supabase_service.save_plot(
+                    saved_plot = await self._save_plot_data(
                         session_id, 
                         user_id, 
                         plot_response.parsed_json, 
@@ -1725,7 +1745,7 @@ Create characters that feel essential to their world and whose stories readers w
                 # Save author to Supabase
                 if SUPABASE_ENABLED and author_response.parsed_json:
                     try:
-                        saved_author = await supabase_service.save_author(
+                        saved_author = await self._save_author_data(
                             session_id, 
                             user_id, 
                             author_response.parsed_json
@@ -1755,7 +1775,7 @@ Create characters that feel essential to their world and whose stories readers w
             # Save author to Supabase
             if SUPABASE_ENABLED and author_response.parsed_json:
                 try:
-                    saved_author = await supabase_service.save_author(
+                    saved_author = await self._save_author_data(
                         session_id, 
                         user_id, 
                         author_response.parsed_json
@@ -1789,7 +1809,7 @@ Create characters that feel essential to their world and whose stories readers w
             # Save author to Supabase first
             if SUPABASE_ENABLED and author_response.parsed_json:
                 try:
-                    saved_author = await supabase_service.save_author(
+                    saved_author = await self._save_author_data(
                         session_id, 
                         user_id, 
                         author_response.parsed_json
@@ -1813,7 +1833,7 @@ Create characters that feel essential to their world and whose stories readers w
                 # Save plot with author assignment
                 if SUPABASE_ENABLED and plot_response.parsed_json:
                     try:
-                        saved_plot = await supabase_service.save_plot(
+                        saved_plot = await self._save_plot_data(
                             session_id, 
                             user_id, 
                             plot_response.parsed_json, 
@@ -1844,7 +1864,7 @@ Create characters that feel essential to their world and whose stories readers w
                     if selected_content.get("content_id") and selected_content.get("content_type") == "author":
                         selected_author_id = selected_content["content_id"]
                     
-                    saved_plot = await supabase_service.save_plot(
+                    saved_plot = await self._save_plot_data(
                         session_id, 
                         user_id, 
                         plot_response.parsed_json, 
@@ -1886,7 +1906,7 @@ Create characters that feel essential to their world and whose stories readers w
             # Save world building to database
             if SUPABASE_ENABLED and world_response.success and world_response.parsed_json:
                 try:
-                    saved_world = await supabase_service.save_world_building(
+                    saved_world = await self._save_world_building_data(
                         session_id, 
                         user_id, 
                         world_response.parsed_json, 
@@ -1925,7 +1945,7 @@ Create characters that feel essential to their world and whose stories readers w
             # Save characters to database
             if SUPABASE_ENABLED and characters_response.success and characters_response.parsed_json:
                 try:
-                    saved_characters = await supabase_service.save_characters(
+                    saved_characters = await self._save_characters_data(
                         session_id, 
                         user_id, 
                         characters_response.parsed_json, 
@@ -1950,7 +1970,7 @@ Create characters that feel essential to their world and whose stories readers w
             saved_plot_id = None
             if SUPABASE_ENABLED and plot_response.success and plot_response.parsed_json:
                 try:
-                    saved_plot = await supabase_service.save_plot(
+                    saved_plot = await self._save_plot_data(
                         session_id, 
                         user_id, 
                         plot_response.parsed_json, 
@@ -1977,7 +1997,7 @@ Create characters that feel essential to their world and whose stories readers w
                 # Save world building to database with plot reference
                 if SUPABASE_ENABLED and world_response.success and world_response.parsed_json:
                     try:
-                        saved_world = await supabase_service.save_world_building(
+                        saved_world = await self._save_world_building_data(
                             session_id, 
                             user_id, 
                             world_response.parsed_json, 
@@ -2022,7 +2042,7 @@ Create characters that feel essential to their world and whose stories readers w
                 
                 if SUPABASE_ENABLED and plot_response.success and plot_response.parsed_json:
                     try:
-                        saved_plot = await supabase_service.save_plot(
+                        saved_plot = await self._save_plot_data(
                             session_id, 
                             user_id, 
                             plot_response.parsed_json, 
@@ -2053,7 +2073,7 @@ Create characters that feel essential to their world and whose stories readers w
                 # Save world building to database
                 if SUPABASE_ENABLED and world_response.success and world_response.parsed_json:
                     try:
-                        saved_world = await supabase_service.save_world_building(
+                        saved_world = await self._save_world_building_data(
                             session_id, 
                             user_id, 
                             world_response.parsed_json, 
@@ -2081,7 +2101,7 @@ Create characters that feel essential to their world and whose stories readers w
                     # Save characters to database with both plot and world references
                     if SUPABASE_ENABLED and characters_response.success and characters_response.parsed_json:
                         try:
-                            saved_characters = await supabase_service.save_characters(
+                            saved_characters = await self._save_characters_data(
                                 session_id, 
                                 user_id, 
                                 characters_response.parsed_json, 
@@ -2107,7 +2127,7 @@ Create characters that feel essential to their world and whose stories readers w
             saved_world_id = None
             if SUPABASE_ENABLED and world_response.success and world_response.parsed_json:
                 try:
-                    saved_world = await supabase_service.save_world_building(
+                    saved_world = await self._save_world_building_data(
                         session_id, 
                         user_id, 
                         world_response.parsed_json, 
@@ -2134,7 +2154,7 @@ Create characters that feel essential to their world and whose stories readers w
                 # Save characters to database with world reference
                 if SUPABASE_ENABLED and characters_response.success and characters_response.parsed_json:
                     try:
-                        saved_characters = await supabase_service.save_characters(
+                        saved_characters = await self._save_characters_data(
                             session_id, 
                             user_id, 
                             characters_response.parsed_json, 
@@ -2234,7 +2254,7 @@ Create characters that feel essential to their world and whose stories readers w
                 # Save critique data to database
                 if SUPABASE_ENABLED and iteration_id and critique_response.success and critique_response.parsed_json:
                     try:
-                        await supabase_service.save_critique_data(
+                        await self._save_critique_data(
                             iteration_id=iteration_id,
                             critique_json=critique_response.parsed_json,
                             agent_response=critique_response.message
@@ -2280,7 +2300,7 @@ Create characters that feel essential to their world and whose stories readers w
                         rationale = enhancement_response.parsed_json.get("rationale", "")
                         confidence_score = enhancement_response.parsed_json.get("confidence_score", 0)
                         
-                        await supabase_service.save_enhancement_data(
+                        await self._save_enhancement_data(
                             iteration_id=iteration_id,
                             enhanced_content=str(enhanced_content),
                             changes_made=changes_made,
@@ -2347,7 +2367,7 @@ Create characters that feel essential to their world and whose stories readers w
                 if SUPABASE_ENABLED and iteration_id and scoring_response.success and scoring_response.parsed_json:
                     try:
                         score_data = scoring_response.parsed_json
-                        await supabase_service.save_score_data(
+                        await self._save_score_data(
                             iteration_id=iteration_id,
                             overall_score=score_data.get("overall_score", 0),
                             category_scores=score_data.get("category_scores", {}),

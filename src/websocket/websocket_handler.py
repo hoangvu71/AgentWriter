@@ -75,6 +75,26 @@ class WebSocketHandler:
         # Fallback to original method
         return await supabase_service.save_characters(session_id, user_id, characters_data, orchestrator_params, world_id, plot_id)
     
+    async def _save_critique_data(self, iteration_id: str, critique_json: Dict[str, Any], agent_response: str) -> None:
+        """Helper method to save critique data using repository if available, fallback to supabase_service"""
+        # TODO: Implement repository-based saving when critique repository is available
+        # For now, fallback to original method
+        return await supabase_service.save_critique_data(iteration_id, critique_json, agent_response)
+    
+    async def _save_enhancement_data(self, iteration_id: str, enhanced_content: str, changes_made: Dict[str, Any], 
+                                   rationale: str, confidence_score: float) -> None:
+        """Helper method to save enhancement data using repository if available, fallback to supabase_service"""
+        # TODO: Implement repository-based saving when enhancement repository is available
+        # For now, fallback to original method
+        return await supabase_service.save_enhancement_data(iteration_id, enhanced_content, changes_made, rationale, confidence_score)
+    
+    async def _save_score_data(self, iteration_id: str, overall_score: float, category_scores: Dict[str, Any], 
+                             score_rationale: str, improvement_trajectory: str, recommendations: str) -> None:
+        """Helper method to save score data using repository if available, fallback to supabase_service"""
+        # TODO: Implement repository-based saving when scoring repository is available
+        # For now, fallback to original method
+        return await supabase_service.save_score_data(iteration_id, overall_score, category_scores, score_rationale, improvement_trajectory, recommendations)
+    
     async def handle_connection(self, websocket: WebSocket, session_id: str):
         """Handle a new WebSocket connection"""
         try:
@@ -194,7 +214,7 @@ class WebSocketHandler:
             elif agent_name == "critique":
                 # For critique, we'll create a basic improvement iteration
                 try:
-                    await supabase_service.save_critique_data(
+                    await self._save_critique_data(
                         iteration_id=f"{session_id}_{user_id}_{agent_name}",
                         critique_json=response_data,
                         agent_response=str(response_data)
@@ -206,7 +226,7 @@ class WebSocketHandler:
             elif agent_name == "enhancement":
                 # For enhancement, we'll create a basic improvement iteration
                 try:
-                    await supabase_service.save_enhancement_data(
+                    await self._save_enhancement_data(
                         iteration_id=f"{session_id}_{user_id}_{agent_name}",
                         enhanced_content=response_data.get("enhanced_content", ""),
                         changes_made=response_data.get("improvements_made", {}),
@@ -228,7 +248,7 @@ class WebSocketHandler:
                         "technical_execution": float(response_data.get("technical_execution_score", 0))
                     }
                     
-                    await supabase_service.save_score_data(
+                    await self._save_score_data(
                         iteration_id=f"{session_id}_{user_id}_{agent_name}",
                         overall_score=float(response_data.get("overall_score", 0)),
                         category_scores=category_scores,
