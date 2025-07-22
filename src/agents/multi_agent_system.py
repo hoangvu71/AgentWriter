@@ -68,14 +68,55 @@ class AgentType(Enum):
 class MultiAgentSystem:
     """Multi-agent system for book writing with orchestrator coordination"""
     
-    def __init__(self, model: str = "gemini-2.0-flash"):
+    def __init__(self, model: str = "gemini-2.0-flash", 
+                 plot_repository=None, 
+                 author_repository=None, 
+                 world_building_repository=None, 
+                 characters_repository=None):
         self.model = model
         self.agents: Dict[str, Agent] = {}
         self.runners: Dict[str, InMemoryRunner] = {}
         self.sessions: Dict[str, Dict[str, Any]] = {}
         
+        # Store repositories
+        self.plot_repository = plot_repository
+        self.author_repository = author_repository
+        self.world_building_repository = world_building_repository
+        self.characters_repository = characters_repository
+        
         # Initialize all agents
         self._initialize_agents()
+    
+    async def _save_plot_data(self, session_id: str, user_id: str, plot_data: Dict[str, Any], 
+                             orchestrator_params: Dict[str, Any] = None, author_id: str = None) -> Dict[str, Any]:
+        """Helper method to save plot data using repository if available, fallback to supabase_service"""
+        if self.plot_repository is not None:
+            # TODO: Implement repository-based saving (requires data transformation)
+            # For now, fallback to old method
+            pass
+        
+        # Fallback to original method
+        return await supabase_service.save_plot(session_id, user_id, plot_data, orchestrator_params, author_id)
+    
+    async def _save_author_data(self, session_id: str, user_id: str, author_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Helper method to save author data using repository if available, fallback to supabase_service"""
+        if self.author_repository is not None:
+            # TODO: Implement repository-based saving (requires data transformation)
+            # For now, fallback to old method
+            pass
+        
+        # Fallback to original method
+        return await supabase_service.save_author(session_id, user_id, author_data)
+    
+    async def _update_plot_author_link(self, plot_id: str, author_id: str) -> bool:
+        """Helper method to link plot and author using repository if available, fallback to supabase_service"""
+        if self.plot_repository is not None:
+            # TODO: Implement repository-based linking (requires data transformation)
+            # For now, fallback to old method
+            pass
+        
+        # Fallback to original method
+        return await supabase_service.update_plot_author(plot_id, author_id)
     
     def _initialize_agents(self):
         """Initialize all agents in the system"""
@@ -1051,7 +1092,7 @@ Create characters that feel essential to their world and whose stories readers w
                     if selected_content.get("content_id") and selected_content.get("content_type") == "author":
                         selected_author_id = selected_content["content_id"]
                     
-                    saved_plot = await supabase_service.save_plot(
+                    saved_plot = await self._save_plot_data(
                         session_id, 
                         user_id, 
                         plot_response.parsed_json, 
@@ -1095,7 +1136,7 @@ Create characters that feel essential to their world and whose stories readers w
                 # Save author to Supabase and link to plot
                 if SUPABASE_ENABLED and author_response and author_response.parsed_json:
                     try:
-                        saved_author = await supabase_service.save_author(
+                        saved_author = await self._save_author_data(
                             session_id, 
                             user_id, 
                             author_response.parsed_json
@@ -2429,5 +2470,19 @@ Create characters that feel essential to their world and whose stories readers w
             }
         }
 
-# Global multi-agent system instance
-multi_agent_system = MultiAgentSystem()
+# Global multi-agent system instance with dependency injection
+def create_multi_agent_system():
+    """Factory function to create MultiAgentSystem with dependency injection"""
+    from ..core.container import container
+    try:
+        return MultiAgentSystem(
+            plot_repository=container.get("plot_repository"),
+            author_repository=container.get("author_repository"),
+            world_building_repository=container.get("world_building_repository"),
+            characters_repository=container.get("characters_repository")
+        )
+    except KeyError:
+        # Fallback to old behavior if repositories not available
+        return MultiAgentSystem()
+
+multi_agent_system = create_multi_agent_system()

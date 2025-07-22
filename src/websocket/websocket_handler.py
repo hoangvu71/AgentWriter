@@ -18,12 +18,19 @@ from ..database.supabase_service import supabase_service
 class WebSocketHandler:
     """Handles WebSocket messages and coordinates with multi-agent system"""
     
-    def __init__(self, connection_manager: ConnectionManager, agent_factory: AgentFactory, config: Configuration):
+    def __init__(self, connection_manager: ConnectionManager, agent_factory: AgentFactory, config: Configuration,
+                 plot_repository=None, author_repository=None, world_building_repository=None, characters_repository=None):
         self.connection_manager = connection_manager
         self.agent_factory = agent_factory
         self.config = config
         self.validator = Validator()
         self.logger = get_logger("websocket.handler")
+        
+        # Store repositories
+        self.plot_repository = plot_repository
+        self.author_repository = author_repository
+        self.world_building_repository = world_building_repository
+        self.characters_repository = characters_repository
     
     async def handle_connection(self, websocket: WebSocket, session_id: str):
         """Handle a new WebSocket connection"""

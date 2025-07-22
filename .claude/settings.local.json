@@ -55,7 +55,15 @@
       "Bash(cp:*)",
       "Bash(pytest:*)",
       "WebFetch(domain:google.github.io)",
-      "Bash(del demo_expansion_viewer.py)"
+      "Bash(del demo_expansion_viewer.py)",
+      "Bash(\"./venv/Scripts/python.exe\" main.py)",
+      "Bash(pip show:*)",
+      "Bash(./venv/Scripts/pip show supabase)",
+      "Bash(./venv/Scripts/pip show httpx)",
+      "Bash(./venv/Scripts/pip install:*)",
+      "Bash(./venv/Scripts/python:*)",
+      "Bash(tail:*)",
+      "Bash(\".\\venv\\Scripts\\python.exe\" -c \"from src.agents.multi_agent_system import multi_agent_system; print(''MultiAgentSystem loaded successfully'')\")"
     ],
     "deny": []
   }

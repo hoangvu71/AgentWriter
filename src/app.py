@@ -43,11 +43,15 @@ async def startup_event():
     container.register_instance("connection_manager", ConnectionManager())
     container.register_instance("agent_factory", AgentFactory(config))
     
-    # Register WebSocket handler
+    # Register WebSocket handler with repositories
     websocket_handler = WebSocketHandler(
         connection_manager=container.get("connection_manager"),
         agent_factory=container.get("agent_factory"),
-        config=config
+        config=config,
+        plot_repository=container.get("plot_repository"),
+        author_repository=container.get("author_repository"),
+        world_building_repository=container.get("world_building_repository"),
+        characters_repository=container.get("characters_repository")
     )
     container.register_instance("websocket_handler", websocket_handler)
     
