@@ -134,3 +134,22 @@ class WorldBuildingRepository(BaseRepository[WorldBuilding]):
         except Exception as e:
             self._logger.error(f"Error getting recent world building: {e}", error=e)
             raise
+    
+    async def get_user_world_building(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get all world building for a user in raw format (compatible with existing API)"""
+        try:
+            # Use the adapter's method that returns raw data for API compatibility
+            return await self._database.service.get_user_world_building(user_id, limit)
+        except Exception as e:
+            self._logger.error(f"Error getting world building for user {user_id}: {e}", error=e)
+            raise
+    
+    async def get_world_by_plot(self, plot_id: str) -> List[Dict[str, Any]]:
+        """Get world building for a specific plot in raw format"""
+        try:
+            # Get worlds as entities and convert to raw format
+            worlds = await self.get_by_plot(plot_id)
+            return [self._serialize(world) for world in worlds]
+        except Exception as e:
+            self._logger.error(f"Error getting world building for plot {plot_id}: {e}", error=e)
+            raise

@@ -103,6 +103,26 @@ class AuthorRepository(BaseRepository[Author]):
         
         return sorted_authors[:limit]
     
+    async def get_user_authors(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get all authors for a user in raw format (compatible with existing API)"""
+        try:
+            # Get authors as entities and convert to raw format for API compatibility
+            authors = await self.get_by_user(user_id, limit)
+            return [self._serialize(author) for author in authors]
+        except Exception as e:
+            self._logger.error(f"Error getting authors for user {user_id}: {e}", error=e)
+            raise
+    
+    async def get_authors_by_session(self, session_id: str) -> List[Dict[str, Any]]:
+        """Get all authors for a session in raw format"""
+        try:
+            # Get authors as entities and convert to raw format
+            authors = await self.get_by_session(session_id)
+            return [self._serialize(author) for author in authors]
+        except Exception as e:
+            self._logger.error(f"Error getting authors for session {session_id}: {e}", error=e)
+            raise
+    
     async def get_authors_with_plot_counts(self, user_id: str) -> List[Dict[str, Any]]:
         """Get authors with count of associated plots"""
         # This would require a more complex query with joins

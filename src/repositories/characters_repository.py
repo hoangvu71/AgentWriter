@@ -126,6 +126,25 @@ class CharactersRepository(BaseRepository[Characters]):
             self._logger.error(f"Error getting recent characters: {e}", error=e)
             raise
     
+    async def get_user_characters(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get all characters for a user in raw format (compatible with existing API)"""
+        try:
+            # Use the adapter's method that returns raw data for API compatibility
+            return await self._database.service.get_user_characters(user_id, limit)
+        except Exception as e:
+            self._logger.error(f"Error getting characters for user {user_id}: {e}", error=e)
+            raise
+    
+    async def get_characters_by_world(self, world_id: str) -> List[Dict[str, Any]]:
+        """Get characters for a specific world in raw format"""
+        try:
+            # Get characters as entities and convert to raw format
+            characters = await self.get_by_world(world_id)
+            return [self._serialize(char) for char in characters]
+        except Exception as e:
+            self._logger.error(f"Error getting characters for world {world_id}: {e}", error=e)
+            raise
+    
     async def get_characters_with_world_context(self, user_id: str, limit: int = 20) -> List[Dict[str, Any]]:
         """Get characters with their world building context"""
         try:

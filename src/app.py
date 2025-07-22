@@ -13,7 +13,7 @@ from .core.logging import setup_logging, get_logger
 from .websocket.connection_manager import ConnectionManager
 from .websocket.websocket_handler import WebSocketHandler
 from .agents.agent_factory import AgentFactory
-from .routers import plots, authors, websocket, content, admin, models
+from .routers import plots, authors, websocket, content, admin, models, health, sessions
 
 # Setup logging
 setup_logging()
@@ -39,19 +39,24 @@ async def startup_event():
     if config_errors:
         logger.warning(f"Configuration issues: {', '.join(config_errors)}")
     
-    # Register services in container
+    # Validate all required services are available
+    try:
+        content_saving_service = container.get("content_saving_service")
+        logger.info("ContentSavingService loaded successfully")
+    except Exception as e:
+        logger.error(f"Failed to load ContentSavingService: {e}")
+        raise RuntimeError("Application startup failed - ContentSavingService unavailable") from e
+    
+    # Register additional services in container
     container.register_instance("connection_manager", ConnectionManager())
     container.register_instance("agent_factory", AgentFactory(config))
     
-    # Register WebSocket handler with repositories
+    # Register WebSocket handler with required ContentSavingService
     websocket_handler = WebSocketHandler(
         connection_manager=container.get("connection_manager"),
         agent_factory=container.get("agent_factory"),
         config=config,
-        plot_repository=container.get("plot_repository"),
-        author_repository=container.get("author_repository"),
-        world_building_repository=container.get("world_building_repository"),
-        characters_repository=container.get("characters_repository")
+        content_saving_service=content_saving_service
     )
     container.register_instance("websocket_handler", websocket_handler)
     
@@ -129,6 +134,8 @@ app.include_router(authors.router, prefix="/api", tags=["authors"])
 app.include_router(content.router, prefix="/api", tags=["content"])
 app.include_router(admin.router, prefix="/api", tags=["admin"])
 app.include_router(models.router, prefix="", tags=["models"])
+app.include_router(health.router, tags=["health"])
+app.include_router(sessions.router, tags=["sessions"])
 
 
 def create_app() -> FastAPI:

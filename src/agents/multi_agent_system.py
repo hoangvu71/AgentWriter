@@ -68,224 +68,57 @@ class AgentType(Enum):
 class MultiAgentSystem:
     """Multi-agent system for book writing with orchestrator coordination"""
     
-    def __init__(self, model: str = "gemini-2.0-flash", 
-                 plot_repository=None, 
-                 author_repository=None, 
-                 world_building_repository=None, 
-                 characters_repository=None):
+    def __init__(self, model: str = "gemini-2.0-flash", content_saving_service=None):
         self.model = model
         self.agents: Dict[str, Agent] = {}
         self.runners: Dict[str, InMemoryRunner] = {}
         self.sessions: Dict[str, Dict[str, Any]] = {}
         
-        # Store repositories
-        self.plot_repository = plot_repository
-        self.author_repository = author_repository
-        self.world_building_repository = world_building_repository
-        self.characters_repository = characters_repository
+        # Use centralized ContentSavingService for all database operations
+        if not content_saving_service:
+            raise ValueError("ContentSavingService is required - no fallback to individual repositories allowed")
+        self.content_saving_service = content_saving_service
         
         # Initialize all agents
         self._initialize_agents()
     
     async def _save_plot_data(self, session_id: str, user_id: str, plot_data: Dict[str, Any], 
                              orchestrator_params: Dict[str, Any] = None, author_id: str = None) -> Dict[str, Any]:
-        """Helper method to save plot data using repository if available, fallback to supabase_service"""
-        if self.plot_repository is not None:
-            try:
-                # Transform dictionary data to Plot entity
-                from ..models.entities import Plot
-                plot_entity = Plot(
-                    session_id=session_id,
-                    user_id=user_id,
-                    title=plot_data.get("title", ""),
-                    plot_summary=plot_data.get("plot_summary", ""),
-                    author_id=author_id
-                    # Note: genre/tone/audience IDs would need to be resolved from orchestrator_params
-                    # For now, keeping it simple and falling back for complex cases
-                )
-                
-                # Save using repository
-                plot_id = await self.plot_repository.create(plot_entity)
-                
-                # Return format compatible with existing code
-                return {
-                    "id": plot_id,
-                    "session_id": session_id,
-                    "user_id": user_id,
-                    "author_id": author_id,
-                    **plot_data
-                }
-            except Exception as e:
-                print(f"Repository save failed, falling back to supabase_service: {e}")
-                # Fall through to fallback
-        
-        # Fallback to original method
-        return await supabase_service.save_plot(session_id, user_id, plot_data, orchestrator_params, author_id)
+        """Save plot data using ContentSavingService"""
+        return await self.content_saving_service.save_plot_data(session_id, user_id, plot_data, orchestrator_params, author_id)
     
     async def _save_author_data(self, session_id: str, user_id: str, author_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Helper method to save author data using repository if available, fallback to supabase_service"""
-        if self.author_repository is not None:
-            try:
-                # Transform dictionary data to Author entity
-                from ..models.entities import Author
-                author_entity = Author(
-                    session_id=session_id,
-                    user_id=user_id,
-                    author_name=author_data.get("author_name", ""),
-                    pen_name=author_data.get("pen_name"),
-                    biography=author_data.get("biography", ""),
-                    writing_style=author_data.get("writing_style", "")
-                )
-                
-                # Save using repository
-                author_id = await self.author_repository.create(author_entity)
-                
-                # Return format compatible with existing code
-                return {
-                    "id": author_id,
-                    "session_id": session_id,
-                    "user_id": user_id,
-                    **author_data
-                }
-            except Exception as e:
-                print(f"Repository save failed, falling back to supabase_service: {e}")
-                # Fall through to fallback
-        
-        # Fallback to original method
-        return await supabase_service.save_author(session_id, user_id, author_data)
+        """Save author data using ContentSavingService"""
+        return await self.content_saving_service.save_author_data(session_id, user_id, author_data)
     
     async def _update_plot_author_link(self, plot_id: str, author_id: str) -> bool:
-        """Helper method to link plot and author using repository if available, fallback to supabase_service"""
-        if self.plot_repository is not None:
-            # TODO: Implement repository-based linking (requires data transformation)
-            # For now, fallback to old method
-            pass
-        
-        # Fallback to original method
+        """Link plot and author - currently uses supabase_service directly"""
+        # TODO: Move to ContentSavingService or implement in PlotRepository
         return await supabase_service.update_plot_author(plot_id, author_id)
     
     async def _save_world_building_data(self, session_id: str, user_id: str, world_data: Dict[str, Any], 
                                        orchestrator_params: Dict[str, Any] = None, plot_id: str = None) -> Dict[str, Any]:
-        """Helper method to save world building data using repository if available, fallback to supabase_service"""
-        if self.world_building_repository is not None:
-            try:
-                # Transform dictionary data to WorldBuilding entity
-                from ..models.entities import WorldBuilding
-                
-                # Extract world content - could be nested in various formats
-                world_content = ""
-                if isinstance(world_data.get("world_building"), str):
-                    world_content = world_data["world_building"]
-                elif isinstance(world_data.get("world_description"), str):
-                    world_content = world_data["world_description"]
-                else:
-                    # Fallback to string representation of the whole data
-                    world_content = str(world_data)
-                
-                world_entity = WorldBuilding(
-                    session_id=session_id,
-                    user_id=user_id,
-                    plot_id=plot_id,
-                    world_name=world_data.get("world_name", "Unnamed World"),
-                    world_type=world_data.get("world_type", "unknown"),
-                    world_content=world_content
-                )
-                
-                # Save using repository
-                world_id = await self.world_building_repository.create(world_entity)
-                
-                # Return format compatible with existing code
-                return {
-                    "id": world_id,
-                    "session_id": session_id,
-                    "user_id": user_id,
-                    "plot_id": plot_id,
-                    **world_data
-                }
-            except Exception as e:
-                print(f"Repository save failed, falling back to supabase_service: {e}")
-                # Fall through to fallback
-        
-        # Fallback to original method
-        return await supabase_service.save_world_building(session_id, user_id, world_data, orchestrator_params, plot_id)
+        """Save world building data using ContentSavingService"""
+        return await self.content_saving_service.save_world_building_data(session_id, user_id, world_data, orchestrator_params, plot_id)
     
     async def _save_characters_data(self, session_id: str, user_id: str, characters_data: Dict[str, Any], 
                                    orchestrator_params: Dict[str, Any] = None, world_id: str = None, plot_id: str = None) -> Dict[str, Any]:
-        """Helper method to save characters data using repository if available, fallback to supabase_service"""
-        if self.characters_repository is not None:
-            try:
-                # Transform dictionary data to Characters entity
-                from ..models.entities import Characters
-                
-                # Extract character list and relationships
-                characters_list = characters_data.get("characters", [])
-                if isinstance(characters_list, str):
-                    # If it's a string, try to parse as JSON or treat as single character
-                    from ..utils.json_parser import parse_llm_json
-                    try:
-                        parsed_json = parse_llm_json(characters_list)
-                        if parsed_json and isinstance(parsed_json, dict):
-                            # If we got a dict, look for a characters array within it
-                            characters_list = parsed_json.get("characters", [parsed_json])
-                        elif parsed_json and isinstance(parsed_json, list):
-                            characters_list = parsed_json
-                        else:
-                            # Fallback: treat as description for single character
-                            characters_list = [{"name": "Character", "description": characters_list}]
-                    except (json.JSONDecodeError, TypeError, AttributeError) as e:
-                        # Fallback: treat as description for single character
-                        characters_list = [{"name": "Character", "description": characters_list}]
-                
-                characters_entity = Characters(
-                    session_id=session_id,
-                    user_id=user_id,
-                    world_id=world_id,
-                    plot_id=plot_id,
-                    character_count=len(characters_list) if isinstance(characters_list, list) else 1,
-                    world_context_integration=characters_data.get("world_context_integration", ""),
-                    characters=characters_list,
-                    relationship_networks=characters_data.get("relationship_networks", {}),
-                    character_dynamics=characters_data.get("character_dynamics", {})
-                )
-                
-                # Save using repository
-                characters_id = await self.characters_repository.create(characters_entity)
-                
-                # Return format compatible with existing code
-                return {
-                    "id": characters_id,
-                    "session_id": session_id,
-                    "user_id": user_id,
-                    "world_id": world_id,
-                    "plot_id": plot_id,
-                    **characters_data
-                }
-            except Exception as e:
-                print(f"Repository save failed, falling back to supabase_service: {e}")
-                # Fall through to fallback
-        
-        # Fallback to original method
-        return await supabase_service.save_characters(session_id, user_id, characters_data, orchestrator_params, world_id, plot_id)
+        """Save characters data using ContentSavingService"""
+        return await self.content_saving_service.save_characters_data(session_id, user_id, characters_data, orchestrator_params, world_id, plot_id)
     
     async def _save_critique_data(self, iteration_id: str, critique_json: Dict[str, Any], agent_response: str) -> None:
-        """Helper method to save critique data using repository if available, fallback to supabase_service"""
-        # TODO: Implement repository-based saving when critique repository is available
-        # For now, fallback to original method
-        return await supabase_service.save_critique_data(iteration_id, critique_json, agent_response)
+        """Save critique data using ContentSavingService"""
+        return await self.content_saving_service.save_critique_data(iteration_id, critique_json, agent_response)
     
     async def _save_enhancement_data(self, iteration_id: str, enhanced_content: str, changes_made: Dict[str, Any], 
                                    rationale: str, confidence_score: float) -> None:
-        """Helper method to save enhancement data using repository if available, fallback to supabase_service"""
-        # TODO: Implement repository-based saving when enhancement repository is available
-        # For now, fallback to original method
-        return await supabase_service.save_enhancement_data(iteration_id, enhanced_content, changes_made, rationale, confidence_score)
+        """Save enhancement data using ContentSavingService"""
+        return await self.content_saving_service.save_enhancement_data(iteration_id, enhanced_content, changes_made, rationale, confidence_score)
     
     async def _save_score_data(self, iteration_id: str, overall_score: float, category_scores: Dict[str, Any], 
                              score_rationale: str, improvement_trajectory: str, recommendations: str) -> None:
-        """Helper method to save score data using repository if available, fallback to supabase_service"""
-        # TODO: Implement repository-based saving when scoring repository is available
-        # For now, fallback to original method
-        return await supabase_service.save_score_data(iteration_id, overall_score, category_scores, score_rationale, improvement_trajectory, recommendations)
+        """Save score data using ContentSavingService"""
+        return await self.content_saving_service.save_score_data(iteration_id, overall_score, category_scores, score_rationale, improvement_trajectory, recommendations)
     
     def _initialize_agents(self):
         """Initialize all agents in the system"""
@@ -1103,13 +936,10 @@ def create_multi_agent_system():
     from ..core.container import container
     try:
         return MultiAgentSystem(
-            plot_repository=container.get("plot_repository"),
-            author_repository=container.get("author_repository"),
-            world_building_repository=container.get("world_building_repository"),
-            characters_repository=container.get("characters_repository")
+            content_saving_service=container.get("content_saving_service")
         )
     except KeyError:
-        # Fallback to old behavior if repositories not available
+        # Fallback to old behavior if service not available
         return MultiAgentSystem()
 
 multi_agent_system = create_multi_agent_system()

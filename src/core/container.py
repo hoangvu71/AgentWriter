@@ -21,6 +21,9 @@ class ServiceContainer:
         
         # Register core services
         self._register_core_services()
+        
+        # Add fail-fast error handling for required services
+        self._validate_core_services()
     
     def _register_core_services(self):
         """Register core system services"""
@@ -39,6 +42,10 @@ class ServiceContainer:
         self.register_singleton("author_repository", self._create_author_repository)
         self.register_singleton("world_building_repository", self._create_world_building_repository)
         self.register_singleton("characters_repository", self._create_characters_repository)
+        self.register_singleton("session_repository", self._create_session_repository)
+        
+        # Content saving service
+        self.register_singleton("content_saving_service", self._create_content_saving_service)
     
     def _create_database_adapter(self):
         """Create database adapter instance"""
@@ -69,6 +76,23 @@ class ServiceContainer:
         database = self.get("database")
         return CharactersRepository(database)
     
+    def _create_session_repository(self):
+        """Create session repository instance"""
+        from ..repositories.session_repository import SessionRepository
+        database = self.get("database")
+        return SessionRepository(database)
+    
+    def _create_content_saving_service(self):
+        """Create content saving service instance"""
+        from ..services.content_saving_service import ContentSavingService
+        return ContentSavingService(
+            plot_repository=self.get("plot_repository"),
+            author_repository=self.get("author_repository"),
+            world_building_repository=self.get("world_building_repository"),
+            characters_repository=self.get("characters_repository"),
+            session_repository=self.get("session_repository")
+        )
+    
     def register_singleton(self, name: str, factory: Callable[[], T]) -> None:
         """Register a singleton service"""
         self._factories[name] = factory
@@ -96,7 +120,8 @@ class ServiceContainer:
             factory = self._factories[name]
             
             # For singletons, cache the result
-            if name in ["config", "validator"]:  # Known singletons
+            if name in ["config", "validator", "database", "plot_repository", "author_repository", 
+                       "world_building_repository", "characters_repository", "session_repository", "content_saving_service"]:  # Known singletons
                 instance = factory()
                 self._singletons[name] = instance
                 return instance
@@ -124,12 +149,25 @@ class ServiceContainer:
                 name in self._singletons or 
                 name in self._factories)
     
+    def _validate_core_services(self) -> None:
+        """Validate that all required core services are properly registered"""
+        required_services = [
+            "database", "plot_repository", "author_repository", 
+            "world_building_repository", "characters_repository", 
+            "session_repository", "content_saving_service"
+        ]
+        
+        for service_name in required_services:
+            if not self.has_service(service_name):
+                raise ValueError(f"Required service '{service_name}' is not registered in container")
+    
     def clear(self) -> None:
         """Clear all services (useful for testing)"""
         self._services.clear()
         self._factories.clear()
         self._singletons.clear()
         self._register_core_services()
+        self._validate_core_services()
 
 
 # Global container instance

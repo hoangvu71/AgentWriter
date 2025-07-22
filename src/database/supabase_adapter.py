@@ -175,6 +175,10 @@ class SupabaseAdapter(IDatabase):
     async def get_plot_with_author(self, plot_id: str) -> Dict[str, Any]:
         """Get plot with associated author"""
         return await self.service.get_plot_with_author(plot_id)
+    
+    async def get_table_schema(self, table_name: str) -> List[Dict[str, Any]]:
+        """Get schema information for a table"""
+        return await self.service.get_table_schema(table_name)
 
 
 # Global adapter instance

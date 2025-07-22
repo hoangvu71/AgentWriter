@@ -123,3 +123,24 @@ class PlotRepository(BaseRepository[Plot]):
         except Exception as e:
             self._logger.error(f"Error getting plot with author: {e}", error=e)
             raise
+    
+    async def get_user_plots(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get all plots for a user in raw format (compatible with existing API)"""
+        try:
+            # Use the adapter's method that returns raw data for API compatibility
+            return await self._database.get_plots_by_user(user_id, limit)
+        except Exception as e:
+            self._logger.error(f"Error getting plots for user {user_id}: {e}", error=e)
+            raise
+    
+    async def get_plots_by_session(self, session_id: str) -> List[Dict[str, Any]]:
+        """Get all plots for a session in raw format"""
+        try:
+            # Note: This would need to be implemented in the adapter if not already available
+            # For now, we'll use the existing external method
+            plots = await self.get_by_session_external(session_id)
+            # Convert to raw format for API compatibility
+            return [self._serialize(plot) for plot in plots]
+        except Exception as e:
+            self._logger.error(f"Error getting plots for session {session_id}: {e}", error=e)
+            raise
