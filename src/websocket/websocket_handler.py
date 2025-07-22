@@ -36,9 +36,30 @@ class WebSocketHandler:
                              orchestrator_params: Dict[str, Any] = None) -> Dict[str, Any]:
         """Helper method to save plot data using repository if available, fallback to supabase_service"""
         if self.plot_repository is not None:
-            # TODO: Implement repository-based saving (requires data transformation)
-            # For now, fallback to old method
-            pass
+            try:
+                # Transform dictionary data to Plot entity
+                from ..models.entities import Plot
+                plot_entity = Plot(
+                    session_id=session_id,
+                    user_id=user_id,
+                    title=plot_data.get("title", ""),
+                    plot_summary=plot_data.get("plot_summary", "")
+                    # Note: author_id would come from orchestrator_params if available
+                )
+                
+                # Save using repository
+                plot_id = await self.plot_repository.create(plot_entity)
+                
+                # Return format compatible with existing code
+                return {
+                    "id": plot_id,
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    **plot_data
+                }
+            except Exception as e:
+                self.logger.warning(f"Repository save failed, falling back to supabase_service: {e}")
+                # Fall through to fallback
         
         # Fallback to original method
         return await supabase_service.save_plot(session_id, user_id, plot_data, orchestrator_params)
@@ -46,9 +67,31 @@ class WebSocketHandler:
     async def _save_author_data(self, session_id: str, user_id: str, author_data: Dict[str, Any]) -> Dict[str, Any]:
         """Helper method to save author data using repository if available, fallback to supabase_service"""
         if self.author_repository is not None:
-            # TODO: Implement repository-based saving (requires data transformation)
-            # For now, fallback to old method
-            pass
+            try:
+                # Transform dictionary data to Author entity
+                from ..models.entities import Author
+                author_entity = Author(
+                    session_id=session_id,
+                    user_id=user_id,
+                    author_name=author_data.get("author_name", ""),
+                    pen_name=author_data.get("pen_name"),
+                    biography=author_data.get("biography", ""),
+                    writing_style=author_data.get("writing_style", "")
+                )
+                
+                # Save using repository
+                author_id = await self.author_repository.create(author_entity)
+                
+                # Return format compatible with existing code
+                return {
+                    "id": author_id,
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    **author_data
+                }
+            except Exception as e:
+                self.logger.warning(f"Repository save failed, falling back to supabase_service: {e}")
+                # Fall through to fallback
         
         # Fallback to original method
         return await supabase_service.save_author(session_id, user_id, author_data)
@@ -57,9 +100,43 @@ class WebSocketHandler:
                                        orchestrator_params: Dict[str, Any] = None, plot_id: str = None) -> Dict[str, Any]:
         """Helper method to save world building data using repository if available, fallback to supabase_service"""
         if self.world_building_repository is not None:
-            # TODO: Implement repository-based saving (requires data transformation)
-            # For now, fallback to old method
-            pass
+            try:
+                # Transform dictionary data to WorldBuilding entity
+                from ..models.entities import WorldBuilding
+                
+                # Extract world content - could be nested in various formats
+                world_content = ""
+                if isinstance(world_data.get("world_building"), str):
+                    world_content = world_data["world_building"]
+                elif isinstance(world_data.get("world_description"), str):
+                    world_content = world_data["world_description"]
+                else:
+                    # Fallback to string representation of the whole data
+                    world_content = str(world_data)
+                
+                world_entity = WorldBuilding(
+                    session_id=session_id,
+                    user_id=user_id,
+                    plot_id=plot_id,
+                    world_name=world_data.get("world_name", "Unnamed World"),
+                    world_type=world_data.get("world_type", "unknown"),
+                    world_content=world_content
+                )
+                
+                # Save using repository
+                world_id = await self.world_building_repository.create(world_entity)
+                
+                # Return format compatible with existing code
+                return {
+                    "id": world_id,
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "plot_id": plot_id,
+                    **world_data
+                }
+            except Exception as e:
+                self.logger.warning(f"Repository save failed, falling back to supabase_service: {e}")
+                # Fall through to fallback
         
         # Fallback to original method
         return await supabase_service.save_world_building(session_id, user_id, world_data, orchestrator_params, plot_id)
@@ -68,9 +145,47 @@ class WebSocketHandler:
                                    orchestrator_params: Dict[str, Any] = None, world_id: str = None, plot_id: str = None) -> Dict[str, Any]:
         """Helper method to save characters data using repository if available, fallback to supabase_service"""
         if self.characters_repository is not None:
-            # TODO: Implement repository-based saving (requires data transformation)
-            # For now, fallback to old method
-            pass
+            try:
+                # Transform dictionary data to Characters entity
+                from ..models.entities import Characters
+                
+                # Extract character list and relationships
+                characters_list = characters_data.get("characters", [])
+                if isinstance(characters_list, str):
+                    # If it's a string, try to parse as JSON or treat as single character
+                    import json
+                    try:
+                        characters_list = json.loads(characters_list)
+                    except:
+                        characters_list = [{"name": "Character", "description": characters_list}]
+                
+                characters_entity = Characters(
+                    session_id=session_id,
+                    user_id=user_id,
+                    world_id=world_id,
+                    plot_id=plot_id,
+                    character_count=len(characters_list) if isinstance(characters_list, list) else 1,
+                    world_context_integration=characters_data.get("world_context_integration", ""),
+                    characters=characters_list,
+                    relationship_networks=characters_data.get("relationship_networks", {}),
+                    character_dynamics=characters_data.get("character_dynamics", {})
+                )
+                
+                # Save using repository
+                characters_id = await self.characters_repository.create(characters_entity)
+                
+                # Return format compatible with existing code
+                return {
+                    "id": characters_id,
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "world_id": world_id,
+                    "plot_id": plot_id,
+                    **characters_data
+                }
+            except Exception as e:
+                self.logger.warning(f"Repository save failed, falling back to supabase_service: {e}")
+                # Fall through to fallback
         
         # Fallback to original method
         return await supabase_service.save_characters(session_id, user_id, characters_data, orchestrator_params, world_id, plot_id)
