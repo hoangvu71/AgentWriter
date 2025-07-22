@@ -32,6 +32,49 @@ class WebSocketHandler:
         self.world_building_repository = world_building_repository
         self.characters_repository = characters_repository
     
+    async def _save_plot_data(self, session_id: str, user_id: str, plot_data: Dict[str, Any], 
+                             orchestrator_params: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Helper method to save plot data using repository if available, fallback to supabase_service"""
+        if self.plot_repository is not None:
+            # TODO: Implement repository-based saving (requires data transformation)
+            # For now, fallback to old method
+            pass
+        
+        # Fallback to original method
+        return await supabase_service.save_plot(session_id, user_id, plot_data, orchestrator_params)
+    
+    async def _save_author_data(self, session_id: str, user_id: str, author_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Helper method to save author data using repository if available, fallback to supabase_service"""
+        if self.author_repository is not None:
+            # TODO: Implement repository-based saving (requires data transformation)
+            # For now, fallback to old method
+            pass
+        
+        # Fallback to original method
+        return await supabase_service.save_author(session_id, user_id, author_data)
+    
+    async def _save_world_building_data(self, session_id: str, user_id: str, world_data: Dict[str, Any], 
+                                       orchestrator_params: Dict[str, Any] = None, plot_id: str = None) -> Dict[str, Any]:
+        """Helper method to save world building data using repository if available, fallback to supabase_service"""
+        if self.world_building_repository is not None:
+            # TODO: Implement repository-based saving (requires data transformation)
+            # For now, fallback to old method
+            pass
+        
+        # Fallback to original method
+        return await supabase_service.save_world_building(session_id, user_id, world_data, orchestrator_params, plot_id)
+    
+    async def _save_characters_data(self, session_id: str, user_id: str, characters_data: Dict[str, Any], 
+                                   orchestrator_params: Dict[str, Any] = None, world_id: str = None, plot_id: str = None) -> Dict[str, Any]:
+        """Helper method to save characters data using repository if available, fallback to supabase_service"""
+        if self.characters_repository is not None:
+            # TODO: Implement repository-based saving (requires data transformation)
+            # For now, fallback to old method
+            pass
+        
+        # Fallback to original method
+        return await supabase_service.save_characters(session_id, user_id, characters_data, orchestrator_params, world_id, plot_id)
+    
     async def handle_connection(self, websocket: WebSocket, session_id: str):
         """Handle a new WebSocket connection"""
         try:
@@ -110,7 +153,7 @@ class WebSocketHandler:
         """Save agent response to appropriate database table"""
         try:
             if agent_name == "plot_generator":
-                await supabase_service.save_plot(
+                await self._save_plot_data(
                     session_id=session_id,
                     user_id=user_id,
                     plot_data=response_data,
@@ -118,7 +161,7 @@ class WebSocketHandler:
                 )
                 
             elif agent_name == "author_generator":
-                await supabase_service.save_author(
+                await self._save_author_data(
                     session_id=session_id,
                     user_id=user_id,
                     author_data=response_data
@@ -127,7 +170,7 @@ class WebSocketHandler:
             elif agent_name == "world_building":
                 # Get plot ID if available from recent plot creation
                 plot_id = await self._get_recent_plot_id(session_id, user_id)
-                await supabase_service.save_world_building(
+                await self._save_world_building_data(
                     session_id=session_id,
                     user_id=user_id,
                     world_data=response_data,
@@ -139,7 +182,7 @@ class WebSocketHandler:
                 # Get plot and world IDs if available
                 plot_id = await self._get_recent_plot_id(session_id, user_id)
                 world_id = await self._get_recent_world_id(session_id, user_id)
-                await supabase_service.save_characters(
+                await self._save_characters_data(
                     session_id=session_id,
                     user_id=user_id,
                     characters_data=response_data,

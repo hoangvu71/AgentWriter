@@ -118,6 +118,28 @@ class MultiAgentSystem:
         # Fallback to original method
         return await supabase_service.update_plot_author(plot_id, author_id)
     
+    async def _save_world_building_data(self, session_id: str, user_id: str, world_data: Dict[str, Any], 
+                                       orchestrator_params: Dict[str, Any] = None, plot_id: str = None) -> Dict[str, Any]:
+        """Helper method to save world building data using repository if available, fallback to supabase_service"""
+        if self.world_building_repository is not None:
+            # TODO: Implement repository-based saving (requires data transformation)
+            # For now, fallback to old method
+            pass
+        
+        # Fallback to original method
+        return await supabase_service.save_world_building(session_id, user_id, world_data, orchestrator_params, plot_id)
+    
+    async def _save_characters_data(self, session_id: str, user_id: str, characters_data: Dict[str, Any], 
+                                   orchestrator_params: Dict[str, Any] = None, world_id: str = None, plot_id: str = None) -> Dict[str, Any]:
+        """Helper method to save characters data using repository if available, fallback to supabase_service"""
+        if self.characters_repository is not None:
+            # TODO: Implement repository-based saving (requires data transformation)
+            # For now, fallback to old method
+            pass
+        
+        # Fallback to original method
+        return await supabase_service.save_characters(session_id, user_id, characters_data, orchestrator_params, world_id, plot_id)
+    
     def _initialize_agents(self):
         """Initialize all agents in the system"""
         
@@ -1146,7 +1168,7 @@ Create characters that feel essential to their world and whose stories readers w
                         # Update plot to link to author
                         if saved_plot_id:
                             try:
-                                await supabase_service.update_plot_author(saved_plot_id, saved_author_id)
+                                await self._update_plot_author_link(saved_plot_id, saved_author_id)
                             except Exception as e:
                                 print(f"Failed to update plot-author relationship: {e}")
                     except Exception as e:
@@ -1181,7 +1203,7 @@ Create characters that feel essential to their world and whose stories readers w
             # Save plot without author assignment
             if SUPABASE_ENABLED and plot_response and plot_response.parsed_json:
                 try:
-                    saved_plot = await supabase_service.save_plot(
+                    saved_plot = await self._save_plot_data(
                         session_id, 
                         user_id, 
                         plot_response.parsed_json, 
@@ -1220,7 +1242,7 @@ Create characters that feel essential to their world and whose stories readers w
             # Save author to Supabase
             if SUPABASE_ENABLED and author_response and author_response.parsed_json:
                 try:
-                    saved_author = await supabase_service.save_author(
+                    saved_author = await self._save_author_data(
                         session_id, 
                         user_id, 
                         author_response.parsed_json
@@ -1291,7 +1313,7 @@ Create characters that feel essential to their world and whose stories readers w
                     if SUPABASE_ENABLED and world_response.success and world_response.parsed_json:
                         try:
                             print(f"[DEBUG] Attempting to save world building. Response keys: {list(world_response.parsed_json.keys()) if world_response.parsed_json else 'None'}")
-                            saved_world = await supabase_service.save_world_building(
+                            saved_world = await self._save_world_building_data(
                                 session_id, 
                                 user_id, 
                                 world_response.parsed_json, 
@@ -1348,7 +1370,7 @@ Create characters that feel essential to their world and whose stories readers w
                     if SUPABASE_ENABLED and characters_response.success and characters_response.parsed_json:
                         try:
                             print(f"[DEBUG] Attempting to save characters. Response keys: {list(characters_response.parsed_json.keys()) if characters_response.parsed_json else 'None'}")
-                            saved_characters = await supabase_service.save_characters(
+                            saved_characters = await self._save_characters_data(
                                 session_id, 
                                 user_id, 
                                 characters_response.parsed_json, 
@@ -1713,7 +1735,7 @@ Create characters that feel essential to their world and whose stories readers w
                         # Update plot to link to author
                         if saved_plot_id:
                             try:
-                                await supabase_service.update_plot_author(saved_plot_id, saved_author_id)
+                                await self._update_plot_author_link(saved_plot_id, saved_author_id)
                             except Exception as e:
                                 print(f"Failed to update plot-author relationship: {e}")
                     except Exception as e:
