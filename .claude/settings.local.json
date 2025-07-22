@@ -65,7 +65,8 @@
       "Bash(tail:*)",
       "Bash(\".\\venv\\Scripts\\python.exe\" -c \"from src.agents.multi_agent_system import multi_agent_system; print(''MultiAgentSystem loaded successfully'')\")",
       "Bash(rg:*)",
-      "Bash(pip index:*)"
+      "Bash(pip index:*)",
+      "Bash(wc:*)"
     ],
     "deny": []
   }

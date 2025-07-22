@@ -17,6 +17,7 @@ class DatabaseConfig:
     anon_key: str
     service_role_key: Optional[str] = None
     password: Optional[str] = None
+    project_ref: Optional[str] = None
 
 
 @dataclass
@@ -60,7 +61,8 @@ class Configuration:
             url=os.getenv("SUPABASE_URL", ""),
             anon_key=os.getenv("SUPABASE_ANON_KEY", ""),
             service_role_key=os.getenv("SUPABASE_SERVICE_ROLE_KEY"),
-            password=os.getenv("SUPABASE_DB_PASSWORD")
+            password=os.getenv("SUPABASE_DB_PASSWORD"),
+            project_ref=os.getenv("SUPABASE_PROJECT_REF")
         )
     
     def _load_google_cloud_config(self) -> GoogleCloudConfig:
@@ -106,7 +108,8 @@ class Configuration:
             "url": self._database_config.url,
             "anon_key": self._database_config.anon_key,
             "service_role_key": self._database_config.service_role_key or "",
-            "password": self._database_config.password or ""
+            "password": self._database_config.password or "",
+            "project_ref": self._database_config.project_ref or ""
         }
     
     @property

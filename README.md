@@ -103,8 +103,8 @@ A sophisticated multi-agent system for book writing powered by Google's Agent De
 - **👥 Target Audience Matching**: Age, orientation, and gender considerations
 - **💾 Database Persistence**: All data automatically saved to Supabase
 - **🔍 Search & Retrieval**: Find past plots, authors, worlds, and characters easily
-- **📚 Library Interface**: Card-based browsing with search, filter, and detailed modal views
-- **⚙️ Admin Interface**: Manage genres and target audiences with real-time validation
+- **📚 Library Interface**: *Planned - Card-based browsing with search, filter, and detailed modal views*
+- **⚙️ Admin Interface**: *Planned - Manage genres and target audiences with real-time validation*
 - **🔄 Iterative Improvement**: Built-in critique, enhancement, and scoring system for content quality
 - **🧠 Memory**: Maintains conversation history and user preferences across agents
 - **🤖 Model Selection**: Choose from 5 different Google AI models:
@@ -151,8 +151,8 @@ GOOGLE_GENAI_USE_VERTEXAI=true
 
 # Supabase Database  
 SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_DB_PASSWORD=BTTmSilqcNn9Ynj5
+SUPABASE_ANON_KEY=your_anon_key_here
+SUPABASE_DB_PASSWORD=your_db_password_here
 ```
 
 ## 🔄 Adding New Features/Agents
@@ -194,8 +194,8 @@ npx supabase db push
 ## API Endpoints
 
 - `GET /` - Web interface
-- `GET /library` - Content library interface
-- `GET /admin` - Administration interface for genres and audiences
+- `GET /library` - *Placeholder page - Library interface in development*
+- `GET /admin` - *Placeholder page - Admin interface in development*
 - `GET /health` - Health check with multi-agent system info
 - `GET /sessions` - List active sessions
 - `GET /sessions/{session_id}` - Get session info
@@ -243,8 +243,9 @@ BooksWriter/
 ├── main.py                     # FastAPI web server with multi-agent support
 ├── src/                        # Application source code
 │   ├── agents/
-│   │   ├── multi_agent_system.py    # Main multi-agent orchestrator
-│   │   └── agent_service.py         # Agent service utilities
+│   │   ├── agent_factory.py         # Agent factory and registry
+│   │   ├── orchestrator.py          # Orchestrator agent implementation
+│   │   └── [individual agents]      # Modular agent implementations
 │   ├── database/
 │   │   └── supabase_service.py      # Database service layer
 │   ├── services/
@@ -263,11 +264,10 @@ BooksWriter/
 │   ├── database/               # Database verification and management
 │   ├── dev/                    # Development tools (port management, etc.)
 │   └── maintenance/            # System maintenance and TDD compliance
-├── templates/                  # HTML templates with full functionality
-│   ├── index.html              # Main application landing page
-│   ├── chat.html               # Interactive chat interface
-│   ├── library.html            # Content library with search/filter
-│   └── admin.html              # Administration interface
+├── templates/                  # HTML templates 
+│   ├── index.html              # Main application landing page (✅ Functional)
+│   ├── library.html            # Library placeholder page (🔄 In development)
+│   └── admin.html              # Admin placeholder page (🔄 In development)
 ├── static/                     # Frontend assets (CSS, JavaScript)
 │   ├── css/main.css            # Unified CSS with theme support
 │   └── js/                     # JavaScript utilities and interactions

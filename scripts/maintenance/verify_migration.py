@@ -4,17 +4,31 @@ Verify that data migration was successful
 """
 
 import os
+import sys
 import psycopg2
 from dotenv import load_dotenv
 import json
+
+# Add src directory to path to import configuration
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+
+from core.configuration import Configuration
 
 load_dotenv('../../config/.env')
 
 def verify_migration():
     """Verify the data migration worked correctly"""
     
-    password = os.getenv("SUPABASE_DB_PASSWORD")
-    project_ref = "cfqgzbudjnvtyxrrvvmo"
+    config = Configuration()
+    supabase_config = config.supabase_config
+    
+    password = supabase_config["password"]
+    project_ref = supabase_config["project_ref"]
+    
+    if not password:
+        raise ValueError("SUPABASE_DB_PASSWORD environment variable is required")
+    if not project_ref:
+        raise ValueError("SUPABASE_PROJECT_REF environment variable is required")
     
     connection_strings = [
         f"postgresql://postgres:{password}@db.{project_ref}.supabase.co:5432/postgres",

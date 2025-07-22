@@ -171,7 +171,7 @@ class WebSocketHandler:
                         created_context["author_id"] = saved_data["id"]
                     elif agent_name == "world_building":
                         created_context["world_id"] = saved_data["id"]
-                    elif agent_name == "characters" or agent_name == "character_agent":
+                    elif agent_name == "characters":
                         created_context["characters_id"] = saved_data["id"]
             else:
                 self.logger.info(f"No data returned from save operation for agent: {agent_name}")

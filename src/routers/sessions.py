@@ -5,54 +5,39 @@ Session management endpoints for tracking user sessions.
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from ..database.supabase_service import supabase_service
+from ..core.container import container
 from ..core.logging import get_logger
 
 router = APIRouter(prefix="/api", tags=["sessions"])
 logger = get_logger("sessions")
 
 
+def get_session_repository():
+    """Dependency injection for SessionRepository"""
+    try:
+        return container.get("session_repository")
+    except Exception as e:
+        logger.error(f"Failed to get session repository: {e}")
+        raise HTTPException(status_code=500, detail="Session service unavailable")
+
+
 @router.get("/sessions")
-async def get_sessions(limit: int = 50) -> Dict[str, Any]:
+async def get_sessions(
+    limit: int = 50, 
+    session_repository = Depends(get_session_repository)
+) -> Dict[str, Any]:
     """
     Get list of all sessions with basic statistics.
     
     Args:
         limit: Maximum number of sessions to return
+        session_repository: Injected session repository
         
     Returns:
         Dictionary containing sessions list and statistics
     """
-    if not supabase_service.client:
-        raise HTTPException(status_code=503, detail="Database service unavailable")
-    
     try:
-        # Get recent sessions
-        response = supabase_service.client.table("plots").select(
-            "session_id, user_id, created_at"
-        ).order("created_at", desc=True).limit(limit).execute()
-        
-        # Group by session to get unique sessions
-        sessions_map = {}
-        for record in response.data:
-            session_id = record.get("session_id")
-            if session_id and session_id not in sessions_map:
-                sessions_map[session_id] = {
-                    "session_id": session_id,
-                    "user_id": record.get("user_id"),
-                    "created_at": record.get("created_at"),
-                    "content_count": 0
-                }
-            if session_id:
-                sessions_map[session_id]["content_count"] += 1
-        
-        sessions = list(sessions_map.values())
-        
-        return {
-            "sessions": sessions,
-            "total_sessions": len(sessions),
-            "limit": limit
-        }
+        return await session_repository.get_recent_sessions(limit)
         
     except Exception as e:
         logger.error(f"Error fetching sessions: {e}")
@@ -60,54 +45,27 @@ async def get_sessions(limit: int = 50) -> Dict[str, Any]:
 
 
 @router.get("/sessions/{session_id}")
-async def get_session_details(session_id: str) -> Dict[str, Any]:
+async def get_session_details(
+    session_id: str,
+    session_repository = Depends(get_session_repository)
+) -> Dict[str, Any]:
     """
     Get detailed information about a specific session.
     
     Args:
         session_id: The session ID to lookup
+        session_repository: Injected session repository
         
     Returns:
         Detailed session information including all related content
     """
-    if not supabase_service.client:
-        raise HTTPException(status_code=503, detail="Database service unavailable")
-    
     try:
-        session_data = await supabase_service.get_session_data(session_id)
+        session_details = await session_repository.get_session_statistics(session_id)
         
-        if not session_data:
+        if not session_details["exists"]:
             raise HTTPException(status_code=404, detail="Session not found")
         
-        # Calculate session statistics
-        total_content = sum(len(v) if isinstance(v, list) else 0 
-                          for v in session_data.values())
-        
-        # Get session timeline
-        created_times = []
-        for content_type, items in session_data.items():
-            if isinstance(items, list):
-                for item in items:
-                    if "created_at" in item:
-                        created_times.append(item["created_at"])
-        
-        created_times.sort()
-        session_start = created_times[0] if created_times else None
-        session_end = created_times[-1] if created_times else None
-        
-        return {
-            "session_id": session_id,
-            "statistics": {
-                "total_content": total_content,
-                "plots": len(session_data.get("plots", [])),
-                "authors": len(session_data.get("authors", [])),
-                "world_building": len(session_data.get("world_building", [])),
-                "characters": len(session_data.get("characters", [])),
-                "session_start": session_start,
-                "session_end": session_end
-            },
-            "content": session_data
-        }
+        return session_details
         
     except HTTPException:
         raise
@@ -117,70 +75,28 @@ async def get_session_details(session_id: str) -> Dict[str, Any]:
 
 
 @router.get("/sessions/{session_id}/timeline")
-async def get_session_timeline(session_id: str) -> List[Dict[str, Any]]:
+async def get_session_timeline(
+    session_id: str,
+    session_repository = Depends(get_session_repository)
+) -> List[Dict[str, Any]]:
     """
     Get a chronological timeline of all content created in a session.
     
     Args:
         session_id: The session ID to lookup
+        session_repository: Injected session repository
         
     Returns:
         List of timeline events in chronological order
     """
-    if not supabase_service.client:
-        raise HTTPException(status_code=503, detail="Database service unavailable")
-    
     try:
-        session_data = await supabase_service.get_session_data(session_id)
+        timeline = await session_repository.get_session_timeline(session_id)
         
-        if not session_data:
-            raise HTTPException(status_code=404, detail="Session not found")
-        
-        # Build timeline
-        timeline = []
-        
-        # Add plots to timeline
-        for plot in session_data.get("plots", []):
-            timeline.append({
-                "timestamp": plot.get("created_at"),
-                "type": "plot",
-                "id": plot.get("id"),
-                "title": plot.get("title"),
-                "summary": plot.get("plot_summary", "")[:100] + "..."
-            })
-        
-        # Add authors to timeline
-        for author in session_data.get("authors", []):
-            timeline.append({
-                "timestamp": author.get("created_at"),
-                "type": "author",
-                "id": author.get("id"),
-                "name": author.get("author_name"),
-                "pen_name": author.get("pen_name")
-            })
-        
-        # Add world building to timeline
-        for world in session_data.get("world_building", []):
-            timeline.append({
-                "timestamp": world.get("created_at"),
-                "type": "world_building",
-                "id": world.get("id"),
-                "name": world.get("world_name"),
-                "plot_id": world.get("plot_id")
-            })
-        
-        # Add characters to timeline
-        for char_set in session_data.get("characters", []):
-            timeline.append({
-                "timestamp": char_set.get("created_at"),
-                "type": "characters",
-                "id": char_set.get("id"),
-                "count": char_set.get("character_count"),
-                "plot_id": char_set.get("plot_id")
-            })
-        
-        # Sort by timestamp
-        timeline.sort(key=lambda x: x.get("timestamp", ""))
+        if not timeline:
+            # Check if session exists
+            session_details = await session_repository.get_session_statistics(session_id)
+            if not session_details["exists"]:
+                raise HTTPException(status_code=404, detail="Session not found")
         
         return timeline
         
@@ -192,28 +108,23 @@ async def get_session_timeline(session_id: str) -> List[Dict[str, Any]]:
 
 
 @router.delete("/sessions/{session_id}")
-async def delete_session(session_id: str) -> Dict[str, str]:
+async def delete_session(
+    session_id: str,
+    session_repository = Depends(get_session_repository)
+) -> Dict[str, str]:
     """
     Delete all content associated with a session.
     WARNING: This is a destructive operation that cannot be undone.
     
     Args:
         session_id: The session ID to delete
+        session_repository: Injected session repository
         
     Returns:
         Confirmation message
     """
-    if not supabase_service.client:
-        raise HTTPException(status_code=503, detail="Database service unavailable")
-    
     try:
-        # For safety, we'll just return a message for now
-        # In production, you'd want additional confirmation
-        return {
-            "message": "Session deletion endpoint - implement with caution",
-            "session_id": session_id,
-            "warning": "This operation would permanently delete all session content"
-        }
+        return await session_repository.delete_session(session_id)
         
     except Exception as e:
         logger.error(f"Error in delete session {session_id}: {e}")

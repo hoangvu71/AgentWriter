@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """
 Supabase service for data persistence in multi-agent book writing system
+
+⚠️ DEPRECATION WARNING: Direct usage of supabase_service is deprecated.
+Use repository pattern instead: container.get("plot_repository"), etc.
+This service will be removed in a future version.
 """
 
 import os
+import warnings
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from supabase import create_client, Client
@@ -15,6 +20,13 @@ class SupabaseService:
     """Service class for Supabase database operations"""
     
     def __init__(self):
+        warnings.warn(
+            "Direct instantiation of SupabaseService is deprecated. "
+            "Use repository pattern via dependency injection: container.get('plot_repository')",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        
         self.url = os.getenv("SUPABASE_URL")
         self.key = os.getenv("SUPABASE_ANON_KEY")
         self.client = None
@@ -32,6 +44,12 @@ class SupabaseService:
     
     def _ensure_client(self):
         """Ensure client is available, raise exception if not"""
+        warnings.warn(
+            "Direct supabase_service method usage is deprecated. "
+            "Use repository pattern instead.",
+            DeprecationWarning,
+            stacklevel=3
+        )
         if not self.client:
             raise Exception("Supabase client not initialized - features disabled")
     

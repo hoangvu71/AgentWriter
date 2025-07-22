@@ -8,4 +8,4 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-# This ensures that imports like "from src.agents.multi_agent_system import ..." work correctly
+# This ensures that imports like "from src.agents.agent_factory import ..." work correctly

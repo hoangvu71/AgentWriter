@@ -78,7 +78,7 @@ class TDDEnforcementFramework:
         # Check critical files have comprehensive tests
         critical_files = [
             "main.py",
-            "multi_agent_system.py", 
+            "agent_factory.py", 
             "supabase_service.py"
         ]
         

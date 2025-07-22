@@ -33,11 +33,13 @@ CREATE INDEX IF NOT EXISTS idx_new_table_field ON new_table(field);
 
 ### 3. Apply Migration
 ```bash
-npx supabase db push --password "YOUR_DB_PASSWORD"
+npx supabase db push --password "$SUPABASE_DB_PASSWORD"
 ```
 
-**Important:** User must provide the database password from:
-- Supabase Dashboard → Project Settings → Database → Database password
+**Important:** Set database password as environment variable:
+- Add `SUPABASE_DB_PASSWORD=your_password` to `.env` file
+- Get password from: Supabase Dashboard → Project Settings → Database → Database password
+- **NEVER hardcode passwords in documentation or scripts**
 
 ### 4. Verify Migration
 ```bash
@@ -65,7 +67,7 @@ npx supabase migration new "world_building_and_characters"
 # 2. Added tables for world_building and characters with JSONB fields
 
 # 3. Applied successfully
-npx supabase db push --password "KWMNXOIPRu6Ee8c2"
+npx supabase db push --password "$SUPABASE_DB_PASSWORD"
 
 # 4. Verified tables exist
 python scripts/database/check_tables.py

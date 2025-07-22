@@ -1,0 +1,166 @@
+repos:
+  # TDD Enforcement - CRITICAL: Always run first
+  - repo: local
+    hooks:
+      - id: tdd-enforcement
+        name: TDD Compliance Enforcement
+        entry: python scripts/maintenance/TDD_ENFORCEMENT_FRAMEWORK.py
+        language: python
+        files: \.(py|js)$
+        stages: [pre-commit]
+        fail_fast: true
+        verbose: true
+      
+      - id: tdd-compliance-report
+        name: Generate TDD Compliance Report
+        entry: python scripts/maintenance/tdd_compliance_report.py
+        language: python
+        files: \.(py|js)$
+        stages: [pre-commit]
+        pass_filenames: false
+
+  # Python Code Quality
+  - repo: https://github.com/psf/black
+    rev: 23.7.0
+    hooks:
+      - id: black
+        name: Format Python code
+        language_version: python3
+        files: \.(py)$
+        exclude: ^(venv|\.venv|node_modules)/
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        name: Sort Python imports
+        args: ["--profile", "black"]
+        files: \.(py)$
+        exclude: ^(venv|\.venv|node_modules)/
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.0.0
+    hooks:
+      - id: flake8
+        name: Lint Python code
+        args: ["--max-line-length=88", "--extend-ignore=E203,W503"]
+        files: \.(py)$
+        exclude: ^(venv|\.venv|node_modules|migrations)/
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.5.1
+    hooks:
+      - id: mypy
+        name: Type check Python code
+        args: ["--ignore-missing-imports", "--strict-optional"]
+        files: ^src/.*\.py$
+        exclude: ^(tests|venv|\.venv)/
+
+  # Security Scanning
+  - repo: https://github.com/pycqa/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        name: Security scan Python code
+        args: ["-r", "src/", "--skip", "B101"]
+        files: ^src/.*\.py$
+
+  # JavaScript/TypeScript Quality
+  - repo: local
+    hooks:
+      - id: javascript-tests
+        name: Run JavaScript Tests
+        entry: npm test
+        language: node
+        files: \.(js|ts|jsx|tsx)$
+        pass_filenames: false
+        stages: [pre-commit]
+
+  # General File Quality
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+        name: Remove trailing whitespace
+        exclude: \.(md|txt)$
+      
+      - id: end-of-file-fixer
+        name: Fix end of files
+        exclude: \.(md|txt|json)$
+      
+      - id: check-yaml
+        name: Validate YAML files
+        files: \.(yaml|yml)$
+      
+      - id: check-json
+        name: Validate JSON files
+        files: \.(json)$
+        exclude: ^(package-lock\.json|\.vscode/)
+      
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+      
+      - id: check-added-large-files
+        name: Check for large files
+        args: ['--maxkb=1000']
+      
+      - id: detect-private-key
+        name: Detect private keys
+      
+      - id: check-case-conflict
+        name: Check filename case conflicts
+
+  # Documentation and Security
+  - repo: local
+    hooks:
+      - id: no-hardcoded-secrets
+        name: Check for hardcoded secrets
+        entry: bash -c 'grep -r -E "(password|secret|key|token).*=.*[\"'\'']((?!your_|test_|example_|placeholder).{8,})[\"'\'']" --include="*.py" --include="*.js" --include="*.md" --include="*.yml" --include="*.yaml" . && exit 1 || exit 0'
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+        verbose: true
+
+      - id: env-file-check
+        name: Ensure .env files are not committed
+        entry: bash -c 'find . -name ".env*" -not -name ".env.example" -not -path "./venv/*" -not -path "./.venv/*" -not -path "./node_modules/*" | grep -q . && echo "ERROR: .env files found in repository" && exit 1 || exit 0'
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+  # Test Coverage Enforcement
+  - repo: local
+    hooks:
+      - id: python-test-coverage
+        name: Ensure Python test coverage above 80%
+        entry: python -m pytest tests/ --cov=src --cov-fail-under=80 --quiet
+        language: python
+        files: \.(py)$
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: verify-tests-exist
+        name: Verify tests exist for new Python files
+        entry: bash -c 'for file in "$@"; do if [[ "$file" == src/*.py && "$file" != *__init__.py && ! -f "tests/unit/test_$(basename "$file")" ]]; then echo "Missing test file for $file"; exit 1; fi; done'
+        language: system
+        files: ^src/.*\.py$
+        exclude: __init__\.py$
+        stages: [pre-commit]
+
+# Global Configuration
+default_stages: [pre-commit]
+fail_fast: true
+minimum_pre_commit_version: 3.0.0
+
+# CI Configuration
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+    
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false

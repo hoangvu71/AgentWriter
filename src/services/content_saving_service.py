@@ -1,6 +1,6 @@
 """
 Centralized service for saving agent-generated content to database.
-Eliminates duplication between multi_agent_system.py and websocket_handler.py.
+Provides repository-only database access for all agent-generated content.
 """
 
 from typing import Dict, Any, Optional
@@ -262,11 +262,11 @@ class ContentSavingService:
             ValueError: If required context is missing for the agent type
         """
         try:
-            if agent_name == "plot_generator" or agent_name == "plot_agent":
+            if agent_name == "plot_generator":
                 return await self.save_plot_data(session_id, user_id, response_data, orchestrator_params)
-            elif agent_name == "author_generator" or agent_name == "author_agent":
+            elif agent_name == "author_generator":
                 return await self.save_author_data(session_id, user_id, response_data)
-            elif agent_name == "world_building" or agent_name == "world_building_agent":
+            elif agent_name == "world_building":
                 # SECURITY FIX: Validate required context before proceeding
                 plot_id = orchestrator_params.get("plot_id") if orchestrator_params else None
                 if not plot_id:
@@ -274,7 +274,7 @@ class ContentSavingService:
                     self.logger.error(error_msg)
                     raise ValueError("Cannot save world_building data: missing plot_id in context")
                 return await self.save_world_building_data(session_id, user_id, response_data, orchestrator_params, plot_id)
-            elif agent_name == "characters" or agent_name == "character_agent":
+            elif agent_name == "characters":
                 # SECURITY FIX: Validate required context before proceeding
                 world_id = orchestrator_params.get("world_id") if orchestrator_params else None
                 plot_id = orchestrator_params.get("plot_id") if orchestrator_params else None

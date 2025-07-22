@@ -43,8 +43,27 @@ CREATE INDEX idx_writing_styles_author_id ON writing_styles(author_id);
 
 ## Best Practices
 
-1. Always use `IF NOT EXISTS` for new tables
-2. Use `IF NOT EXISTS` for new indexes
-3. Include rollback instructions in comments
-4. Test locally first if possible
-5. Keep migrations small and focused
+1. **Always use `IF NOT EXISTS`** for new tables and indexes
+2. **Include rollback instructions** in comments (use SAFE_MIGRATION_TEMPLATE.sql)
+3. **Wrap in transactions** - use BEGIN/COMMIT blocks
+4. **Create backups** before destructive operations
+5. **Test locally first** - validate in staging environment
+6. **Keep migrations small** and focused on one change
+7. **Use automated validation** - run migration validator before applying
+8. **Test rollback procedures** - ensure rollbacks work correctly
+
+## Migration Safety Tools
+
+- `SAFE_MIGRATION_TEMPLATE.sql` - Template with safety best practices
+- `scripts/migration/automated_migration_validator.py` - Validates migrations for risks
+- `scripts/migration/test_migration_rollback.py` - Tests rollback procedures
+
+## Validation Commands
+
+```bash
+# Validate all migrations for safety issues
+python scripts/migration/automated_migration_validator.py migrations/
+
+# Test rollback procedures (requires test database)
+python scripts/migration/test_migration_rollback.py migrations/ "postgresql://user:pass@localhost:5432/postgres"
+```

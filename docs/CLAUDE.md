@@ -545,8 +545,9 @@ The project follows a clean, modular structure with full separation of concerns:
 BooksWriter/
 ├── src/                    # Source code modules
 │   ├── agents/            # Multi-agent system components
-│   │   ├── agent_service.py      # Individual agent implementations
-│   │   └── multi_agent_system.py # Orchestrator and coordination
+│   │   ├── agent_factory.py      # Agent factory and registry
+│   │   ├── orchestrator.py       # Orchestrator agent
+│   │   └── [modular agents]      # Individual agent implementations
 │   ├── database/          # Database services
 │   │   └── supabase_service.py   # Supabase integration
 │   ├── services/          # Business logic services
@@ -601,19 +602,23 @@ BooksWriter/
 #### Adding New Agents to the System
 When extending the multi-agent system with new specialized agents:
 
-**1. Agent Definition**
+**1. Create Agent Class**
 ```python
-# Add to AgentType enum in multi_agent_system.py
-class AgentType(Enum):
-    NEW_AGENT = "new_agent_name"
+# Create new agent class inheriting from BaseAgent
+class NewAgent(BaseAgent):
+    def __init__(self, config: Configuration):
+        super().__init__(
+            name="new_agent",
+            description="Brief description of agent capabilities",
+            instruction="Clear, concise instructions for the agent's role",
+            config=config
+        )
+```
 
-# Add to _initialize_agents() method
-self.agents[AgentType.NEW_AGENT.value] = Agent(
-    name="new_agent_name",
-    model=self.model,
-    instruction="""Clear, detailed instructions for the agent's role...""",
-    description="Brief description of agent capabilities"
-)
+**2. Register in AgentFactory**
+```python
+# Add to agent_factory.py registry
+self._agent_registry["new_agent"] = NewAgent
 ```
 
 **2. Agent Design Principles**

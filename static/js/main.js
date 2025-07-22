@@ -16,14 +16,14 @@ let ws = null;
                     category: "system"
                 },
                 plot_generator: {
-                    name: "Plot Generator",
+                    name: "Plot Generator Agent",
                     role: "Story Creation",
                     icon: "📚", 
                     colors: ["#f093fb", "#f5576c"],
                     category: "content"
                 },
                 author_generator: {
-                    name: "Author Generator",
+                    name: "Author Generator Agent",
                     role: "Author Profiles",
                     icon: "✍️",
                     colors: ["#4facfe", "#00f2fe"],
@@ -49,6 +49,27 @@ let ws = null;
                     icon: "📊",
                     colors: ["#ffecd2", "#fcb69f"],
                     category: "evaluation"
+                },
+                world_building: {
+                    name: "World Building Agent",
+                    role: "World Creation",
+                    icon: "🌍",
+                    colors: ["#43e97b", "#38f9d7"],
+                    category: "content"
+                },
+                characters: {
+                    name: "Characters Agent",
+                    role: "Character Development",
+                    icon: "👥",
+                    colors: ["#fa709a", "#fee140"],
+                    category: "content"
+                },
+                loregen: {
+                    name: "Lore Generator Agent",
+                    role: "Lore Expansion",
+                    icon: "📜",
+                    colors: ["#667eea", "#764ba2"],
+                    category: "content"
                 }
             };
             

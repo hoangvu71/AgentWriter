@@ -1,3 +1,4 @@
+# Python version requirement: 3.8+ (remove enum34 as obsolete in modern Python)
 # Core dependencies
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
@@ -11,8 +12,7 @@ google-cloud-aiplatform==1.38.0
 google-auth==2.25.2
 
 # Multi-agent system dependencies
-# NOTE: asyncio and dataclasses are built into Python 3.7+
-enum34; python_version < "3.4"
+# NOTE: asyncio, dataclasses, and enum are built into modern Python (3.7+/3.4+)
 
 # Supabase integration
 supabase==2.17.0
@@ -28,8 +28,8 @@ pytest-asyncio==0.23.3
 # NOTE: httpx already specified above - using 0.28.1 for consistency
 
 # RAG and clustering dependencies
-scikit-learn==1.3.2
-numpy==1.24.3
+scikit-learn==1.3.2  # Consider 1.4+ for latest features
+numpy==1.24.3  # Consider 1.26+ for Python 3.12+ compatibility
 sentence-transformers==2.2.2
 
 # Development
