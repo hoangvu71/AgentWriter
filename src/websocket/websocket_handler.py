@@ -34,7 +34,8 @@ class WebSocketHandler:
     
     async def _save_plot_data(self, session_id: str, user_id: str, plot_data: Dict[str, Any], 
                              orchestrator_params: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Helper method to save plot data using repository if available, fallback to supabase_service"""
+        """Helper method to save plot data using repository if available, fallback to supabase_service
+        Returns the saved plot data including the created ID for context passing"""
         if self.plot_repository is not None:
             try:
                 # Transform dictionary data to Plot entity
@@ -65,7 +66,8 @@ class WebSocketHandler:
         return await supabase_service.save_plot(session_id, user_id, plot_data, orchestrator_params)
     
     async def _save_author_data(self, session_id: str, user_id: str, author_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Helper method to save author data using repository if available, fallback to supabase_service"""
+        """Helper method to save author data using repository if available, fallback to supabase_service
+        Returns the saved author data including the created ID for context passing"""
         if self.author_repository is not None:
             try:
                 # Transform dictionary data to Author entity
@@ -98,7 +100,8 @@ class WebSocketHandler:
     
     async def _save_world_building_data(self, session_id: str, user_id: str, world_data: Dict[str, Any], 
                                        orchestrator_params: Dict[str, Any] = None, plot_id: str = None) -> Dict[str, Any]:
-        """Helper method to save world building data using repository if available, fallback to supabase_service"""
+        """Helper method to save world building data using repository if available, fallback to supabase_service
+        Returns the saved world building data including the created ID for context passing"""
         if self.world_building_repository is not None:
             try:
                 # Transform dictionary data to WorldBuilding entity
@@ -143,7 +146,8 @@ class WebSocketHandler:
     
     async def _save_characters_data(self, session_id: str, user_id: str, characters_data: Dict[str, Any], 
                                    orchestrator_params: Dict[str, Any] = None, world_id: str = None, plot_id: str = None) -> Dict[str, Any]:
-        """Helper method to save characters data using repository if available, fallback to supabase_service"""
+        """Helper method to save characters data using repository if available, fallback to supabase_service
+        Returns the saved characters data including the created ID for context passing"""
         if self.characters_repository is not None:
             try:
                 # Transform dictionary data to Characters entity
@@ -283,41 +287,73 @@ class WebSocketHandler:
         response_data: Dict[str, Any], 
         session_id: str, 
         user_id: str,
-        orchestrator_data: Dict[str, Any] = None
-    ) -> None:
-        """Save agent response to appropriate database table"""
+        orchestrator_data: Dict[str, Any] = None,
+        context: Dict[str, str] = None
+    ) -> Dict[str, str]:
+        """Save agent response to appropriate database table with explicit context passing
+        
+        Args:
+            context: Dictionary containing IDs from previous agents (plot_id, world_id, author_id)
+            
+        Returns:
+            Dictionary containing the created record ID for use by subsequent agents
+        """
+        if context is None:
+            context = {}
+            
+        created_context = {}
+        
         try:
             if agent_name == "plot_generator":
-                await self._save_plot_data(
+                saved_plot = await self._save_plot_data(
                     session_id=session_id,
                     user_id=user_id,
                     plot_data=response_data,
                     orchestrator_params=orchestrator_data
                 )
+                # Extract plot ID for context passing
+                created_context["plot_id"] = saved_plot.get("id")
                 
             elif agent_name == "author_generator":
-                await self._save_author_data(
+                saved_author = await self._save_author_data(
                     session_id=session_id,
                     user_id=user_id,
                     author_data=response_data
                 )
+                # Extract author ID for context passing
+                created_context["author_id"] = saved_author.get("id")
                 
             elif agent_name == "world_building":
-                # Get plot ID if available from recent plot creation
-                plot_id = await self._get_recent_plot_id(session_id, user_id)
-                await self._save_world_building_data(
+                # FIXED: Use explicit plot_id from context instead of fetching "recent"
+                plot_id = context.get("plot_id")
+                if not plot_id:
+                    self.logger.warning("No plot_id in context for world_building - using fallback")
+                    plot_id = await self._get_recent_plot_id(session_id, user_id)
+                    
+                saved_world = await self._save_world_building_data(
                     session_id=session_id,
                     user_id=user_id,
                     world_data=response_data,
                     orchestrator_params=orchestrator_data,
                     plot_id=plot_id
                 )
+                # Extract world ID for context passing
+                created_context["world_id"] = saved_world.get("id")
                 
             elif agent_name == "characters":
-                # Get plot and world IDs if available
-                plot_id = await self._get_recent_plot_id(session_id, user_id)
-                world_id = await self._get_recent_world_id(session_id, user_id)
-                await self._save_characters_data(
+                # FIXED: Use explicit IDs from context instead of fetching "recent"
+                plot_id = context.get("plot_id")
+                world_id = context.get("world_id")
+                
+                if not plot_id:
+                    self.logger.warning("No plot_id in context for characters - using fallback")
+                    plot_id = await self._get_recent_plot_id(session_id, user_id)
+                    
+                if not world_id:
+                    self.logger.warning("No world_id in context for characters - using fallback")
+                    world_id = await self._get_recent_world_id(session_id, user_id)
+                    
+                saved_characters = await self._save_characters_data(
                     session_id=session_id,
                     user_id=user_id,
                     characters_data=response_data,
@@ -325,6 +361,8 @@ class WebSocketHandler:
                     world_id=world_id,
                     plot_id=plot_id
                 )
+                # Extract characters ID for context passing
+                created_context["characters_id"] = saved_characters.get("id")
                 
             elif agent_name == "critique":
                 # For critique, we'll create a basic improvement iteration
@@ -383,9 +421,16 @@ class WebSocketHandler:
         except Exception as e:
             self.logger.error(f"Database save error for {agent_name}: {e}")
             raise
+            
+        return created_context
     
     async def _get_recent_plot_id(self, session_id: str, user_id: str) -> str:
-        """Get the most recently created plot ID for this session"""
+        """Get the most recently created plot ID for this session
+        
+        DEPRECATED: This method is unsafe in concurrent environments and can cause race conditions.
+        Use explicit context passing instead via the workflow_context parameter.
+        """
+        self.logger.warning("DEPRECATED: _get_recent_plot_id() called - use explicit context passing instead")
         try:
             session_data = await supabase_service.get_session_data(session_id)
             plots = session_data.get("plots", [])
@@ -397,7 +442,12 @@ class WebSocketHandler:
         return None
     
     async def _get_recent_world_id(self, session_id: str, user_id: str) -> str:
-        """Get the most recently created world ID for this session"""
+        """Get the most recently created world ID for this session
+        
+        DEPRECATED: This method is unsafe in concurrent environments and can cause race conditions.
+        Use explicit context passing instead via the workflow_context parameter.
+        """
+        self.logger.warning("DEPRECATED: _get_recent_world_id() called - use explicit context passing instead")
         try:
             session_data = await supabase_service.get_session_data(session_id)
             # Would need to add world_building to session data query
@@ -502,7 +552,8 @@ class WebSocketHandler:
             except Exception as e:
                 self.logger.warning(f"Failed to save orchestrator decision: {e}")
             
-            # Process through each agent
+            # Process through each agent with context passing
+            workflow_context = {}  # Track created IDs across agents to prevent race conditions
             for agent_name in agent_names:
                 try:
                     agent = self.agent_factory.create_agent(agent_name)
@@ -561,15 +612,18 @@ class WebSocketHandler:
                                 "raw_content": final_response.content
                             }, client_id)
                             
-                            # Save to database (only final result)
+                            # Save to database (only final result) with context passing
                             try:
-                                await self._save_agent_response_to_database(
+                                created_context = await self._save_agent_response_to_database(
                                     agent_name, 
                                     final_json, 
                                     session_id, 
                                     user_id,
-                                    orchestrator_data
+                                    orchestrator_data,
+                                    workflow_context  # Pass accumulated context
                                 )
+                                # Update workflow context with newly created IDs
+                                workflow_context.update(created_context)
                                 
                                 await self.connection_manager.send_json({
                                     "type": "database_saved",
@@ -607,15 +661,18 @@ class WebSocketHandler:
                                         "raw_content": full_response
                                     }, client_id)
                                     
-                                    # Save to database
+                                    # Save to database with context passing
                                     try:
-                                        await self._save_agent_response_to_database(
+                                        created_context = await self._save_agent_response_to_database(
                                             agent_name, 
                                             response.parsed_json, 
                                             session_id, 
                                             user_id,
-                                            orchestrator_data
+                                            orchestrator_data,
+                                            workflow_context  # Pass accumulated context
                                         )
+                                        # Update workflow context with newly created IDs
+                                        workflow_context.update(created_context)
                                         
                                         await self.connection_manager.send_json({
                                             "type": "database_saved",
