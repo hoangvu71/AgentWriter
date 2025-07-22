@@ -1,8 +1,9 @@
-# Core dependencies
+# Core dependencies - updated for compatibility
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
-websockets==12.0
+websockets==15.0.1
 python-multipart==0.0.6
+httpx==0.28.1
 
 # Google ADK and Vertex AI
 google-adk @ git+https://github.com/google/adk-python.git@main
@@ -14,8 +15,13 @@ asyncio
 dataclasses
 enum34; python_version < "3.4"
 
-# Supabase integration
-supabase==2.3.4
+# Supabase integration - updated for compatibility
+supabase==2.17.0
+gotrue==2.12.3
+postgrest==1.1.1
+storage3==0.12.0
+supafunc==0.10.1
+realtime==2.6.0
 
 # Testing
 pytest==7.4.4

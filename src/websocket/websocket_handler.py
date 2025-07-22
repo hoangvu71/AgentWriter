@@ -5,6 +5,7 @@ WebSocket message handler for multi-agent system communication.
 import json
 from typing import Dict, Any
 from fastapi import WebSocket
+from fastapi.websockets import WebSocketDisconnect
 from ..core.interfaces import AgentRequest
 from ..core.configuration import Configuration
 from ..core.validation import Validator, ValidationError
@@ -70,12 +71,22 @@ class WebSocketHandler:
                     "type": "error",
                     "error": "Invalid JSON format"
                 }, client_id)
+            except WebSocketDisconnect:
+                # Client disconnected - don't try to send messages
+                self.logger.info(f"Client {client_id} disconnected", client_id=client_id)
+                break
             except Exception as e:
                 self.logger.error(f"Error in message loop for {client_id}: {e}", error=e)
-                await self.connection_manager.send_json({
-                    "type": "error",
-                    "error": "Message processing failed"
-                }, client_id)
+                # Only try to send error message if connection is still active
+                if client_id in self.connection_manager.active_connections:
+                    try:
+                        await self.connection_manager.send_json({
+                            "type": "error",
+                            "error": "Message processing failed"
+                        }, client_id)
+                    except Exception:
+                        # If sending fails, the connection is dead anyway
+                        break
                 break
         
         # Clean up connection

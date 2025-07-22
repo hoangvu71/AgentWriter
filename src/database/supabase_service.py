@@ -17,14 +17,31 @@ class SupabaseService:
     def __init__(self):
         self.url = os.getenv("SUPABASE_URL")
         self.key = os.getenv("SUPABASE_ANON_KEY")
+        self.client = None
         
         if not self.url or not self.key:
-            raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY must be set in environment variables")
+            print("Warning: SUPABASE_URL and SUPABASE_ANON_KEY not set. Supabase features disabled.")
+            return
         
-        self.client: Client = create_client(self.url, self.key)
+        try:
+            self.client: Client = create_client(self.url, self.key)
+            print("Supabase client initialized successfully")
+        except Exception as e:
+            print(f"Warning: Failed to initialize Supabase client: {e}")
+            print("Supabase features will be disabled.")
+    
+    def _ensure_client(self):
+        """Ensure client is available, raise exception if not"""
+        if not self.client:
+            raise Exception("Supabase client not initialized - features disabled")
+    
+    def _is_client_available(self) -> bool:
+        """Check if client is available"""
+        return self.client is not None
     
     async def create_or_get_user(self, user_id: str) -> Dict[str, Any]:
         """Create or get user by user_id"""
+        self._ensure_client()
         try:
             # Check if user exists
             response = self.client.table("users").select("*").eq("user_id", user_id).execute()
@@ -495,6 +512,8 @@ class SupabaseService:
     
     def get_all_plots_with_metadata(self) -> List[Dict[str, Any]]:
         """Get all plots with normalized metadata using efficient joins"""
+        if not self.client:
+            return []
         try:
             # Single query with all joins using Supabase's foreign key relationships
             # The syntax is: foreign_key_column:table_name(columns)
@@ -999,6 +1018,9 @@ class SupabaseService:
     
     async def get_all_target_audiences(self) -> List[Dict[str, Any]]:
         """Get all target audiences"""
+        if not self.client:
+            print("Warning: Supabase client not initialized")
+            return []
         try:
             response = self.client.table("target_audiences").select("*").order("age_group").execute()
             return response.data
