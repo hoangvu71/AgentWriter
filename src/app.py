@@ -13,7 +13,7 @@ from .core.logging import setup_logging, get_logger
 from .websocket.connection_manager import ConnectionManager
 from .websocket.websocket_handler import WebSocketHandler
 from .agents.agent_factory import AgentFactory
-from .routers import plots, authors, websocket, content, admin, models, health, sessions
+from .routers import plots, authors, websocket, content, models, health, sessions
 
 # Setup logging
 setup_logging()
@@ -98,15 +98,6 @@ async def library_page():
         return HTMLResponse(content="<h1>Library template not found</h1>", status_code=404)
 
 
-@app.get("/admin", response_class=HTMLResponse)
-async def admin_page():
-    """Content management interface for managing genres and target audiences"""
-    try:
-        with open('templates/admin.html', 'r', encoding='utf-8') as f:
-            html_content = f.read()
-        return HTMLResponse(content=html_content)
-    except FileNotFoundError:
-        return HTMLResponse(content="<h1>Admin template not found</h1>", status_code=404)
 
 
 @app.get("/health")
@@ -133,7 +124,6 @@ app.include_router(websocket.router, prefix="/ws", tags=["websocket"])
 app.include_router(plots.router, prefix="/api", tags=["plots"])
 app.include_router(authors.router, prefix="/api", tags=["authors"])
 app.include_router(content.router, prefix="/api", tags=["content"])
-app.include_router(admin.router, prefix="/api", tags=["admin"])
 app.include_router(models.router, prefix="", tags=["models"])
 app.include_router(health.router, tags=["health"])
 app.include_router(sessions.router, tags=["sessions"])

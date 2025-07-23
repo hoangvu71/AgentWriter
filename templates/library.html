@@ -56,21 +56,7 @@
 </head>
 <body>
     <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <a href="/" class="logo">
-                <div class="logo-icon">AI</div>
-                BooksWriter AI
-            </a>
-            <div class="nav-actions">
-                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
-                    <span id="theme-icon">🌙</span>
-                </button>
-                <a href="/admin" class="nav-link secondary">Admin</a>
-                <a href="/library" class="nav-link">Library</a>
-            </div>
-        </div>
-    </header>
+    <div id="header-placeholder"></div>
 
     <!-- Library Container -->
     <div class="library-container">
@@ -83,6 +69,15 @@
         </div>
     </div>
 
-    <script src="/static/js/main.js"></script>
+    <script src="/static/js/shared-header.js"></script>
+    
+    <!-- Enhanced Modular JavaScript Architecture (minimal for library page) -->
+    <script src="/static/js/modules/theme.js"></script>
+    <script>
+        // Initialize shared header
+        document.addEventListener('DOMContentLoaded', function() {
+            applySharedHeader('library');
+        });
+    </script>
 </body>
 </html>

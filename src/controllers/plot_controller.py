@@ -109,12 +109,16 @@ class PlotController(BaseController):
             validated_plot_id = self.validator.validate_uuid(plot_id)
             
             if not repository:
-                return self.error_response("Repository not available")
+                from ..core.container import container
+                try:
+                    repository = container.get("plot_repository")
+                except Exception as e:
+                    return self.handle_error(e, "Repository not available")
             
             plot = await repository.get_by_id(validated_plot_id)
             
             if not plot:
-                return self.error_response("Plot not found")
+                raise ValueError("Plot not found")
             
             plot_data = {
                 "id": plot.id,
@@ -151,7 +155,11 @@ class PlotController(BaseController):
             validated_query = self.validator.validate_text(q, max_length=200)
             
             if not repository:
-                return self.error_response("Repository not available")
+                from ..core.container import container
+                try:
+                    repository = container.get("plot_repository")
+                except Exception as e:
+                    return self.handle_error(e, "Repository not available")
             
             plots = await repository.search_by_title(validated_user_id, validated_query, limit)
             
@@ -185,7 +193,11 @@ class PlotController(BaseController):
             validated_user_id = self.validator.validate_alphanumeric(user_id)
             
             if not repository:
-                return self.error_response("Repository not available")
+                from ..core.container import container
+                try:
+                    repository = container.get("plot_repository")
+                except Exception as e:
+                    return self.handle_error(e, "Repository not available")
             
             plots = await repository.get_recent_plots(validated_user_id, limit)
             

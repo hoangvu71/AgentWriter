@@ -9,21 +9,7 @@
 </head>
     <body>
         <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <a href="/" class="logo">
-                    <div class="logo-icon">AI</div>
-                    BooksWriter AI
-                </a>
-                <div class="nav-actions">
-                    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
-                        <span id="theme-icon">🌙</span>
-                    </button>
-                    <a href="/admin" class="nav-link secondary">Admin</a>
-                    <a href="/library" class="nav-link">Library</a>
-                </div>
-            </div>
-        </header>
+        <div id="header-placeholder"></div>
         <!-- Main Content -->
         <main class="main-container">
             <!-- Sidebar -->
@@ -32,7 +18,7 @@
                 <div class="sidebar-section">
                     <h3 class="section-title">AI Model</h3>
                     <div class="model-selector">
-                        <select id="modelSelect" onchange="switchModel()">
+                        <select id="modelSelect">
                             <option value="">Loading models...</option>
                         </select>
                         <div class="model-info" id="modelInfo">Select a model to get started</div>
@@ -43,7 +29,7 @@
                     <div class="parameters-section">
                         <div class="parameters-header">
                             <h3 class="parameters-title">Content Parameters</h3>
-                            <button class="toggle-btn" id="toggleParams" onclick="toggleParameters()">
+                            <button class="toggle-btn" id="toggleParams">
                                 ▼
                             </button>
                         </div>
@@ -51,43 +37,43 @@
                             <!-- Genre Hierarchy -->
                             <div class="param-group">
                                 <label class="param-label">Genre</label>
-                                <select class="param-select" id="genreSelect" onchange="onGenreChange()">
+                                <select class="param-select" id="genreSelect">
                                     <option value="">Select Genre...</option>
                                 </select>
                             </div>
                             <div class="param-group">
                                 <label class="param-label">Subgenre</label>
-                                <select class="param-select" id="subgenreSelect" onchange="onSubgenreChange()" disabled>
+                                <select class="param-select" id="subgenreSelect" disabled>
                                     <option value="">Select Subgenre...</option>
                                 </select>
                             </div>
                             <div class="param-group">
                                 <label class="param-label">Microgenre</label>
-                                <select class="param-select" id="microgenreSelect" onchange="onMicrogenreChange()" disabled>
+                                <select class="param-select" id="microgenreSelect" disabled>
                                     <option value="">Select Microgenre...</option>
                                 </select>
                             </div>
                             <div class="param-group">
                                 <label class="param-label">Trope</label>
-                                <select class="param-select" id="tropeSelect" onchange="onTropeChange()" disabled>
+                                <select class="param-select" id="tropeSelect" disabled>
                                     <option value="">Select Trope...</option>
                                 </select>
                             </div>
                             <div class="param-group">
                                 <label class="param-label">Tone</label>
-                                <select class="param-select" id="toneSelect" onchange="updateContext()" disabled>
+                                <select class="param-select" id="toneSelect" disabled>
                                     <option value="">Select Tone...</option>
                                 </select>
                             </div>
                             <div class="param-group">
                                 <label class="param-label">Target Audience</label>
-                                <select class="param-select" id="audienceSelect" onchange="updateContext()">
+                                <select class="param-select" id="audienceSelect">
                                     <option value="">Select Audience...</option>
                                 </select>
                             </div>
                             <div class="param-group">
                                 <label class="param-label">Content to Improve</label>
-                                <select class="param-select" id="contentSelect" onchange="onContentChange()">
+                                <select class="param-select" id="contentSelect">
                                     <option value="">Select Content...</option>
                                 </select>
                             </div>
@@ -115,7 +101,7 @@
                             placeholder="Try: 'Create a plot and author based on the specified genres and audience params' or describe what you want!"
                             rows="1"
                         ></textarea>
-                        <button class="send-btn" onclick="sendMessage()" id="sendButton">
+                        <button class="send-btn" id="sendButton">
                             <span>Send</span>
                             <span>→</span>
                         </button>
@@ -127,16 +113,22 @@
                 </div>
             </section>
         </main>
+        <script src="/static/js/shared-header.js"></script>
+        <script src="/static/js/cache-utils.js"></script>
+        
+        <!-- Enhanced Modular JavaScript Architecture -->
+        <script src="/static/js/modules/api.js"></script>
+        <script src="/static/js/modules/websocket.js"></script>
+        <script src="/static/js/modules/state.js"></script>
+        <script src="/static/js/modules/ui.js"></script>
+        <script src="/static/js/modules/agents.js"></script>
+        <script src="/static/js/modules/theme.js"></script>
+        <script src="/static/js/chat-enhanced.js"></script>
         <script>
-            // Clear cache and reload JavaScript
-            if ('caches' in window) {
-                caches.keys().then(function(names) {
-                    names.forEach(function(name) {
-                        caches.delete(name);
-                    });
-                });
-            }
+            // Initialize shared header
+            document.addEventListener('DOMContentLoaded', function() {
+                applySharedHeader('home');
+            });
         </script>
-        <script src="/static/js/main.js?v=1.2"></script>
 </body>
     </html>

@@ -568,7 +568,16 @@ BooksWriter/
 │   └── admin.html        # Administration interface
 ├── static/                # Static assets (JS, CSS)
 │   ├── css/main.css      # Unified CSS with theme support
-│   └── js/main.js        # JavaScript utilities and theme management
+│   └── js/               # Modular JavaScript architecture
+│       ├── modules/      # Core JavaScript modules
+│       │   ├── api.js           # API communication service
+│       │   ├── websocket.js     # WebSocket connection management
+│       │   ├── state.js         # Centralized state management
+│       │   ├── ui.js           # DOM manipulation & UI components
+│       │   ├── agents.js       # Agent system & workflow visualization
+│       │   └── theme.js        # Theme management
+│       ├── chat-enhanced.js     # Enhanced chat application
+│       └── chat-modular.js      # Basic modular chat (legacy)
 ├── docs/                  # Documentation
 │   ├── CLAUDE.md         # This file - AI instructions
 │   ├── SETUP_GUIDE.md    # Consolidated setup instructions

@@ -3,8 +3,8 @@ Dynamic schema service for generating JSON structures from database schemas.
 """
 
 from typing import Dict, List, Any, Optional
-from ..database.supabase_service import supabase_service
 from .logging import get_logger
+from ..database.database_factory import db_factory
 
 
 class SchemaService:
@@ -63,7 +63,7 @@ class SchemaService:
                 raise ValueError(f"Unknown content type: {content_type}")
             
             # Get table schema from database
-            columns = await supabase_service.get_table_schema(table_name)
+            columns = await self._get_table_schema(table_name)
             
             # Generate JSON schema
             json_schema = self._generate_json_schema(columns, content_type)
@@ -75,6 +75,42 @@ class SchemaService:
             self.logger.error(f"Error generating schema for {content_type}: {e}")
             # Return fallback schema
             return self._get_fallback_json_schema(content_type)
+    
+    async def _get_table_schema(self, table_name: str) -> List[Dict[str, Any]]:
+        """Get column information for a specific table via database adapter"""
+        try:
+            adapter = await db_factory.get_adapter()
+            
+            # For SQLite, we'll use a simple approach since it doesn't have information_schema
+            # For Supabase, we can use direct client access if available
+            if hasattr(adapter, 'service') and hasattr(adapter.service, 'client'):
+                # Supabase - use information_schema query
+                query = f"""
+                SELECT 
+                    column_name,
+                    data_type,
+                    is_nullable,
+                    column_default,
+                    character_maximum_length,
+                    numeric_precision,
+                    numeric_scale
+                FROM information_schema.columns 
+                WHERE table_name = '{table_name}' 
+                AND table_schema = 'public'
+                ORDER BY ordinal_position;
+                """
+                
+                response = adapter.service.client.rpc('exec_sql', {'sql': query}).execute()
+                return response.data
+            else:
+                # SQLite or other - return basic schema info for now
+                # This is a fallback since SQLite schema introspection is complex
+                self.logger.warning(f"Using fallback schema for {table_name} (SQLite mode)")
+                return []
+                
+        except Exception as e:
+            self.logger.error(f"Error getting table schema for {table_name}: {e}")
+            return []
     
     def _generate_json_schema(self, columns: List[Dict[str, Any]], content_type: str) -> Dict[str, Any]:
         """Generate JSON schema structure from database columns"""

@@ -1,0 +1,43 @@
+{
+  "cleanup_patterns": {
+    "one_time_scripts": [
+      "scripts/update_*.py",
+      "scripts/migration/apply_migration_*.py",
+      "scripts/*_temp.py",
+      "scripts/temp_*.py"
+    ],
+    "archival_docs": [
+      "*REFACTORING*.md",
+      "WORKSPACE_DOCUMENTATION.md",
+      "docs/*_OBSOLETE.md",
+      "docs/temp_*.md"
+    ],
+    "critical_files": [
+      "src/repositories/plot_repository.py", 
+      "src/services/content_saving_service.py",
+      "main.py",
+      "requirements.txt",
+      "src/app.py",
+      "src/core/container.py",
+      "src/database/database_factory.py"
+    ]
+  },
+  "settings": {
+    "archive_directory": "docs/archive",
+    "dry_run": false,
+    "verbose": true,
+    "require_confirmation": false
+  },
+  "exclusions": {
+    "never_remove": [
+      "scripts/cleanup_*.py",
+      "scripts/setup_*.py", 
+      "scripts/generate_*.py"
+    ],
+    "protected_patterns": [
+      "src/**/*.py",
+      "templates/**/*.html",
+      "static/**/*"
+    ]
+  }
+}

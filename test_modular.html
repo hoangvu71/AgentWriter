@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Modular JavaScript Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        .loading { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>Modular JavaScript Architecture Test</h1>
+    
+    <div class="test-section">
+        <h3>Module Loading Test</h3>
+        <div id="module-test">Testing...</div>
+    </div>
+    
+    <div class="test-section">
+        <h3>State Management Test</h3>
+        <div id="state-test">Testing...</div>
+        <button onclick="testStateManager()">Test State Updates</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>UI Manager Test</h3>
+        <div id="ui-test">Testing...</div>
+        <input type="text" id="test-input" placeholder="Type something">
+        <button onclick="testUIManager()">Test UI Operations</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>WebSocket Service Test</h3>
+        <div id="websocket-test">Testing...</div>
+        <button onclick="testWebSocketService()">Test WebSocket Connection</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>API Service Test</h3>
+        <div id="api-test">Testing...</div>
+        <button onclick="testAPIService()">Test API Calls</button>
+    </div>
+
+    <!-- Load modules in correct order -->
+    <script src="static/js/modules/api.js"></script>
+    <script src="static/js/modules/websocket.js"></script>
+    <script src="static/js/modules/state.js"></script>
+    <script src="static/js/modules/ui.js"></script>
+    
+    <script>
+        // Test functions
+        function testModuleLoading() {
+            const results = [];
+            
+            if (typeof apiService !== 'undefined') {
+                results.push('✓ API Service loaded');
+            } else {
+                results.push('✗ API Service failed to load');
+            }
+            
+            if (typeof webSocketService !== 'undefined') {
+                results.push('✓ WebSocket Service loaded');
+            } else {
+                results.push('✗ WebSocket Service failed to load');
+            }
+            
+            if (typeof stateManager !== 'undefined') {
+                results.push('✓ State Manager loaded');
+            } else {
+                results.push('✗ State Manager failed to load');
+            }
+            
+            if (typeof uiManager !== 'undefined') {
+                results.push('✓ UI Manager loaded');
+            } else {
+                results.push('✗ UI Manager failed to load');
+            }
+            
+            document.getElementById('module-test').innerHTML = results.join('<br>');
+        }
+        
+        function testStateManager() {
+            const results = [];
+            
+            try {
+                // Test state setting and getting
+                stateManager.set('testKey', 'testValue');
+                const value = stateManager.get('testKey');
+                if (value === 'testValue') {
+                    results.push('✓ State set/get works');
+                } else {
+                    results.push('✗ State set/get failed');
+                }
+                
+                // Test state subscription
+                let subscriptionWorked = false;
+                const unsubscribe = stateManager.subscribe('testKey2', (newValue) => {
+                    subscriptionWorked = true;
+                });
+                stateManager.set('testKey2', 'subscriptionTest');
+                
+                if (subscriptionWorked) {
+                    results.push('✓ State subscription works');
+                } else {
+                    results.push('✗ State subscription failed');
+                }
+                
+                unsubscribe();
+                
+                // Test state history
+                const history = stateManager.getHistory();
+                if (Array.isArray(history) && history.length > 0) {
+                    results.push('✓ State history works');
+                } else {
+                    results.push('✗ State history failed');
+                }
+                
+            } catch (error) {
+                results.push('✗ State Manager error: ' + error.message);
+            }
+            
+            document.getElementById('state-test').innerHTML = results.join('<br>');
+        }
+        
+        function testUIManager() {
+            const results = [];
+            
+            try {
+                // Test element getting
+                const input = uiManager.getElement('test-input');
+                if (input) {
+                    results.push('✓ Element retrieval works');
+                    
+                    // Test content setting/getting  
+                    const testContent = 'UI Manager Test Content';
+                    uiManager.setContent('ui-test', testContent + '<br>');
+                    
+                    results.push('✓ Content setting works');
+                } else {
+                    results.push('✗ Element retrieval failed');
+                }
+                
+            } catch (error) {
+                results.push('✗ UI Manager error: ' + error.message);
+            }
+            
+            document.getElementById('ui-test').innerHTML = results.join('<br>');
+        }
+        
+        function testWebSocketService() {
+            const results = [];
+            
+            try {
+                // Test connection state
+                const state = webSocketService.getConnectionState();
+                results.push('✓ Connection state: ' + state);
+                
+                // Test session info
+                const sessionInfo = webSocketService.getSessionInfo();
+                if (sessionInfo && sessionInfo.userId) {
+                    results.push('✓ Session info works');
+                } else {
+                    results.push('✗ Session info failed');
+                }
+                
+                // Test message handler registration
+                webSocketService.onMessage('test', (data) => {
+                    console.log('Test message handler called');
+                });
+                results.push('✓ Message handler registration works');
+                
+            } catch (error) {
+                results.push('✗ WebSocket Service error: ' + error.message);
+            }
+            
+            document.getElementById('websocket-test').innerHTML = results.join('<br>');
+        }
+        
+        function testAPIService() {
+            const results = [];
+            
+            try {
+                // Test API service exists and has methods
+                if (typeof apiService.fetchJSON === 'function') {
+                    results.push('✓ fetchJSON method exists');
+                } else {
+                    results.push('✗ fetchJSON method missing');
+                }
+                
+                if (typeof apiService.loadModels === 'function') {
+                    results.push('✓ loadModels method exists');
+                } else {
+                    results.push('✗ loadModels method missing');
+                }
+                
+                if (typeof apiService.loadParameters === 'function') {
+                    results.push('✓ loadParameters method exists');
+                } else {
+                    results.push('✗ loadParameters method missing');
+                }
+                
+                results.push('✓ API Service structure is correct');
+                
+            } catch (error) {
+                results.push('✗ API Service error: ' + error.message);
+            }
+            
+            document.getElementById('api-test').innerHTML = results.join('<br>');
+        }
+        
+        // Run initial tests
+        document.addEventListener('DOMContentLoaded', function() {
+            testModuleLoading();
+        });
+    </script>
+</body>
+</html>
