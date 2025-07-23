@@ -496,7 +496,7 @@ class AgentManager {
     }
 
     /**
-     * Create collapsible JSON display
+     * Create collapsible JSON display with programmatic event listeners
      */
     createCollapsibleJSON(jsonData, agentId) {
         const container = document.createElement('div');
@@ -505,22 +505,76 @@ class AgentManager {
         const preview = this.generateJSONPreview(jsonData, agentId);
         const fullJson = JSON.stringify(jsonData, null, 2);
         
-        container.innerHTML = `
-            <div class="json-preview" data-collapsed="true">
-                <pre><code>${preview}</code></pre>
-                <button class="json-toggle" onclick="toggleJSON(this.parentElement)">
-                    📋 Show Full Response
-                </button>
-            </div>
-            <div class="json-full" style="display: none;">
-                <pre><code>${fullJson}</code></pre>
-                <button class="json-toggle" onclick="toggleJSON(this.parentElement.previousElementSibling)">
-                    📋 Show Preview
-                </button>
-            </div>
-        `;
+        // Create elements programmatically for better control
+        const previewDiv = document.createElement('div');
+        previewDiv.className = 'json-preview';
+        previewDiv.dataset.collapsed = 'true';
+        
+        const previewCode = document.createElement('pre');
+        previewCode.innerHTML = `<code>${preview}</code>`;
+        
+        const showFullButton = document.createElement('button');
+        showFullButton.className = 'json-toggle';
+        showFullButton.textContent = '📋 Show Full Response';
+        
+        const fullDiv = document.createElement('div');
+        fullDiv.className = 'json-full';
+        fullDiv.style.display = 'none';
+        
+        const fullCode = document.createElement('pre');
+        fullCode.innerHTML = `<code>${fullJson}</code>`;
+        
+        const showPreviewButton = document.createElement('button');
+        showPreviewButton.className = 'json-toggle';
+        showPreviewButton.textContent = '📋 Show Preview';
+        
+        // Assemble structure
+        previewDiv.appendChild(previewCode);
+        previewDiv.appendChild(showFullButton);
+        fullDiv.appendChild(fullCode);
+        fullDiv.appendChild(showPreviewButton);
+        container.appendChild(previewDiv);
+        container.appendChild(fullDiv);
+        
+        // Use UIManager-compatible event handling if available
+        if (window.uiManager && window.uiManager.addEventListenerToElement) {
+            window.uiManager.addEventListenerToElement(showFullButton, 'click', () => {
+                this.toggleJSONDisplay(previewDiv, fullDiv, true);
+            });
+            
+            window.uiManager.addEventListenerToElement(showPreviewButton, 'click', () => {
+                this.toggleJSONDisplay(previewDiv, fullDiv, false);
+            });
+        } else {
+            // Fallback to direct event listeners
+            showFullButton.addEventListener('click', () => {
+                this.toggleJSONDisplay(previewDiv, fullDiv, true);
+            });
+            
+            showPreviewButton.addEventListener('click', () => {
+                this.toggleJSONDisplay(previewDiv, fullDiv, false);
+            });
+        }
         
         return container;
+    }
+    
+    /**
+     * Toggle JSON display between preview and full view
+     * @param {HTMLElement} previewDiv - Preview container
+     * @param {HTMLElement} fullDiv - Full JSON container  
+     * @param {boolean} showFull - Whether to show full view
+     */
+    toggleJSONDisplay(previewDiv, fullDiv, showFull) {
+        if (showFull) {
+            previewDiv.style.display = 'none';
+            fullDiv.style.display = 'block';
+            previewDiv.dataset.collapsed = 'false';
+        } else {
+            previewDiv.style.display = 'block';
+            fullDiv.style.display = 'none';
+            previewDiv.dataset.collapsed = 'true';
+        }
     }
 }
 
@@ -530,21 +584,6 @@ const agentManager = new AgentManager();
 // Export for ES6 modules and global access
 if (typeof window !== 'undefined') {
     window.agentManager = agentManager;
-    // Global function for JSON toggling (needed for onclick handlers)
-    window.toggleJSON = function(previewElement) {
-        const container = previewElement.parentElement;
-        const isCollapsed = previewElement.dataset.collapsed === 'true';
-        
-        if (isCollapsed) {
-            previewElement.style.display = 'none';
-            container.querySelector('.json-full').style.display = 'block';
-            previewElement.dataset.collapsed = 'false';
-        } else {
-            previewElement.style.display = 'block';
-            container.querySelector('.json-full').style.display = 'none';
-            previewElement.dataset.collapsed = 'true';
-        }
-    };
 }
 
 export default agentManager;

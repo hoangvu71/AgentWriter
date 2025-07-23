@@ -430,6 +430,39 @@ class UIManager {
     }
 
     /**
+     * Add event listener to element directly (for dynamic elements without IDs)
+     */
+    addEventListenerToElement(element, event, handler, options = {}) {
+        if (!element) return null;
+
+        element.addEventListener(event, handler, options);
+
+        // Generate unique key for tracking
+        const elementKey = `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const key = `${elementKey}-${event}`;
+        
+        if (!this.eventListeners.has(key)) {
+            this.eventListeners.set(key, []);
+        }
+        this.eventListeners.get(key).push({ element, handler, options });
+
+        // Return cleanup function
+        return () => {
+            element.removeEventListener(event, handler, options);
+            const listeners = this.eventListeners.get(key);
+            if (listeners) {
+                const index = listeners.findIndex(l => l.handler === handler);
+                if (index > -1) {
+                    listeners.splice(index, 1);
+                }
+                if (listeners.length === 0) {
+                    this.eventListeners.delete(key);
+                }
+            }
+        };
+    }
+
+    /**
      * Remove all event listeners for cleanup
      */
     cleanup() {
