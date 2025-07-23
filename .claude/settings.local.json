@@ -73,7 +73,19 @@
       "Bash(dir local_database.db)",
       "Bash(dir development.db)",
       "Bash(cd \"C:\\Users\\hoang\\Documents\\BooksWriter\")",
-      "Bash(repomix)"
+      "Bash(repomix)",
+      "Bash(rm -rf htmlcov/)",
+      "Bash(rm -f COMPLETE_AGENT_ECOSYSTEM.md DEPENDENCY_CLEANUP_REPORT.md REPOSITORY_MIGRATION_PLAN.md)",
+      "Bash(rm -rf docs/archive/)",
+      "Bash(ls docs/)",
+      "Bash(rm -f docs/database_documentation.md docs/database_migrations.md docs/get_access_token.md docs/get_database_password.md docs/get_service_key.md docs/setup_documentation.md docs/supabase_setup.md)",
+      "Bash(rm -f test_*.html test_*.js tmp_*.ps1 nul)",
+      "Bash(rm -f scripts/cleanup_post_deployment.py)",
+      "Bash(rm -f package.json package-lock.json)",
+      "Bash(rm -rf node_modules/)",
+      "Bash(find . -name \"__pycache__\" -type d)",
+      "Bash(find . -name \"*.tmp\" -o -name \"*.log\" -o -name \".DS_Store\" -type f)",
+      "Bash(find . -name \"*.log\" -not -path \"./venv/*\" -not -path \"./.git/*\")"
     ],
     "deny": []
   }
