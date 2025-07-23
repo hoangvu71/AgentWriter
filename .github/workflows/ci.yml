@@ -47,7 +47,13 @@ jobs:
     
     - name: Run TDD compliance check
       run: |
-        python scripts/maintenance/tdd_compliance_report.py
+        echo "📋 Running TDD compliance check..."
+        if python scripts/maintenance/tdd_compliance_report.py; then
+          echo "✅ TDD compliance report generated successfully"
+        else
+          echo "❌ TDD compliance check failed"
+          exit 1
+        fi
     
     - name: Run Python tests with coverage
       run: |
@@ -106,11 +112,15 @@ jobs:
     
     - name: Run TDD Enforcement Framework
       run: |
-        python scripts/maintenance/TDD_ENFORCEMENT_FRAMEWORK.py
-    
-    - name: Verify no TDD violations
-      run: |
-        echo "TDD compliance verified - all tests pass before any implementation"
+        echo "🚨 Running TDD Enforcement Framework..."
+        if python scripts/maintenance/TDD_ENFORCEMENT_FRAMEWORK.py; then
+          echo "✅ TDD compliance verified - all tests pass before any implementation"
+          echo "🎉 TDD ENFORCEMENT PASSED - Development standards maintained"
+        else
+          echo "❌ TDD VIOLATION DETECTED - CI pipeline failed"
+          echo "🛑 DEVELOPMENT MUST STOP UNTIL VIOLATIONS ARE CORRECTED"
+          exit 1
+        fi
 
   lint-and-format:
     runs-on: ubuntu-latest
@@ -149,7 +159,13 @@ jobs:
     - name: Run security scan with bandit
       run: |
         pip install bandit
-        bandit -r src/ -f json -o bandit-report.json || true
+        echo "🔒 Running security scan with bandit..."
+        if bandit -r src/ -f json -o bandit-report.json; then
+          echo "✅ Security scan completed - no critical issues found"
+        else
+          echo "⚠️ Security scan found issues - check bandit-report.json"
+          # Don't fail CI for security warnings, just report them
+        fi
     
     - name: Upload security scan results
       uses: actions/upload-artifact@v3

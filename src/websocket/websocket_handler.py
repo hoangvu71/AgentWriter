@@ -12,14 +12,13 @@ from ..core.validation import Validator, ValidationError
 from ..core.logging import get_logger
 from ..websocket.connection_manager import ConnectionManager
 from ..agents.agent_factory import AgentFactory
-from ..database.supabase_service import supabase_service
 
 
 class WebSocketHandler:
     """Handles WebSocket messages and coordinates with multi-agent system"""
     
     def __init__(self, connection_manager: ConnectionManager, agent_factory: AgentFactory, config: Configuration,
-                 content_saving_service):
+                 content_saving_service, session_repository=None):
         self.connection_manager = connection_manager
         self.agent_factory = agent_factory
         self.config = config
@@ -30,6 +29,11 @@ class WebSocketHandler:
         if not content_saving_service:
             raise ValueError("ContentSavingService is required - no fallback to supabase_service allowed")
         self.content_saving_service = content_saving_service
+        
+        # Session repository for orchestrator decisions
+        if not session_repository:
+            raise ValueError("SessionRepository is required for orchestrator decision tracking")
+        self.session_repository = session_repository
     
     async def _save_plot_data(self, session_id: str, user_id: str, plot_data: Dict[str, Any], 
                              orchestrator_params: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -275,10 +279,10 @@ class WebSocketHandler:
                 "orchestrator_decision": orchestrator_decision
             }, client_id)
             
-            # Save orchestrator decision to database
+            # Save orchestrator decision to database using repository pattern
             try:
                 if orchestrator_data:
-                    await supabase_service.save_orchestrator_decision(
+                    await self.session_repository.save_orchestrator_decision(
                         session_id=session_id,
                         user_id=user_id,
                         decision_data=orchestrator_data

@@ -4,7 +4,6 @@ Provides repository-only database access for all agent-generated content.
 """
 
 from typing import Dict, Any, Optional
-from ..database.supabase_service import supabase_service
 from ..core.logging import get_logger
 
 
@@ -15,18 +14,22 @@ class ContentSavingService:
     """
     
     def __init__(self, plot_repository, author_repository, world_building_repository, 
-                 characters_repository, session_repository=None):
+                 characters_repository, session_repository=None, iterative_repository=None):
         """Initialize ContentSavingService with required repositories - no fallbacks to supabase_service."""
         self.plot_repository = plot_repository
         self.author_repository = author_repository
         self.world_building_repository = world_building_repository
         self.characters_repository = characters_repository
         self.session_repository = session_repository
+        self.iterative_repository = iterative_repository
         self.logger = get_logger("content_saving")
         
         # Validate required repositories are provided
         if not all([plot_repository, author_repository, world_building_repository, characters_repository]):
             raise ValueError("All core repositories (plot, author, world_building, characters) are required")
+        
+        if not iterative_repository:
+            raise ValueError("IterativeRepository is required for critique/enhancement/scoring operations")
     
     async def save_plot_data(self, session_id: str, user_id: str, plot_data: Dict[str, Any], 
                            orchestrator_params: Dict[str, Any] = None, author_id: str = None) -> Dict[str, Any]:
@@ -182,20 +185,20 @@ class ContentSavingService:
             self.logger.error(f"Failed to save characters data via repository: {e}")
             raise
     
-    async def save_critique_data(self, iteration_id: str, critique_json: Dict[str, Any], agent_response: str) -> None:
+    async def save_critique_data(self, iteration_id: str, critique_json: Dict[str, Any], agent_response: str) -> Dict[str, Any]:
         """
-        Save critique data using repository if available, fallback to supabase_service.
+        Save critique data using repository pattern.
         
         Args:
             iteration_id: Iteration identifier
             critique_json: Critique data in JSON format
             agent_response: Agent response text
+            
+        Returns:
+            Dictionary containing the saved critique record
         """
-        # TODO: Implement critique repository when needed
-        # Using supabase_service directly for specialized tables not yet in repository pattern
         try:
-            from ..database.supabase_service import supabase_service
-            return await supabase_service.save_critique_data(iteration_id, critique_json, agent_response)
+            return await self.iterative_repository.save_critique(iteration_id, critique_json, agent_response)
         except Exception as e:
             self.logger.error(f"Failed to save critique data for iteration {iteration_id}: {e}")
             raise
@@ -215,8 +218,9 @@ class ContentSavingService:
         # TODO: Implement enhancement repository when needed
         # Using supabase_service directly for specialized tables not yet in repository pattern
         try:
-            from ..database.supabase_service import supabase_service
-            return await supabase_service.save_enhancement_data(iteration_id, enhanced_content, changes_made, rationale, confidence_score)
+            return await self.iterative_repository.save_enhancement(
+                iteration_id, enhanced_content, changes_made, rationale, confidence_score
+            )
         except Exception as e:
             self.logger.error(f"Failed to save enhancement data for iteration {iteration_id}: {e}")
             raise
@@ -237,8 +241,9 @@ class ContentSavingService:
         # TODO: Implement scoring repository when needed
         # Using supabase_service directly for specialized tables not yet in repository pattern
         try:
-            from ..database.supabase_service import supabase_service
-            return await supabase_service.save_score_data(iteration_id, overall_score, category_scores, score_rationale, improvement_trajectory, recommendations)
+            return await self.iterative_repository.save_score(
+                iteration_id, overall_score, category_scores, score_rationale, improvement_trajectory, recommendations
+            )
         except Exception as e:
             self.logger.error(f"Failed to save score data for iteration {iteration_id}: {e}")
             raise

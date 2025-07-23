@@ -44,13 +44,30 @@ class ServiceContainer:
         self.register_singleton("characters_repository", self._create_characters_repository)
         self.register_singleton("session_repository", self._create_session_repository)
         
+        # Additional repositories
+        self.register_singleton("orchestrator_repository", self._create_orchestrator_repository)
+        self.register_singleton("iterative_repository", self._create_iterative_repository)
+        
         # Content saving service
         self.register_singleton("content_saving_service", self._create_content_saving_service)
     
     def _create_database_adapter(self):
-        """Create database adapter instance"""
-        from ..database.supabase_adapter import supabase_adapter
-        return supabase_adapter
+        """Create database adapter instance with automatic fallback"""
+        from ..database.database_factory import db_factory
+        import asyncio
+        
+        # Try to get adapter asynchronously if possible
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # If we're in an async context, return sync adapter
+                return db_factory.get_sync_adapter()
+            else:
+                # If no loop is running, create one to check connectivity
+                return asyncio.run(db_factory.get_adapter())
+        except RuntimeError:
+            # Fallback to sync adapter if async not available
+            return db_factory.get_sync_adapter()
     
     def _create_plot_repository(self):
         """Create plot repository instance"""
@@ -82,6 +99,18 @@ class ServiceContainer:
         database = self.get("database")
         return SessionRepository(database)
     
+    def _create_orchestrator_repository(self):
+        """Create orchestrator repository instance"""
+        from ..repositories.orchestrator_repository import OrchestratorRepository
+        database = self.get("database")
+        return OrchestratorRepository(database)
+    
+    def _create_iterative_repository(self):
+        """Create iterative repository instance"""
+        from ..repositories.iterative_repository import IterativeRepository
+        database = self.get("database")
+        return IterativeRepository(database)
+    
     def _create_content_saving_service(self):
         """Create content saving service instance"""
         from ..services.content_saving_service import ContentSavingService
@@ -90,7 +119,8 @@ class ServiceContainer:
             author_repository=self.get("author_repository"),
             world_building_repository=self.get("world_building_repository"),
             characters_repository=self.get("characters_repository"),
-            session_repository=self.get("session_repository")
+            session_repository=self.get("session_repository"),
+            iterative_repository=self.get("iterative_repository")
         )
     
     def register_singleton(self, name: str, factory: Callable[[], T]) -> None:
@@ -121,7 +151,8 @@ class ServiceContainer:
             
             # For singletons, cache the result
             if name in ["config", "validator", "database", "plot_repository", "author_repository", 
-                       "world_building_repository", "characters_repository", "session_repository", "content_saving_service"]:  # Known singletons
+                       "world_building_repository", "characters_repository", "session_repository", 
+                       "orchestrator_repository", "iterative_repository", "content_saving_service"]:  # Known singletons
                 instance = factory()
                 self._singletons[name] = instance
                 return instance
@@ -154,7 +185,8 @@ class ServiceContainer:
         required_services = [
             "database", "plot_repository", "author_repository", 
             "world_building_repository", "characters_repository", 
-            "session_repository", "content_saving_service"
+            "session_repository", "orchestrator_repository", "iterative_repository",
+            "content_saving_service"
         ]
         
         for service_name in required_services:

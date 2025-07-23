@@ -41,6 +41,23 @@ class WorldBuildingRepository(BaseRepository[WorldBuilding]):
         # Remove None values to avoid issues
         return {k: v for k, v in data.items() if v is not None}
     
+    async def get_world_building_by_plot(self, plot_id: str) -> Optional[Dict[str, Any]]:
+        """Get world building data for a specific plot ID"""
+        try:
+            worlds = await self._database.select(
+                self._table_name,
+                filters={"plot_id": plot_id},
+                order_by="created_at",
+                desc=True,
+                limit=1
+            )
+            
+            return worlds[0] if worlds else None
+            
+        except Exception as e:
+            self._logger.error(f"Error getting world building for plot {plot_id}: {e}")
+            raise
+    
     def _deserialize(self, data: Dict[str, Any]) -> WorldBuilding:
         """Convert database data to world building entity"""
         # Parse world_type enum

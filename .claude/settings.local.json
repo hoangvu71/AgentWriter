@@ -66,7 +66,12 @@
       "Bash(\".\\venv\\Scripts\\python.exe\" -c \"from src.agents.multi_agent_system import multi_agent_system; print(''MultiAgentSystem loaded successfully'')\")",
       "Bash(rg:*)",
       "Bash(pip index:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(CI_TEST_MODE=success python test_ci_failure_simulation.py)",
+      "Bash(scriptsdevkill_port_8000.bat)",
+      "Bash(ping:*)",
+      "Bash(dir local_database.db)",
+      "Bash(dir development.db)"
     ],
     "deny": []
   }

@@ -28,8 +28,50 @@ class SessionRepository:
             Dictionary containing all session content grouped by type
         """
         try:
-            # Use the existing service method for session data aggregation
-            return await self._database.service.get_session_data(session_id)
+            # Aggregate data from all content tables using repository pattern
+            session_data = {
+                "session_id": session_id,
+                "plots": [],
+                "authors": [],
+                "world_building": [],
+                "characters": [],
+                "orchestrator_decisions": [],
+                "critiques": [],
+                "enhancements": [],
+                "scores": []
+            }
+            
+            # Get data from each table
+            plots = await self._database.select("plots", filters={"session_id": session_id})
+            authors = await self._database.select("authors", filters={"session_id": session_id})
+            world_building = await self._database.select("world_building", filters={"session_id": session_id})
+            characters = await self._database.select("characters", filters={"session_id": session_id})
+            orchestrator_decisions = await self._database.select("orchestrator_decisions", filters={"session_id": session_id})
+            
+            # Get iterative improvement data
+            # Note: These tables are keyed by iteration_id, need to join through plots/content
+            if plots:
+                plot_ids = [plot.get("id") for plot in plots]
+                for plot_id in plot_ids:
+                    critiques = await self._database.select("critiques", filters={"iteration_id": f"plot_{plot_id}"})
+                    enhancements = await self._database.select("enhancements", filters={"iteration_id": f"plot_{plot_id}"})
+                    scores = await self._database.select("scores", filters={"iteration_id": f"plot_{plot_id}"})
+                    
+                    session_data["critiques"].extend(critiques)
+                    session_data["enhancements"].extend(enhancements)
+                    session_data["scores"].extend(scores)
+            
+            # Populate session data
+            session_data["plots"] = plots
+            session_data["authors"] = authors
+            session_data["world_building"] = world_building
+            session_data["characters"] = characters
+            session_data["orchestrator_decisions"] = orchestrator_decisions
+            
+            self._logger.info(f"Retrieved session data for {session_id} with {len(plots)} plots, {len(authors)} authors, {len(world_building)} worlds, {len(characters)} characters")
+            
+            return session_data
+            
         except Exception as e:
             self._logger.error(f"Error getting session data for {session_id}: {e}", error=e)
             raise
@@ -115,13 +157,17 @@ class SessionRepository:
         """
         try:
             # Query plots table to get unique sessions (most common content type)
-            response = self._database.service.client.table("plots").select(
-                "session_id, user_id, created_at"
-            ).order("created_at", desc=True).limit(limit).execute()
+            plots = await self._database.select(
+                "plots",
+                columns=["session_id", "user_id", "created_at"],
+                order_by="created_at",
+                desc=True,
+                limit=limit * 2  # Get more records to ensure enough unique sessions
+            )
             
             # Group by session to get unique sessions
             sessions_map = {}
-            for record in response.data:
+            for record in plots:
                 session_id = record.get("session_id")
                 if session_id and session_id not in sessions_map:
                     sessions_map[session_id] = {
@@ -133,7 +179,8 @@ class SessionRepository:
                 if session_id:
                     sessions_map[session_id]["content_count"] += 1
             
-            sessions = list(sessions_map.values())
+            # Limit to requested number of sessions
+            sessions = list(sessions_map.values())[:limit]
             
             return {
                 "sessions": sessions,
@@ -146,7 +193,7 @@ class SessionRepository:
             raise
     
     async def save_orchestrator_decision(self, session_id: str, user_id: str, 
-                                       decision_data: Dict[str, Any]) -> None:
+                                       decision_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Save orchestrator routing decision for analysis and debugging.
         
@@ -154,14 +201,29 @@ class SessionRepository:
             session_id: Session identifier
             user_id: User identifier  
             decision_data: Orchestrator decision details
+            
+        Returns:
+            Dictionary containing the saved decision record
         """
         try:
-            # Use the existing service method
-            await self._database.service.save_orchestrator_decision(
-                session_id=session_id,
-                user_id=user_id,
-                **decision_data
-            )
+            # Prepare decision record using repository pattern
+            decision_record = {
+                "session_id": session_id,
+                "user_id": user_id,
+                "request_content": decision_data.get("request_content", ""),
+                "routing_decision": decision_data.get("routing_decision", ""),
+                "agents_selected": decision_data.get("agents_selected", []),
+                "reasoning": decision_data.get("reasoning", ""),
+                "confidence_score": decision_data.get("confidence_score", 0.0),
+                "created_at": datetime.utcnow().isoformat()
+            }
+            
+            # Save using repository pattern
+            response = await self._database.insert("orchestrator_decisions", decision_record)
+            
+            self._logger.info(f"Saved orchestrator decision for session {session_id}")
+            return response
+            
         except Exception as e:
             self._logger.error(f"Error saving orchestrator decision: {e}", error=e)
             raise

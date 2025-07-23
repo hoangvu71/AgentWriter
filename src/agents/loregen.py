@@ -178,9 +178,9 @@ class LoreGenAgent(BaseAgent):
     async def _get_world_building(self, plot_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve world building data for the plot"""
         if not self._database_service:
-            # Import here to avoid circular imports
-            from ..database.supabase_service import SupabaseService
-            self._database_service = SupabaseService()
+            # Use dependency injection from container instead of direct instantiation
+            from ..core.container import container
+            self._database_service = container.get("world_building_repository")
         
         try:
             world_data = await self._database_service.get_world_building_by_plot(plot_id)

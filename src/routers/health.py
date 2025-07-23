@@ -5,7 +5,7 @@ Health check endpoint for system monitoring.
 from fastapi import APIRouter, Depends
 from typing import Dict, Any
 from ..core.configuration import Configuration
-from ..database.supabase_service import supabase_service
+from ..database.database_factory import db_factory
 
 router = APIRouter(prefix="/api", tags=["health"])
 
@@ -27,17 +27,30 @@ async def health_check() -> Dict[str, Any]:
         }
     }
     
-    # Check Supabase connection if enabled
+    # Check database connection
     try:
-        if supabase_service.client:
-            # Simple query to verify connection
-            supabase_service.client.table("genres").select("id").limit(1).execute()
-            health_status["services"]["database"] = "operational"
+        import os
+        adapter = await db_factory.get_adapter()
+        database_mode = os.getenv("DATABASE_MODE", "supabase").lower()
+        
+        if database_mode == "sqlite":
+            db_path = os.getenv("SQLITE_DB_PATH", "development.db")
+            health_status["services"]["database"] = f"operational (development mode - SQLite: {db_path})"
+            health_status["database_mode"] = "development"
+        elif db_factory.is_offline_mode():
+            health_status["services"]["database"] = "operational (fallback mode - SQLite)"
+            health_status["database_mode"] = "fallback"
         else:
-            health_status["services"]["database"] = "disabled"
+            health_status["services"]["database"] = "operational (production - Supabase)"
+            health_status["database_mode"] = "production"
+            
+        # Test database with a simple query
+        await adapter.count("genres")
+        
     except Exception as e:
         health_status["services"]["database"] = "error"
         health_status["warnings"] = [f"Database connection issue: {str(e)}"]
+        health_status["database_mode"] = "error"
     
     # Check if any critical services are down
     if any(status == "error" for status in health_status["services"].values()):

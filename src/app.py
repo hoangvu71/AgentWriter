@@ -51,12 +51,13 @@ async def startup_event():
     container.register_instance("connection_manager", ConnectionManager())
     container.register_instance("agent_factory", AgentFactory(config))
     
-    # Register WebSocket handler with required ContentSavingService
+    # Register WebSocket handler with required ContentSavingService and SessionRepository
     websocket_handler = WebSocketHandler(
         connection_manager=container.get("connection_manager"),
         agent_factory=container.get("agent_factory"),
         config=config,
-        content_saving_service=content_saving_service
+        content_saving_service=content_saving_service,
+        session_repository=container.get("session_repository")
     )
     container.register_instance("websocket_handler", websocket_handler)
     
