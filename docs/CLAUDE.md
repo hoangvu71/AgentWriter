@@ -305,8 +305,9 @@ When making changes to database schema (adding tables, normalizing data, etc.), 
 1. **Supabase CLI available via npx** (already installed)
 2. **Project must be linked** to Supabase:
    ```bash
-   npx supabase link --project-ref YOUR_PROJECT_REF
+   npx supabase link --project-ref <your-project-ref>
    ```
+   Get your project reference from: Supabase Dashboard → Settings → General → Reference ID
 3. **Database password required** for remote operations
 
 **Standard Migration Application Process:**
@@ -316,8 +317,8 @@ When making changes to database schema (adding tables, normalizing data, etc.), 
 4. Verify with: `python scripts/database/check_tables.py`
 
 **Project Configuration:**
-- Project Reference ID: `cfqgzbudjnvtyxrrvvmo` (already linked)
-- Database Host: `aws-0-us-east-1.pooler.supabase.com`
+- Project Reference ID: `<your-project-ref>` (get from Supabase Dashboard → Settings → General)
+- Database Host: `<your-database-host>` (get from Supabase Dashboard → Settings → Database)
 - Migration Path: `supabase/migrations/`
 - Tracking: `migrations/applied_migrations.json`
 

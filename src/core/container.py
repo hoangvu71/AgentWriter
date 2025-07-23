@@ -52,22 +52,27 @@ class ServiceContainer:
         self.register_singleton("content_saving_service", self._create_content_saving_service)
     
     def _create_database_adapter(self):
-        """Create database adapter instance with automatic fallback"""
+        """Create database adapter instance with consistent behavior"""
         from ..database.database_factory import db_factory
         import asyncio
         
-        # Try to get adapter asynchronously if possible
+        # Always use the async adapter logic for consistency
+        # This ensures both sync and async contexts use the same database selection logic
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # If we're in an async context, return sync adapter
-                return db_factory.get_sync_adapter()
-            else:
-                # If no loop is running, create one to check connectivity
-                return asyncio.run(db_factory.get_adapter())
-        except RuntimeError:
-            # Fallback to sync adapter if async not available
-            return db_factory.get_sync_adapter()
+            # Create event loop if needed and run adapter selection
+            return asyncio.run(db_factory.get_adapter())
+        except RuntimeError as e:
+            # If asyncio fails completely, log the error and provide fallback
+            import logging
+            logger = logging.getLogger("container")
+            logger.warning(f"Failed to create database adapter with asyncio: {e}")
+            logger.info("Using direct SQLite fallback for database adapter")
+            
+            # Direct SQLite fallback - only as last resort
+            from ..database.sqlite_adapter import SQLiteAdapter
+            import os
+            db_path = os.getenv("SQLITE_DB_PATH", "development.db")
+            return SQLiteAdapter(db_path)
     
     def _create_plot_repository(self):
         """Create plot repository instance"""

@@ -77,27 +77,6 @@ class DatabaseFactory:
             self.logger.warning(f"Supabase connectivity check failed: {e}")
             return False
     
-    def get_sync_adapter(self) -> Union[SupabaseAdapter, SQLiteAdapter]:
-        """Get adapter synchronously (for non-async contexts)"""
-        # If adapter already cached, return it
-        if self._adapter is not None:
-            return self._adapter
-        
-        # Check DATABASE_MODE environment variable
-        database_mode = os.getenv("DATABASE_MODE", "sqlite").lower()
-        db_path = os.getenv("SQLITE_DB_PATH", "development.db")
-        
-        if database_mode == "sqlite":
-            self.logger.info(f"Using SQLite for synchronous database access ({db_path})")
-            self._adapter = SQLiteAdapter(db_path)
-            self._supabase_available = False
-        else:
-            # For sync context, always use SQLite as fallback
-            self.logger.info(f"Using SQLite for synchronous database access (fallback to {db_path})")
-            self._adapter = SQLiteAdapter(db_path)
-            self._supabase_available = False
-            
-        return self._adapter
     
     def is_using_supabase(self) -> bool:
         """Check if currently using Supabase"""

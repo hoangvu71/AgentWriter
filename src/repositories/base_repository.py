@@ -4,6 +4,7 @@ Base repository implementation with common database operations.
 
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional, TypeVar, Generic
+from datetime import datetime
 from ..core.interfaces import IDatabase
 from ..core.logging import get_logger
 
@@ -98,3 +99,12 @@ class BaseRepository(ABC, Generic[T]):
         except Exception as e:
             self._logger.error(f"Error counting {self._table_name}: {e}", error=e)
             raise
+    
+    def _parse_datetime(self, value: Optional[str]) -> Optional[datetime]:
+        """Parse datetime string to datetime object"""
+        if not value:
+            return None
+        try:
+            return datetime.fromisoformat(value.replace('Z', '+00:00'))
+        except (ValueError, AttributeError):
+            return None

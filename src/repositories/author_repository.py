@@ -57,14 +57,6 @@ class AuthorRepository(BaseRepository[Author]):
             updated_at=self._parse_datetime(data.get("updated_at"))
         )
     
-    def _parse_datetime(self, value: Optional[str]) -> Optional[datetime]:
-        """Parse datetime string to datetime object"""
-        if not value:
-            return None
-        try:
-            return datetime.fromisoformat(value.replace('Z', '+00:00'))
-        except (ValueError, AttributeError):
-            return None
     
     async def get_by_user(self, user_id: str, limit: int = 50) -> List[Author]:
         """Get all authors for a specific user"""

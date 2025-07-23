@@ -46,7 +46,7 @@ class SQLiteAdapter:
         # Users table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
-                id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+                id TEXT PRIMARY KEY,
                 name TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
@@ -55,7 +55,7 @@ class SQLiteAdapter:
         # Sessions table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS sessions (
-                id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+                id TEXT PRIMARY KEY,
                 user_id TEXT,
                 start_time TEXT DEFAULT CURRENT_TIMESTAMP,
                 end_time TEXT,
@@ -67,7 +67,7 @@ class SQLiteAdapter:
         # Authors table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS authors (
-                id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+                id TEXT PRIMARY KEY,
                 author_name TEXT NOT NULL,
                 pen_name TEXT,
                 biography TEXT,
@@ -79,7 +79,7 @@ class SQLiteAdapter:
         # Plots table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS plots (
-                id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+                id TEXT PRIMARY KEY,
                 session_id TEXT,
                 user_id TEXT,
                 author_id TEXT,
@@ -101,7 +101,7 @@ class SQLiteAdapter:
         # World building table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS world_building (
-                id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+                id TEXT PRIMARY KEY,
                 plot_id TEXT,
                 world_name TEXT NOT NULL,
                 geography TEXT DEFAULT '{}',
@@ -116,7 +116,7 @@ class SQLiteAdapter:
         # Characters table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS characters (
-                id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+                id TEXT PRIMARY KEY,
                 plot_id TEXT,
                 world_building_id TEXT,
                 character_populations TEXT DEFAULT '{}',
@@ -130,7 +130,7 @@ class SQLiteAdapter:
         # Orchestrator decisions table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS orchestrator_decisions (
-                id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+                id TEXT PRIMARY KEY,
                 session_id TEXT,
                 user_id TEXT,
                 request_content TEXT,
@@ -147,7 +147,7 @@ class SQLiteAdapter:
         # Genres table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS genres (
-                id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+                id TEXT PRIMARY KEY,
                 name TEXT NOT NULL UNIQUE,
                 description TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -157,7 +157,7 @@ class SQLiteAdapter:
         # Target audiences table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS target_audiences (
-                id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+                id TEXT PRIMARY KEY,
                 age_group TEXT NOT NULL,
                 gender TEXT NOT NULL,
                 sexual_orientation TEXT NOT NULL,
@@ -193,9 +193,17 @@ class SQLiteAdapter:
             if 'id' not in data:
                 data['id'] = str(uuid.uuid4())
             
-            # Add timestamp if not provided
-            if 'created_at' not in data:
+            # Add timestamp if not provided and table has created_at column
+            table_schemas = {
+                'users': True, 'authors': True, 'plots': True, 'world_building': True, 
+                'characters': True, 'orchestrator_decisions': True, 'genres': True, 
+                'target_audiences': True, 'sessions': False  # sessions uses start_time not created_at
+            }
+            
+            if table in table_schemas and table_schemas[table] and 'created_at' not in data:
                 data['created_at'] = datetime.utcnow().isoformat()
+            elif table == 'sessions' and 'start_time' not in data:
+                data['start_time'] = datetime.utcnow().isoformat()
             
             # Serialize JSON fields
             json_fields = ['messages', 'agents_selected', 'geography', 'politics', 

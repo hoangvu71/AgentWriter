@@ -7,7 +7,7 @@ Claude can directly apply database migrations using the Supabase CLI. This docum
 ## Prerequisites
 
 1. **Supabase CLI**: Available via `npx supabase` (already installed)
-2. **Project Linked**: Already linked to project `cfqgzbudjnvtyxrrvvmo`
+2. **Project Linked**: Link to your Supabase project (get project reference from Supabase Dashboard)
 3. **Database Password**: Required for remote operations
 
 ## Standard Migration Process
@@ -52,8 +52,8 @@ This script:
 
 ## Project Configuration
 
-- **Project Reference**: `cfqgzbudjnvtyxrrvvmo`
-- **Database Host**: `aws-0-us-east-1.pooler.supabase.com`
+- **Project Reference**: `<your-project-ref>` (get from Supabase Dashboard → Settings → General)
+- **Database Host**: `<your-database-host>` (get from Supabase Dashboard → Settings → Database)
 - **Migration Directory**: `supabase/migrations/`
 - **Tracking File**: `migrations/applied_migrations.json`
 
@@ -94,10 +94,11 @@ dial tcp 127.0.0.1:54322: connectex: No connection could be made
 ```
 Cannot find project ref. Have you run supabase link?
 ```
-**Solution**: Already linked to `cfqgzbudjnvtyxrrvvmo`. If issues persist:
+**Solution**: Link your project to Supabase. If issues persist:
 ```bash
-npx supabase link --project-ref cfqgzbudjnvtyxrrvvmo
+npx supabase link --project-ref <your-project-ref>
 ```
+Get your project reference from: Supabase Dashboard → Settings → General → Reference ID
 
 ## Environment Variables
 

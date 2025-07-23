@@ -88,14 +88,6 @@ class WorldBuildingRepository(BaseRepository[WorldBuilding]):
             updated_at=self._parse_datetime(data.get("updated_at"))
         )
     
-    def _parse_datetime(self, value: Optional[str]) -> Optional[datetime]:
-        """Parse datetime string to datetime object"""
-        if not value:
-            return None
-        try:
-            return datetime.fromisoformat(value.replace('Z', '+00:00'))
-        except (ValueError, AttributeError):
-            return None
     
     async def get_by_user_external(self, external_user_id: str, limit: int = 50) -> List[WorldBuilding]:
         """Get all world building for a user using external user_id (not UUID)"""
