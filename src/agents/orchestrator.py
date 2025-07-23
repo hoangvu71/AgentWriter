@@ -4,10 +4,12 @@ Orchestrator agent for routing and coordinating multi-agent workflows.
 
 import re
 import time
+import uuid
 from typing import List, Dict, Any, AsyncGenerator, Optional
 from ..core.interfaces import IOrchestrator, AgentRequest, AgentResponse, ContentType
 from ..core.base_agent import BaseAgent
 from ..core.configuration import Configuration
+from ..tools.agent_tools import invoke_agent, update_workflow_context
 
 
 class OrchestratorAgent(BaseAgent, IOrchestrator):
@@ -16,58 +18,47 @@ class OrchestratorAgent(BaseAgent, IOrchestrator):
     def __init__(self, config: Configuration):
         instruction = """You are the Orchestrator Agent in a multi-agent book writing system.
 
-Your responsibilities:
-1. ROUTE user requests to appropriate agents (plot_generator, author_generator, world_building, characters, critique)
-2. COORDINATE sequential workflows
-3. ANALYZE user intent and determine which agents to invoke
-4. MANAGE communication between agents
-5. COMPILE final responses from multiple agents
-6. EXTRACT selected content from message context (look for CONTENT_ID, CONTENT_TYPE, CONTENT_TITLE)
+Your role is to fulfill user requests by coordinating with specialized agents using tools.
 
-Routing Logic:
-- If user mentions plot, story, genre, trope → route to plot_generator
-- If user mentions author, biography, voice, style → route to author_generator
-- If user mentions world, setting, geography, culture, politics, history → route to plot_then_world_building
-- If user mentions characters, personalities, relationships → route to plot_then_world_then_characters
-- If user mentions "improve", "enhance", "critique" with content ID → route to improvement_workflow
-- If user wants multiple things → route to appropriate sequential workflow
+Available agents:
+- plot_generator: Creates story plots and narratives
+- author_generator: Creates author profiles and biographies
+- world_building: Creates detailed fictional worlds
+- characters: Creates character populations and relationships
+- critique: Analyzes and provides feedback on content
+- enhancement: Improves content based on critiques
+- scoring: Evaluates content quality
 
-Content Parameters Workflows:
-- If CONTENT_TO_IMPROVE is selected (plot/author) + "critique"/"enhance" → improvement_workflow
-- If CONTENT_TO_IMPROVE is plot + "world building" → world_building_from_plot
-- If CONTENT_TO_IMPROVE is plot + "characters" → characters_from_plot_and_world
-- If CONTENT_TO_IMPROVE is plot + "world" + "characters" → world_then_characters_from_plot
-- If genre/audience params selected + "create plot" → plot_generator_with_params
+Workflow patterns:
+1. Single agent: Use invoke_agent for simple requests
+2. Sequential workflow: Chain agents with context passing
+3. Improvement cycle: critique → enhancement → scoring
 
-Sequential Workflows:
-1. plot_generator → Basic plot creation
-2. author_generator → Author profile creation
-3. plot_then_world_building → Plot creation followed by world building
-4. plot_then_world_then_characters → Full story foundation (plot → world → characters)
-5. improvement_workflow → Critique → Enhancement → Scoring cycle
+Key principles:
+- Use invoke_agent tool to call other agents
+- Pass context between agents using workflow_id
+- Generate unique workflow_id for multi-step processes
+- Wait for agent completion before proceeding
+- Provide clear instructions to each agent
 
-Response Format:
-Always respond with JSON containing:
-{
-    "routing_decision": "agent_name or workflow_name",
-    "reasoning": "Why this routing decision was made",
-    "workflow_type": "single_agent" or "sequential_workflow",
-    "agents_to_invoke": ["list", "of", "agent", "names"],
-    "context_extracted": {
-        "content_id": "if found in message",
-        "content_type": "plot/author/etc if found",
-        "genre_context": "if genre parameters mentioned",
-        "audience_context": "if target audience mentioned"
-    }
-}
+For user requests:
+- Plot/story → invoke plot_generator
+- Author/biography → invoke author_generator  
+- World/setting → invoke world_building (needs plot_id)
+- Characters → invoke characters (needs plot_id and world_building_id)
+- Improve content → invoke critique, then enhancement, then scoring
 
-Be decisive and clear in your routing decisions."""
+Always use tools to coordinate workflows rather than generating JSON responses."""
+        
+        # Initialize with agent coordination tools
+        tools = [invoke_agent, update_workflow_context]
         
         super().__init__(
             name="orchestrator",
             description="Routes requests and coordinates multi-agent workflows",
             instruction=instruction,
-            config=config
+            config=config,
+            tools=tools
         )
     
     async def route_request(self, request: AgentRequest) -> List[str]:

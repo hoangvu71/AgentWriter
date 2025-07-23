@@ -224,228 +224,95 @@ class WebSocketHandler:
             }, client_id)
     
     async def _handle_agent_message(self, client_id: str, session_id: str, user_id: str, content: str, context: Dict[str, Any] = None):
-        """Handle a message that should be processed by the multi-agent system with structured context"""
+        """Handle a message using the new tool-based orchestrator approach"""
         try:
+            # Set session context for tools
+            from ..core.container import get_container
+            container = get_container()
+            container.set_session_context(session_id, user_id)
+            
             # Create agent request with structured context
             request = AgentRequest(
                 content=content,
                 user_id=user_id,
                 session_id=session_id,
-                context=context or {}  # Include structured context
+                context=context or {}
             )
             
-            # Get orchestrator agent
+            # Get orchestrator agent (now tool-enabled)
             orchestrator = self.agent_factory.create_agent("orchestrator")
             
             # Send orchestrator header
             await self.connection_manager.send_json({
                 "type": "stream_chunk",
-                "content": "\n[AI] Orchestrator:\n"
+                "content": "\n[AI] Orchestrator coordinating workflow...\n"
             }, client_id)
             
-            # Check for direct routing first (e.g., LoreGen)
-            agent_names = await orchestrator.route_request(request)
-            orchestrator_response = None
-            orchestrator_data = {}
+            # Let the orchestrator handle everything through tools
+            orchestrator_response = await orchestrator.process_request(request)
             
-            if agent_names == ['loregen']:
-                # Direct LoreGen routing - skip orchestrator reasoning
+            # Send orchestrator's reasoning and tool execution results
+            await self.connection_manager.send_json({
+                "type": "stream_chunk", 
+                "content": orchestrator_response.content
+            }, client_id)
+            
+            # If there were tool calls, show the results
+            if orchestrator_response.metadata and 'tool_calls' in orchestrator_response.metadata:
+                tool_calls = orchestrator_response.metadata['tool_calls']
+                
                 await self.connection_manager.send_json({
-                    "type": "stream_chunk", 
-                    "content": "LoreGen request detected - routing to RAG-based world building expansion.\n"
+                    "type": "workflow_complete",
+                    "tool_calls": tool_calls,
+                    "results": [tc.get('result', {}) for tc in tool_calls]
                 }, client_id)
-                orchestrator_decision = "LoreGen request detected - routing to RAG-based world building expansion."
+                
+                # Send success message
+                successful_tools = [tc for tc in tool_calls if tc.get('result', {}).get('success', False)]
+                if successful_tools:
+                    success_msg = f"\n✅ Successfully completed {len(successful_tools)} operations:\n"
+                    for tc in successful_tools:
+                        result = tc.get('result', {})
+                        success_msg += f"- {tc['tool']}: {result.get('message', 'Success')}\n"
+                    
+                    await self.connection_manager.send_json({
+                        "type": "stream_chunk",
+                        "content": success_msg
+                    }, client_id)
             else:
-                # Normal orchestrator processing with reasoning
-                orchestrator_response = await orchestrator.process_request(request)
-                
-                # Send orchestrator's reasoning
+                # Fallback for agents that don't use tools yet
                 await self.connection_manager.send_json({
-                    "type": "stream_chunk", 
-                    "content": orchestrator_response.content
+                    "type": "workflow_complete",
+                    "message": "Request processed successfully"
                 }, client_id)
-                
-                # Extract agent names from response if route_request didn't provide them
-                if orchestrator_response.parsed_json and "agents_to_invoke" in orchestrator_response.parsed_json:
-                    agent_names = orchestrator_response.parsed_json["agents_to_invoke"]
-                
-                orchestrator_decision = orchestrator_response.content if orchestrator_response.content else "Multi-agent workflow initiated"
-                orchestrator_data = orchestrator_response.parsed_json if orchestrator_response.parsed_json else {}
             
-            # Send routing information
-            await self.connection_manager.send_json({
-                "type": "workflow_start",
-                "agents_to_invoke": agent_names,
-                "orchestrator_decision": orchestrator_decision
-            }, client_id)
+            # Clear session context
+            container.clear_session_context()
             
-            # Save orchestrator decision to database using repository pattern
-            try:
-                if orchestrator_data:
-                    await self.session_repository.save_orchestrator_decision(
-                        session_id=session_id,
-                        user_id=user_id,
-                        decision_data=orchestrator_data
-                    )
-            except Exception as e:
-                self.logger.warning(f"Failed to save orchestrator decision: {e}")
-            
-            # Process through each agent with context passing
-            workflow_context = {}  # Track created IDs across agents to prevent race conditions
-            for agent_name in agent_names:
-                try:
-                    agent = self.agent_factory.create_agent(agent_name)
-                    
-                    # Send agent header
-                    await self.connection_manager.send_json({
-                        "type": "stream_chunk",
-                        "content": f"\n[AI] {agent.name.replace('_', ' ').title()}:\n"
-                    }, client_id)
-                    
-                    # LoreGen supports multiple cycles for iterative expansion
-                    if agent_name == "loregen":
-                        # Check if multiple cycles were requested
-                        cycles_requested = request.context.get('expansion_cycles', 1) if request.context else 1
-                        
-                        if cycles_requested > 1:
-                            await self.connection_manager.send_json({
-                                "type": "stream_chunk",
-                                "content": f"Running {cycles_requested} cycles of iterative expansion...\n\n"
-                            }, client_id)
-                        
-                        final_response = None
-                        for cycle in range(cycles_requested):
-                            if cycles_requested > 1:
-                                await self.connection_manager.send_json({
-                                    "type": "stream_chunk",
-                                    "content": f"--- Cycle {cycle + 1}/{cycles_requested} ---\n"
-                                }, client_id)
-                            
-                            response = await agent.process_request(request)
-                            final_response = response  # Keep the last response
-                            
-                            # Send cycle response content
-                            await self.connection_manager.send_json({
-                                "type": "stream_chunk",
-                                "content": response.content + "\n"
-                            }, client_id)
-                            
-                            if cycles_requested > 1 and cycle < cycles_requested - 1:
-                                await self.connection_manager.send_json({
-                                    "type": "stream_chunk",
-                                    "content": "Preparing next cycle...\n\n"
-                                }, client_id)
-                        
-                        # Send final structured response (from last cycle)
-                        if final_response and final_response.parsed_json:
-                            # Update the response to include cycle information
-                            final_json = final_response.parsed_json.copy()
-                            if cycles_requested > 1:
-                                final_json['total_cycles_completed'] = cycles_requested
-                                
-                            await self.connection_manager.send_json({
-                                "type": "structured_response",
-                                "agent": agent_name,
-                                "json_data": final_json,
-                                "raw_content": final_response.content
-                            }, client_id)
-                            
-                            # Save to database (only final result) with context passing
-                            try:
-                                created_context = await self._save_agent_response_to_database(
-                                    agent_name, 
-                                    final_json, 
-                                    session_id, 
-                                    user_id,
-                                    orchestrator_data,
-                                    workflow_context  # Pass accumulated context
-                                )
-                                # Update workflow context with newly created IDs
-                                workflow_context.update(created_context)
-                                
-                                await self.connection_manager.send_json({
-                                    "type": "database_saved",
-                                    "agent": agent_name,
-                                    "message": f"{agent_name.replace('_', ' ').title()} saved to database"
-                                }, client_id)
-                                
-                            except Exception as db_error:
-                                self.logger.error(f"Failed to save {agent_name} to database: {db_error}")
-                                await self.connection_manager.send_json({
-                                    "type": "database_error", 
-                                    "agent": agent_name,
-                                    "error": f"Failed to save to database: {str(db_error)}"
-                                }, client_id)
-                    
-                    else:
-                        # Process with streaming for other agents
-                        full_response = ""
-                        async for chunk in agent.process_request_streaming(request):
-                            if chunk.chunk:
-                                full_response += chunk.chunk
-                                await self.connection_manager.send_json({
-                                    "type": "stream_chunk",
-                                    "content": chunk.chunk
-                                }, client_id)
-                            
-                            if chunk.is_complete:
-                                # Try to extract structured data
-                                response = await agent.process_request(request)
-                                if response.parsed_json:
-                                    await self.connection_manager.send_json({
-                                        "type": "structured_response",
-                                        "agent": agent_name,
-                                        "json_data": response.parsed_json,
-                                        "raw_content": full_response
-                                    }, client_id)
-                                    
-                                    # Save to database with context passing
-                                    try:
-                                        created_context = await self._save_agent_response_to_database(
-                                            agent_name, 
-                                            response.parsed_json, 
-                                            session_id, 
-                                            user_id,
-                                            orchestrator_data,
-                                            workflow_context  # Pass accumulated context
-                                        )
-                                        # Update workflow context with newly created IDs
-                                        workflow_context.update(created_context)
-                                        
-                                        await self.connection_manager.send_json({
-                                            "type": "database_saved",
-                                            "agent": agent_name,
-                                            "message": f"{agent_name.replace('_', ' ').title()} saved to database"
-                                        }, client_id)
-                                        
-                                    except Exception as db_error:
-                                        self.logger.error(f"Failed to save {agent_name} to database: {db_error}")
-                                        await self.connection_manager.send_json({
-                                            "type": "database_error", 
-                                            "agent": agent_name,
-                                            "error": f"Failed to save to database: {str(db_error)}"
-                                        }, client_id)
-                                break
-                
-                except Exception as e:
-                    self.logger.error(f"Error processing with agent {agent_name}: {e}", error=e)
-                    await self.connection_manager.send_json({
-                        "type": "stream_chunk",
-                        "content": f"[ERROR] Failed to process with {agent_name}: {str(e)}\n\n"
-                    }, client_id)
-            
-            # Send completion signal
-            await self.connection_manager.send_json({
-                "type": "stream_end",
-                "workflow_completed": True
-            }, client_id)
+            # Legacy agent processing for backward compatibility
+            # TODO: Remove this once all agents are migrated to tools
+            # await self._handle_legacy_agent_processing(client_id, session_id, user_id, content, context)
             
         except Exception as e:
-            self.logger.error(f"Error in agent message handling: {e}", error=e)
+            self.logger.error(f"Error in tool-based agent processing: {e}", error=e)
             await self.connection_manager.send_json({
                 "type": "error",
-                "error": "Failed to process message through multi-agent system"
+                "error": f"Failed to process message: {str(e)}"
             }, client_id)
+            
+            # Clear session context on error
+            try:
+                from ..core.container import get_container
+                container = get_container()
+                container.clear_session_context()
+            except:
+                pass
+    
+    async def _handle_legacy_agent_processing(self, client_id: str, session_id: str, user_id: str, content: str, context: Dict[str, Any] = None):
+        """Legacy agent processing method - to be removed after full migration"""
+        # This method would contain the old loop-based agent processing
+        # For now, we'll skip it since the new tool-based approach should handle everything
+        pass
     
     async def _handle_search_message(self, client_id: str, session_id: str, user_id: str, content: str):
         """Handle a search request"""

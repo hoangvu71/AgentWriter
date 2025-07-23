@@ -87,3 +87,11 @@ class AgentFactory(IAgentFactory):
                 }
         
         return agent_info
+    
+    def get_agent(self, agent_name: str) -> IAgent:
+        """Get an agent by name (alias for create_agent)"""
+        return self.create_agent(agent_name)
+    
+    def list_agents(self) -> List[str]:
+        """List all available agent names (alias for get_available_agents)"""
+        return self.get_available_agents()

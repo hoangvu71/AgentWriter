@@ -6,6 +6,8 @@ from typing import Dict, Any
 from ..core.interfaces import ContentType
 from ..core.base_agent import BaseAgent
 from ..core.configuration import Configuration
+from ..core.persistence_strategies import AuthorPersistenceStrategy
+from ..tools.writing_tools import save_author
 
 
 class AuthorGeneratorAgent(BaseAgent):
@@ -26,14 +28,34 @@ Ensure the author:
 - Feels like a real person who could write in this genre
 - Has background that logically supports their expertise
 - Appeals to the target audience
-- Avoids stereotypes while maintaining authenticity"""
+- Avoids stereotypes while maintaining authenticity
+
+When you have generated a complete author profile, use the save_author tool to save it to the database.
+
+IMPORTANT: Always include session_id and user_id in your tool calls for proper data association.
+
+Use the save_author tool with these parameters:
+- author_name: Full name of the author
+- author_bio: Comprehensive biography
+- writing_style: Description of writing style and voice
+- session_id: Use the current session ID from context
+- user_id: Use the current user ID from context  
+- pen_name: Optional pen name or pseudonym
+- genres: Optional list of genres"""
+        
+        # Initialize with tools
+        tools = [save_author]
         
         super().__init__(
             name="author_generator",
             description="Creates detailed author profiles matching genre and audience specifications",
             instruction=base_instruction,
-            config=config
+            config=config,
+            tools=tools
         )
+        
+        # Set persistence strategy for author generation
+        self.set_persistence_strategy(AuthorPersistenceStrategy())
     
     def _get_content_type(self) -> ContentType:
         return ContentType.AUTHOR

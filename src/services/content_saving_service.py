@@ -248,13 +248,13 @@ class ContentSavingService:
             self.logger.error(f"Failed to save score data for iteration {iteration_id}: {e}")
             raise
     
-    async def save_agent_response(self, agent_name: str, response_data: Dict[str, Any], session_id: str, 
+    async def save_agent_response(self, agent, response_data: Dict[str, Any], session_id: str, 
                                 user_id: str, orchestrator_params: Dict[str, Any] = None) -> Optional[Dict[str, Any]]:
         """
-        Save agent response data based on agent type and content with context validation.
+        Save agent response data using the agent's persistence strategy.
         
         Args:
-            agent_name: Name of the agent
+            agent: Agent instance with persistence strategy
             response_data: Agent response data
             session_id: Session identifier
             user_id: User identifier
@@ -267,34 +267,35 @@ class ContentSavingService:
             ValueError: If required context is missing for the agent type
         """
         try:
-            if agent_name == "plot_generator":
-                return await self.save_plot_data(session_id, user_id, response_data, orchestrator_params)
-            elif agent_name == "author_generator":
-                return await self.save_author_data(session_id, user_id, response_data)
-            elif agent_name == "world_building":
-                # SECURITY FIX: Validate required context before proceeding
-                plot_id = orchestrator_params.get("plot_id") if orchestrator_params else None
-                if not plot_id:
-                    error_msg = f"Cannot save world_building data: missing plot_id in orchestrator_params for session {session_id}"
-                    self.logger.error(error_msg)
-                    raise ValueError("Cannot save world_building data: missing plot_id in context")
-                return await self.save_world_building_data(session_id, user_id, response_data, orchestrator_params, plot_id)
-            elif agent_name == "characters":
-                # SECURITY FIX: Validate required context before proceeding
-                world_id = orchestrator_params.get("world_id") if orchestrator_params else None
-                plot_id = orchestrator_params.get("plot_id") if orchestrator_params else None
-                if not plot_id:
-                    error_msg = f"Cannot save characters data: missing plot_id in orchestrator_params for session {session_id}"
-                    self.logger.error(error_msg)
-                    raise ValueError("Cannot save characters data: missing plot_id in context")
-                if not world_id:
-                    error_msg = f"Cannot save characters data: missing world_id in orchestrator_params for session {session_id}"
-                    self.logger.error(error_msg)
-                    raise ValueError("Cannot save characters data: missing world_id in context")
-                return await self.save_characters_data(session_id, user_id, response_data, orchestrator_params, world_id, plot_id)
+            # Get agent's persistence strategy
+            persistence_strategy = agent.get_persistence_strategy()
+            
+            # Prepare repositories dictionary
+            repositories = {
+                "plot_repository": self.plot_repository,
+                "author_repository": self.author_repository,
+                "world_building_repository": self.world_building_repository,
+                "characters_repository": self.characters_repository,
+                "session_repository": self.session_repository,
+                "iterative_repository": self.iterative_repository
+            }
+            
+            # Use strategy to save data
+            result = await persistence_strategy.save(
+                response_data=response_data,
+                session_id=session_id,
+                user_id=user_id,
+                repositories=repositories,
+                orchestrator_params=orchestrator_params
+            )
+            
+            if result:
+                self.logger.info(f"Successfully saved {agent.name} response using {persistence_strategy.__class__.__name__}")
             else:
-                self.logger.info(f"No specific save logic for agent: {agent_name}")
-                return None
+                self.logger.info(f"No persistence required for {agent.name}")
+            
+            return result
+            
         except Exception as e:
-            self.logger.error(f"Failed to save response for agent {agent_name}: {e}")
+            self.logger.error(f"Failed to save response for agent {agent.name}: {e}")
             raise

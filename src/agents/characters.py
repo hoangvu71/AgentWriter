@@ -6,6 +6,8 @@ from typing import Dict, Any
 from ..core.interfaces import ContentType
 from ..core.base_agent import BaseAgent
 from ..core.configuration import Configuration
+from ..core.persistence_strategies import CharactersPersistenceStrategy
+from ..tools.writing_tools import save_characters, get_plot
 
 
 class CharactersAgent(BaseAgent):
@@ -36,14 +38,35 @@ World integration:
 - Match world's cultural values and hierarchies
 - Skills/occupations fit the economy
 - Power access follows established rules
-- Relationships reflect political/social tensions"""
+- Relationships reflect political/social tensions
+
+When provided with plot_id and world_building_id, use get_plot tool to retrieve context first.
+When you have created a complete character population, use save_characters tool to save it.
+
+IMPORTANT: Always include session_id and user_id in your tool calls for proper data association.
+
+Use the save_characters tool with these parameters:
+- character_count: Number of characters being created
+- world_context_integration: How characters fit the world
+- characters: Detailed character profiles (JSON object)
+- session_id: Use the current session ID from context
+- user_id: Use the current user ID from context
+- relationship_networks: Character relationships and connections
+- character_dynamics: How characters interact and influence each other
+        
+        # Initialize with tools
+        tools = [save_characters, get_plot]
         
         super().__init__(
             name="characters",
             description="Creates detailed character populations with relationships and development arcs",
             instruction=base_instruction,
-            config=config
+            config=config,
+            tools=tools
         )
+        
+        # Set persistence strategy for characters
+        self.set_persistence_strategy(CharactersPersistenceStrategy())
     
     def _get_content_type(self) -> ContentType:
         return ContentType.CHARACTERS

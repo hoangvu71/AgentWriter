@@ -19,6 +19,10 @@ class ServiceContainer:
         self._factories: Dict[str, Callable[[], Any]] = {}
         self._singletons: Dict[str, Any] = {}
         
+        # Session context for tool usage
+        self._current_session_id: Optional[str] = None
+        self._current_user_id: Optional[str] = None
+        
         # Register core services
         self._register_core_services()
         
@@ -50,6 +54,9 @@ class ServiceContainer:
         
         # Content saving service
         self.register_singleton("content_saving_service", self._create_content_saving_service)
+        
+        # Agent factory
+        self.register_singleton("agent_factory", self._create_agent_factory)
     
     def _create_database_adapter(self):
         """Create database adapter instance with consistent behavior"""
@@ -128,6 +135,12 @@ class ServiceContainer:
             iterative_repository=self.get("iterative_repository")
         )
     
+    def _create_agent_factory(self):
+        """Create agent factory instance"""
+        from ..agents.agent_factory import AgentFactory
+        config = self.get("config")
+        return AgentFactory(config)
+    
     def register_singleton(self, name: str, factory: Callable[[], T]) -> None:
         """Register a singleton service"""
         self._factories[name] = factory
@@ -157,7 +170,8 @@ class ServiceContainer:
             # For singletons, cache the result
             if name in ["config", "validator", "database", "plot_repository", "author_repository", 
                        "world_building_repository", "characters_repository", "session_repository", 
-                       "orchestrator_repository", "iterative_repository", "content_saving_service"]:  # Known singletons
+                       "orchestrator_repository", "iterative_repository", "content_saving_service",
+                       "agent_factory"]:  # Known singletons
                 instance = factory()
                 self._singletons[name] = instance
                 return instance
@@ -203,9 +217,55 @@ class ServiceContainer:
         self._services.clear()
         self._factories.clear()
         self._singletons.clear()
+        self._current_session_id = None
+        self._current_user_id = None
         self._register_core_services()
         self._validate_core_services()
+    
+    def set_session_context(self, session_id: str, user_id: str) -> None:
+        """Set current session context for tools"""
+        self._current_session_id = session_id
+        self._current_user_id = user_id
+    
+    def get_current_session_id(self) -> Optional[str]:
+        """Get current session ID"""
+        return self._current_session_id
+    
+    def get_current_user_id(self) -> Optional[str]:
+        """Get current user ID"""
+        return self._current_user_id
+    
+    def clear_session_context(self) -> None:
+        """Clear session context"""
+        self._current_session_id = None
+        self._current_user_id = None
+    
+    # Convenience methods for common services
+    def plot_repository(self):
+        """Get plot repository instance"""
+        return self.get("plot_repository")
+    
+    def author_repository(self):
+        """Get author repository instance"""
+        return self.get("author_repository")
+    
+    def world_building_repository(self):
+        """Get world building repository instance"""
+        return self.get("world_building_repository")
+    
+    def characters_repository(self):
+        """Get characters repository instance"""
+        return self.get("characters_repository")
+    
+    def agent_factory(self):
+        """Get agent factory instance"""
+        return self.get("agent_factory")
 
 
 # Global container instance
 container = ServiceContainer()
+
+
+def get_container() -> ServiceContainer:
+    """Get the global container instance"""
+    return container

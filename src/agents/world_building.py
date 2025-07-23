@@ -6,6 +6,8 @@ from typing import Dict, Any
 from ..core.interfaces import ContentType
 from ..core.base_agent import BaseAgent
 from ..core.configuration import Configuration
+from ..core.persistence_strategies import WorldBuildingPersistenceStrategy
+from ..tools.writing_tools import save_world_building, get_plot
 
 
 class WorldBuildingAgent(BaseAgent):
@@ -21,14 +23,34 @@ Generate:
 - World type (high_fantasy, urban_fantasy, science_fiction, historical_fiction, contemporary, dystopian, other)
 - Complete world content as a single comprehensive piece
 
-Create the world content with whatever structure, depth, and detail serves the story best. Let the genre and plot context guide you - some worlds need vast histories and countless locations, others need focused contemporary settings. Build exactly what the story needs."""
+Create the world content with whatever structure, depth, and detail serves the story best. Let the genre and plot context guide you - some worlds need vast histories and countless locations, others need focused contemporary settings. Build exactly what the story needs.
+
+When provided with a plot_id, use get_plot tool to retrieve plot context first.
+When you have created a complete world, use save_world_building tool to save it to the database.
+
+IMPORTANT: Always include session_id and user_id in your tool calls for proper data association.
+
+Use the save_world_building tool with these parameters:
+- world_name: Compelling world name fitting the genre
+- world_content: Complete world building content 
+- session_id: Use the current session ID from context
+- user_id: Use the current user ID from context
+- plot_id: Associated plot ID if provided
+- world_type: Type of world (high_fantasy, urban_fantasy, etc.)
+        
+        # Initialize with tools
+        tools = [save_world_building, get_plot]
         
         super().__init__(
             name="world_building",
             description="Creates intricate fictional worlds with detailed geography, politics, culture, and systems",
             instruction=base_instruction,
-            config=config
+            config=config,
+            tools=tools
         )
+        
+        # Set persistence strategy for world building
+        self.set_persistence_strategy(WorldBuildingPersistenceStrategy())
     
     def _get_content_type(self) -> ContentType:
         return ContentType.WORLD_BUILDING
