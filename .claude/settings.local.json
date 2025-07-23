@@ -71,7 +71,9 @@
       "Bash(scriptsdevkill_port_8000.bat)",
       "Bash(ping:*)",
       "Bash(dir local_database.db)",
-      "Bash(dir development.db)"
+      "Bash(dir development.db)",
+      "Bash(cd \"C:\\Users\\hoang\\Documents\\BooksWriter\")",
+      "Bash(repomix)"
     ],
     "deny": []
   }
