@@ -252,4 +252,3 @@ if (typeof window !== 'undefined') {
     window.apiService = apiService;
 }
 
-export default apiService;

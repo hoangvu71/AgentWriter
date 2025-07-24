@@ -284,9 +284,7 @@ class WebSocketService {
 // Create singleton instance
 const webSocketService = new WebSocketService();
 
-// Export for ES6 modules and global access
+// Export for global access only (not using ES6 modules)
 if (typeof window !== 'undefined') {
     window.webSocketService = webSocketService;
 }
-
-export default webSocketService;

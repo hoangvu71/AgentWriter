@@ -368,4 +368,3 @@ if (typeof window !== 'undefined') {
     window.stateManager = stateManager;
 }
 
-export default stateManager;

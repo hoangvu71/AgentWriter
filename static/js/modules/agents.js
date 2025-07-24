@@ -586,4 +586,3 @@ if (typeof window !== 'undefined') {
     window.agentManager = agentManager;
 }
 
-export default agentManager;

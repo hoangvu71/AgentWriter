@@ -201,9 +201,7 @@ class ThemeManager {
 // Create singleton instance
 const themeManager = new ThemeManager();
 
-// Export for ES6 modules and global access
+// Export for global access only (not using ES6 modules)
 if (typeof window !== 'undefined') {
     window.themeManager = themeManager;
 }
-
-export default themeManager;

@@ -724,4 +724,3 @@ if (typeof window !== 'undefined') {
     window.uiManager = uiManager;
 }
 
-export default uiManager;
