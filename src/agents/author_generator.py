@@ -6,7 +6,6 @@ from typing import Dict, Any
 from ..core.interfaces import ContentType
 from ..core.base_agent import BaseAgent
 from ..core.configuration import Configuration
-from ..core.persistence_strategies import AuthorPersistenceStrategy
 from ..tools.writing_tools import save_author
 
 
@@ -54,8 +53,6 @@ Use the save_author tool with these parameters:
             tools=tools
         )
         
-        # Set persistence strategy for author generation
-        self.set_persistence_strategy(AuthorPersistenceStrategy())
     
     def _get_content_type(self) -> ContentType:
         return ContentType.AUTHOR

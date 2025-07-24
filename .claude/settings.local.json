@@ -86,7 +86,11 @@
       "Bash(find . -name \"__pycache__\" -type d)",
       "Bash(find . -name \"*.tmp\" -o -name \"*.log\" -o -name \".DS_Store\" -type f)",
       "Bash(find . -name \"*.log\" -not -path \"./venv/*\" -not -path \"./.git/*\")",
-      "Bash(git commit -m \"$(cat <<''EOF''\nComplete removal of legacy files and temporary artifacts\n\nRemoved:\n- Legacy JavaScript files from backup directory\n- Deprecated documentation files (COMPLETE_AGENT_ECOSYSTEM.md, etc.)\n- Temporary test HTML files and modules\n- Old database file (local_database.db)\n- Previous repomix output file\n- Old cleanup script replaced by enhanced version\n- Python cache directories (__pycache__)\n\nThis cleanup maintains only active, production-ready files while preserving\nthe enhanced modular architecture and configurable cleanup system.\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nComplete removal of legacy files and temporary artifacts\n\nRemoved:\n- Legacy JavaScript files from backup directory\n- Deprecated documentation files (COMPLETE_AGENT_ECOSYSTEM.md, etc.)\n- Temporary test HTML files and modules\n- Old database file (local_database.db)\n- Previous repomix output file\n- Old cleanup script replaced by enhanced version\n- Python cache directories (__pycache__)\n\nThis cleanup maintains only active, production-ready files while preserving\nthe enhanced modular architecture and configurable cleanup system.\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(repomix --output project-summary.xml)",
+      "Bash(npx repomix:*)",
+      "Bash(venvScriptspython.exe:*)",
+      "Bash(.\\venv\\Scripts\\activate)"
     ],
     "deny": []
   }

@@ -6,7 +6,6 @@ from typing import Dict, Any
 from ..core.interfaces import ContentType
 from ..core.base_agent import BaseAgent
 from ..core.configuration import Configuration
-from ..core.persistence_strategies import WorldBuildingPersistenceStrategy
 from ..tools.writing_tools import save_world_building, get_plot
 
 
@@ -37,6 +36,7 @@ Use the save_world_building tool with these parameters:
 - user_id: Use the current user ID from context
 - plot_id: Associated plot ID if provided
 - world_type: Type of world (high_fantasy, urban_fantasy, etc.)
+"""
         
         # Initialize with tools
         tools = [save_world_building, get_plot]
@@ -49,8 +49,6 @@ Use the save_world_building tool with these parameters:
             tools=tools
         )
         
-        # Set persistence strategy for world building
-        self.set_persistence_strategy(WorldBuildingPersistenceStrategy())
     
     def _get_content_type(self) -> ContentType:
         return ContentType.WORLD_BUILDING

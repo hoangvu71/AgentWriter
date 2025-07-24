@@ -34,3 +34,6 @@ sentence-transformers==2.2.2
 
 # Development
 python-dotenv==1.0.0
+
+# Observability
+opentelemetry-exporter-otlp==1.35.0

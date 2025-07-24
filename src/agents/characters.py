@@ -6,7 +6,6 @@ from typing import Dict, Any
 from ..core.interfaces import ContentType
 from ..core.base_agent import BaseAgent
 from ..core.configuration import Configuration
-from ..core.persistence_strategies import CharactersPersistenceStrategy
 from ..tools.writing_tools import save_characters, get_plot
 
 
@@ -53,6 +52,7 @@ Use the save_characters tool with these parameters:
 - user_id: Use the current user ID from context
 - relationship_networks: Character relationships and connections
 - character_dynamics: How characters interact and influence each other
+"""
         
         # Initialize with tools
         tools = [save_characters, get_plot]
@@ -65,8 +65,6 @@ Use the save_characters tool with these parameters:
             tools=tools
         )
         
-        # Set persistence strategy for characters
-        self.set_persistence_strategy(CharactersPersistenceStrategy())
     
     def _get_content_type(self) -> ContentType:
         return ContentType.CHARACTERS

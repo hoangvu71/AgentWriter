@@ -6,7 +6,6 @@ from typing import Dict, Any
 from ..core.interfaces import ContentType
 from ..core.base_agent import BaseAgent
 from ..core.configuration import Configuration
-from ..core.persistence_strategies import PlotPersistenceStrategy
 from ..tools.writing_tools import save_plot
 
 
@@ -54,8 +53,6 @@ Use the save_plot tool with these parameters:
             tools=tools
         )
         
-        # Set persistence strategy for plot generation
-        self.set_persistence_strategy(PlotPersistenceStrategy())
     
     def _get_content_type(self) -> ContentType:
         return ContentType.PLOT

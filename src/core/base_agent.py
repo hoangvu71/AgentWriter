@@ -13,7 +13,6 @@ from .interfaces import IAgent, AgentRequest, AgentResponse, StreamChunk, Conten
 from .configuration import Configuration
 from .logging import get_logger
 from .schema_service import schema_service
-from .persistence_strategies import PersistenceStrategy, NoOpPersistenceStrategy
 from .adk_services import get_adk_service_factory
 from .conversation_manager import get_conversation_manager
 from .observability import initialize_observability
@@ -59,8 +58,6 @@ class BaseAgent(IAgent):
         self._observability = initialize_observability()
         self._agent_tracker = get_agent_tracker()
         
-        # Initialize persistence strategy (default to no-op, override in subclasses)
-        self._persistence_strategy = NoOpPersistenceStrategy()
     
     def _generate_dynamic_instruction(self) -> str:
         """Generate instruction with dynamic schema based on database structure"""
@@ -532,14 +529,6 @@ class BaseAgent(IAgent):
                 self._logger.error(f"Failed to create session: {e}")
                 raise  # Don't continue without session - it's required
     
-    def get_persistence_strategy(self) -> PersistenceStrategy:
-        """Get the persistence strategy for this agent"""
-        return self._persistence_strategy
-    
-    def set_persistence_strategy(self, strategy: PersistenceStrategy) -> None:
-        """Set the persistence strategy for this agent"""
-        self._persistence_strategy = strategy
-        self._logger.info(f"Set persistence strategy to {strategy.__class__.__name__}")
     
     async def _save_interaction_to_memory(self, request: AgentRequest, tool_calls: List[Dict], response_content: str) -> None:
         """Save interaction to ADK memory service for conversation continuity"""

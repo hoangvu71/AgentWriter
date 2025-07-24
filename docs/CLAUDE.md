@@ -577,8 +577,7 @@ BooksWriter/
 │       │   ├── ui.js           # DOM manipulation & UI components
 │       │   ├── agents.js       # Agent system & workflow visualization
 │       │   └── theme.js        # Theme management
-│       ├── chat-enhanced.js     # Enhanced chat application
-│       └── chat-modular.js      # Basic modular chat (legacy)
+│       └── chat-enhanced.js     # Enhanced chat application
 ├── docs/                  # Documentation
 │   ├── CLAUDE.md         # This file - AI instructions
 │   ├── SETUP_GUIDE.md    # Consolidated setup instructions
