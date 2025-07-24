@@ -111,6 +111,7 @@ class EnhancedChatApplication {
         stateManager.subscribe('allAudiences', () => this.populateAudienceDropdown());
         stateManager.subscribe('availableContent', () => this.populateContentDropdown());
         stateManager.subscribe('currentModel', () => this.updateModelDisplay());
+        stateManager.subscribe('availableModels', () => this.updateModelDisplay());
 
         // Subscribe to workflow changes
         stateManager.subscribe('currentWorkflow', (workflow) => {
@@ -338,7 +339,7 @@ class EnhancedChatApplication {
         try {
             // Load models
             const modelsResult = await apiService.loadModels();
-            if (modelsResult.success) {
+            if (modelsResult.success && modelsResult.data) {
                 stateManager.setModelData(
                     modelsResult.data.current_model,
                     modelsResult.data.available_models
