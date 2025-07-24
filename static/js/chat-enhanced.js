@@ -334,16 +334,23 @@ class EnhancedChatApplication {
      * Load initial data from APIs
      */
     async loadInitialData() {
+        console.log('Starting loadInitialData...');
         stateManager.set('loading', true);
 
         try {
             // Load models
+            console.log('Loading models...');
             const modelsResult = await apiService.loadModels();
+            console.log('Models result:', modelsResult);
+            
             if (modelsResult.success && modelsResult.data) {
+                console.log('Setting model data:', modelsResult.data.current_model, modelsResult.data.available_models);
                 stateManager.setModelData(
                     modelsResult.data.current_model,
                     modelsResult.data.available_models
                 );
+            } else {
+                console.error('Models result unsuccessful or missing data');
             }
 
             // Load parameters
@@ -699,12 +706,19 @@ class EnhancedChatApplication {
     }
 
     updateModelDisplay() {
+        console.log('updateModelDisplay called');
         const currentModel = stateManager.get('currentModel');
         const availableModels = stateManager.get('availableModels');
         
+        console.log('Current model:', currentModel);
+        console.log('Available models:', availableModels);
+        
         if (currentModel && availableModels) {
+            console.log('Updating UI with model data');
             uiManager.updateModelSelector(currentModel, availableModels);
             uiManager.updateModelInfo(currentModel, availableModels);
+        } else {
+            console.log('Missing model data - currentModel:', !!currentModel, 'availableModels:', !!availableModels);
         }
     }
 

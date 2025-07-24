@@ -273,7 +273,11 @@ class UIManager {
      */
     updateModelSelector(currentModel, availableModels) {
         const select = this.getElement('modelSelect');
-        if (!select) return;
+        console.log('updateModelSelector - select element:', select);
+        if (!select) {
+            console.error('Model select element not found!');
+            return;
+        }
 
         select.innerHTML = '';
         
