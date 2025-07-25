@@ -133,14 +133,18 @@ class ContentSavingService:
         container = get_container()
         container.set_session_context(session_id, user_id)
         
-        # Call the tool function
+        # Call the tool function with correct parameters matching save_world_building interface
         result = save_world_building(
             world_name=response_data.get("world_name", ""),
-            world_content=response_data.get("world_content", ""),
+            description=response_data.get("world_content", ""),  # Tool expects 'description', not 'world_content'
+            plot_id=plot_id,
             session_id=session_id,
             user_id=user_id,
-            plot_id=plot_id,
-            world_type=response_data.get("world_type")
+            geography=response_data.get("geography"),
+            culture=response_data.get("culture"),
+            history=response_data.get("history"),
+            magic_system=response_data.get("magic_system"),
+            technology=response_data.get("technology")
         )
         
         return result
@@ -164,17 +168,13 @@ class ContentSavingService:
         container = get_container()
         container.set_session_context(session_id, user_id)
         
-        # Call the tool function
+        # Call the tool function with correct parameters matching save_characters interface
         result = save_characters(
-            character_count=response_data.get("character_count", 0),
-            world_context_integration=response_data.get("world_context_integration", ""),
+            plot_id=plot_id,
+            world_building_id=world_id,
             characters=response_data.get("characters", []),
             session_id=session_id,
-            user_id=user_id,
-            plot_id=plot_id,
-            world_id=world_id,
-            relationship_networks=response_data.get("relationship_networks"),
-            character_dynamics=response_data.get("character_dynamics")
+            user_id=user_id
         )
         
         return result

@@ -6,15 +6,17 @@ Aligned with actual Supabase schema.
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from .base_repository import BaseRepository
+from .batch_operations import BatchOperationsMixin
 from ..models.entities import Plot
 from ..database.supabase_adapter import SupabaseAdapter
 
 
 class PlotRepository(BaseRepository[Plot]):
-    """Repository for plot operations using actual Supabase schema"""
+    """Repository for plot operations using actual Supabase schema with batch operations"""
     
     def __init__(self, database: SupabaseAdapter):
         super().__init__(database, "plots")
+        self.batch_ops = BatchOperationsMixin(database, "plots")
     
     def _serialize(self, plot: Plot) -> Dict[str, Any]:
         """Convert plot entity to database format matching actual schema"""
@@ -54,6 +56,18 @@ class PlotRepository(BaseRepository[Plot]):
             updated_at=self._parse_datetime(data.get("updated_at"))
         )
     
+    async def create(self, entity: Plot) -> str:
+        """Override create to use specialized save_plot method"""
+        try:
+            self._logger.info(f"Creating plot: {entity.title}")
+            
+            # Use the specialized save_plot method that handles session UUID conversion
+            return await self._database.save_plot(self._serialize(entity))
+            
+        except Exception as e:
+            self._logger.error(f"Error creating plot: {e}", error=e)
+            raise
+    
     
     async def get_by_user_external(self, external_user_id: str, limit: int = 50) -> List[Plot]:
         """Get all plots for a user using external user_id (not UUID)"""
@@ -63,6 +77,68 @@ class PlotRepository(BaseRepository[Plot]):
             return [self._deserialize(plot_data) for plot_data in raw_plots]
         except Exception as e:
             self._logger.error(f"Error getting plots for user {external_user_id}: {e}", error=e)
+            raise
+    
+    async def get_plots_with_authors_batch(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get plots with their authors using batch operations to avoid N+1 queries"""
+        try:
+            # Get all plots for user
+            plots_data = await self._database.get_plots_by_user(user_id, limit)
+            if not plots_data:
+                return []
+            
+            # Extract unique author IDs
+            author_ids = list(set([plot.get("author_id") for plot in plots_data if plot.get("author_id")]))
+            
+            # Batch get all authors
+            authors_data = []
+            if author_ids:
+                authors_data = await self.batch_ops.batch_get_by_ids(author_ids)
+            
+            # Create author lookup map
+            author_map = {author['id']: author for author in authors_data}
+            
+            # Combine plots with authors
+            enriched_plots = []
+            for plot_data in plots_data:
+                author_id = plot_data.get("author_id")
+                if author_id and author_id in author_map:
+                    plot_data['author'] = author_map[author_id]
+                enriched_plots.append(plot_data)
+            
+            return enriched_plots
+            
+        except Exception as e:
+            self._logger.error(f"Error getting plots with authors batch: {e}", error=e)
+            raise
+    
+    async def create_multiple_plots(self, plots: List[Plot]) -> List[str]:
+        """Create multiple plots efficiently using batch operations"""
+        try:
+            # Use batch operations for better performance
+            return await self.batch_ops.batch_create(plots)
+        except Exception as e:
+            self._logger.error(f"Error creating multiple plots: {e}", error=e)
+            raise
+    
+    async def search_plots_with_related_data(
+        self, 
+        criteria: Dict[str, Any], 
+        include_authors: bool = False,
+        limit: int = 50,
+        offset: int = 0
+    ) -> Dict[str, Any]:
+        """Search plots with optional related data and pagination"""
+        try:
+            related_tables = []
+            if include_authors:
+                related_tables.append("authors")
+            
+            return await self.batch_ops.search_with_pagination_and_related(
+                criteria, related_tables, limit, offset
+            )
+        except Exception as e:
+            self._logger.error(f"Error searching plots with related data: {e}", error=e)
             raise
     
     async def get_by_session_external(self, external_session_id: str) -> List[Plot]:

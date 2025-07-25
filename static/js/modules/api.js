@@ -9,23 +9,43 @@ class APIService {
     }
 
     /**
-     * Generic fetch wrapper with error handling
+     * Generic fetch wrapper with error handling and security
      */
     async fetchJSON(url, options = {}) {
         try {
-            const response = await fetch(url, {
-                headers: {
+            // Use security service for secure fetch if available
+            if (window.securityService) {
+                const secureHeaders = window.securityService.addCSRFToHeaders({
                     'Content-Type': 'application/json',
                     ...options.headers
-                },
-                ...options
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                });
+                
+                const response = await window.securityService.secureFetch(url, {
+                    headers: secureHeaders,
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } else {
+                // Fallback to regular fetch
+                const response = await fetch(url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
             }
-            
-            return await response.json();
         } catch (error) {
             console.error(`API Error for ${url}:`, error);
             throw error;

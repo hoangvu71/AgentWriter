@@ -377,7 +377,7 @@ The project follows Test-Driven Development (TDD) principles:
 ## 📚 Documentation
 
 - **📖 `docs/database_documentation.md`** - Complete database schema and API reference
-- **⚙️ `docs/setup_documentation.md`** - Detailed setup and configuration guide
+- **⚙️ `docs/SETUP_GUIDE.md`** - Detailed setup and configuration guide
 - **🔄 `migrations/README.md`** - Database migration system guide
 
 ## Contributing

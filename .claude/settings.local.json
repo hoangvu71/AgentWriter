@@ -90,7 +90,21 @@
       "Bash(repomix --output project-summary.xml)",
       "Bash(npx repomix:*)",
       "Bash(venvScriptspython.exe:*)",
-      "Bash(.\\venv\\Scripts\\activate)"
+      "Bash(.\\venv\\Scripts\\activate)",
+      "Bash(for file in api.js state.js ui.js agents.js)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(done)",
+      "Bash(dir:*)",
+      "WebFetch(domain:cdn.jsdelivr.net)",
+      "Bash(git reset:*)",
+      "Bash(node:*)",
+      "Bash(python -c \"\nimport os\nimport asyncio\n\n# Set required environment variables\nos.environ[''GOOGLE_CLOUD_PROJECT''] = ''test-project''\nos.environ[''GOOGLE_CLOUD_LOCATION''] = ''us-central1''\n\nasync def test_app():\n    try:\n        print(''[INFO] Testing app after security fixes...'')\n        \n        # Test app creation\n        from src.app import create_app\n        app = create_app()\n        print(''[OK] App created successfully'')\n        \n        # Test home route  \n        from src.app import get_home\n        response = await get_home()\n        content = response.body.decode(''utf-8'')\n        \n        # Check CSP\n        if ''unsafe-inline'' in content:\n            print(''[OK] CSP updated with unsafe-inline'')\n        else:\n            print(''[WARNING] CSP might not be updated'')\n            \n        # Check DOMPurify\n        if ''dompurify@3.0.8'' in content and ''integrity='' not in content:\n            print(''[OK] DOMPurify script tag fixed (no integrity hash)'')\n        else:\n            print(''[WARNING] DOMPurify script tag might have issues'')\n            \n        # Check models endpoint\n        from src.routers.models import get_available_models\n        models = await get_available_models()\n        print(f''[OK] Models endpoint: {len(models.get(\"\"available_models\"\", {}))} models'')\n        \n        print(''[SUCCESS] All fixes appear to be working!'')\n        \n    except Exception as e:\n        print(f''[ERROR] Test failed: {e}'')\n        import traceback\n        traceback.print_exc()\n\nasyncio.run(test_app())\n\")",
+      "WebFetch(domain:github.com)",
+      "Bash(npx @supabase/mcp-server-supabase@latest:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(set SUPABASE_URL=https://cfqgzbudjnvtyxrrvvmo.supabase.co)",
+      "Bash(set:*)",
+      "Bash(where:*)"
     ],
     "deny": []
   }

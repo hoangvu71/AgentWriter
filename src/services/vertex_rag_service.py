@@ -127,42 +127,6 @@ class VertexRAGService:
         self.logger.info(f"Created {len(enriched_chunks)} semantic chunks")
         return enriched_chunks
     
-    async def import_chunks_to_corpus(
-        self,
-        corpus_name: str,
-        chunks: List[Dict[str, Any]]
-    ) -> bool:
-        """
-        Import chunks to Vertex AI RAG corpus with chunking configuration.
-        """
-        try:
-            # Convert chunks to text files for import
-            # (In production, this would use Google Cloud Storage)
-            chunk_texts = [chunk['text'] for chunk in chunks]
-            
-            # Configure chunking (confirmed parameters from research)
-            transformation_config = rag.TransformationConfig(
-                chunking_config=rag.ChunkingConfig(
-                    chunk_size=512,    # Confirmed from research
-                    chunk_overlap=100  # Confirmed from research
-                )
-            )
-            
-            # Import files to corpus
-            # Note: In real implementation, chunks would be written to GCS first
-            operation = rag.import_files(
-                corpus_name,
-                paths=chunk_texts,  # Would be GCS paths in production
-                transformation_config=transformation_config,
-                max_embedding_requests_per_min=1000  # QPM rate from research
-            )
-            
-            self.logger.info(f"Imported {len(chunks)} chunks to corpus {corpus_name}")
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Failed to import chunks to corpus {corpus_name}: {e}")
-            return False
     
     async def query_corpus(
         self,

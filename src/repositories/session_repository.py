@@ -42,20 +42,20 @@ class SessionRepository:
             }
             
             # Get data from each table
-            plots = await self._database.select("plots", filters={"session_id": session_id})
-            authors = await self._database.select("authors", filters={"session_id": session_id})
-            world_building = await self._database.select("world_building", filters={"session_id": session_id})
-            characters = await self._database.select("characters", filters={"session_id": session_id})
-            orchestrator_decisions = await self._database.select("orchestrator_decisions", filters={"session_id": session_id})
+            plots = await self._database.search("plots", criteria={"session_id": session_id})
+            authors = await self._database.search("authors", criteria={"session_id": session_id})
+            world_building = await self._database.search("world_building", criteria={"session_id": session_id})
+            characters = await self._database.search("characters", criteria={"session_id": session_id})
+            orchestrator_decisions = await self._database.search("orchestrator_decisions", criteria={"session_id": session_id})
             
             # Get iterative improvement data
             # Note: These tables are keyed by iteration_id, need to join through plots/content
             if plots:
                 plot_ids = [plot.get("id") for plot in plots]
                 for plot_id in plot_ids:
-                    critiques = await self._database.select("critiques", filters={"iteration_id": f"plot_{plot_id}"})
-                    enhancements = await self._database.select("enhancements", filters={"iteration_id": f"plot_{plot_id}"})
-                    scores = await self._database.select("scores", filters={"iteration_id": f"plot_{plot_id}"})
+                    critiques = await self._database.search("critiques", criteria={"iteration_id": f"plot_{plot_id}"})
+                    enhancements = await self._database.search("enhancements", criteria={"iteration_id": f"plot_{plot_id}"})
+                    scores = await self._database.search("scores", criteria={"iteration_id": f"plot_{plot_id}"})
                     
                     session_data["critiques"].extend(critiques)
                     session_data["enhancements"].extend(enhancements)
@@ -157,11 +157,9 @@ class SessionRepository:
         """
         try:
             # Query plots table to get unique sessions (most common content type)
-            plots = await self._database.select(
+            plots = await self._database.search(
                 "plots",
-                columns=["session_id", "user_id", "created_at"],
-                order_by="created_at",
-                desc=True,
+                criteria={},  # Get all plots
                 limit=limit * 2  # Get more records to ensure enough unique sessions
             )
             
@@ -301,6 +299,92 @@ class SessionRepository:
             self._logger.error(f"Error in delete session {session_id}: {e}", error=e)
             raise
     
+    async def ensure_session_exists(self, session_id: str, user_id: str) -> Dict[str, Any]:
+        """
+        Ensure a session exists in the database, create if it doesn't.
+        
+        Args:
+            session_id: Session identifier
+            user_id: User identifier
+            
+        Returns:
+            Dictionary containing session information
+        """
+        try:
+            # Check if session exists
+            existing_sessions = await self._database.search(
+                "sessions", 
+                criteria={"session_id": session_id}
+            )
+            
+            if existing_sessions:
+                self._logger.debug(f"Session {session_id} already exists")
+                return existing_sessions[0]
+            
+            # Ensure user exists first (foreign key requirement) and get their UUID
+            user_data = await self._ensure_user_exists(user_id)
+            user_uuid = user_data["id"]  # Get the actual UUID for foreign key
+            
+            # Create new session
+            session_data = {
+                "session_id": session_id,    # external session identifier
+                "user_id": user_uuid,        # internal user UUID for foreign key
+                "created_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.utcnow().isoformat()
+            }
+            
+            session_record_id = await self._database.insert("sessions", session_data)
+            self._logger.info(f"Created new session {session_id} for user {user_id}")
+            
+            return {
+                "id": session_record_id,
+                **session_data
+            }
+            
+        except Exception as e:
+            self._logger.error(f"Error ensuring session exists {session_id}: {e}", error=e)
+            raise
+    
+    async def _ensure_user_exists(self, user_id: str) -> Dict[str, Any]:
+        """
+        Ensure a user exists in the database, create if it doesn't.
+        
+        Args:
+            user_id: User identifier
+            
+        Returns:
+            Dictionary containing user information
+        """
+        try:
+            # Check if user exists (using correct field name)
+            existing_users = await self._database.search(
+                "users", 
+                criteria={"user_id": user_id}
+            )
+            
+            if existing_users:
+                self._logger.debug(f"User {user_id} already exists")
+                return existing_users[0]
+            
+            # Create new user (matching actual database schema)
+            user_data = {
+                "user_id": user_id,  # external user identifier
+                "created_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.utcnow().isoformat()
+            }
+            
+            user_record_id = await self._database.insert("users", user_data)
+            self._logger.info(f"Created new user {user_id}")
+            
+            return {
+                "id": user_record_id,
+                **user_data
+            }
+            
+        except Exception as e:
+            self._logger.error(f"Error ensuring user exists {user_id}: {e}", error=e)
+            raise
+
     async def search_sessions(self, user_id: str = None, limit: int = 20) -> List[Dict[str, Any]]:
         """
         Search sessions with optional user filter.

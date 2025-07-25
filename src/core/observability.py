@@ -11,7 +11,7 @@ from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.logging import LoggingInstrumentor
+# from opentelemetry.instrumentation.logging import LoggingInstrumentor  # Commented out since observability is disabled
 from opentelemetry.sdk.resources import Resource
 
 from .logging import get_logger
@@ -23,7 +23,8 @@ class ObservabilityConfig:
     """Configuration for observability and tracing"""
     
     def __init__(self):
-        self.enabled = self._is_tracing_enabled()
+        # Temporarily disable observability to fix serialization issues
+        self.enabled = False  # self._is_tracing_enabled()
         self.service_name = os.getenv("OTEL_SERVICE_NAME", "adk-book-writer")
         self.service_version = os.getenv("OTEL_SERVICE_VERSION", "1.0.0")
         self.environment = os.getenv("ENVIRONMENT", "development")

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Modules - BooksWriter</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 5px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        #console { background: #f8f9fa; padding: 15px; margin-top: 20px; font-family: monospace; height: 300px; overflow-y: auto; border: 1px solid #dee2e6; }
+    </style>
+</head>
+<body>
+    <h1>BooksWriter Module Loading Debug</h1>
+    <div id="status"></div>
+    <div id="console"></div>
+    
+    <script>
+        const statusDiv = document.getElementById('status');
+        const consoleDiv = document.getElementById('console');
+        
+        function addStatus(message, type = 'success') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = message;
+            statusDiv.appendChild(div);
+            
+            // Also log to console div
+            const timestamp = new Date().toLocaleTimeString();
+            consoleDiv.innerHTML += `[${timestamp}] ${message}\\n`;
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+        
+        // Override console methods to capture errors
+        const originalError = console.error;
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        
+        console.error = function(...args) {
+            addStatus('ERROR: ' + args.join(' '), 'error');
+            originalError.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            addStatus('WARNING: ' + args.join(' '), 'warning');
+            originalWarn.apply(console, args);
+        };
+        
+        console.log = function(...args) {
+            addStatus('LOG: ' + args.join(' '), 'success');
+            originalLog.apply(console, args);
+        };
+        
+        // Test script loading
+        addStatus('Starting module loading tests...');
+        
+        // Test if DOMPurify is loaded
+        if (typeof DOMPurify !== 'undefined') {
+            addStatus('✓ DOMPurify is available');
+        } else {
+            addStatus('✗ DOMPurify is not available', 'error');
+        }
+        
+        // Test CSRF token
+        const csrfToken = document.querySelector('meta[name=\"csrf-token\"]');
+        if (csrfToken && csrfToken.getAttribute('content')) {
+            addStatus('✓ CSRF token found: ' + csrfToken.getAttribute('content').substring(0, 10) + '...');
+        } else {
+            addStatus('✗ CSRF token not found or empty', 'error');
+        }
+        
+        // Test API call
+        addStatus('Testing API call...');
+        fetch('/models')
+            .then(response => {
+                if (response.ok) {
+                    addStatus('✓ /models API call successful');
+                    return response.json();
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            })
+            .then(data => {
+                addStatus(`✓ Models data received: ${Object.keys(data.available_models).length} models`);
+            })
+            .catch(error => {
+                addStatus(`✗ /models API call failed: ${error.message}`, 'error');
+            });
+        
+        // Test genres API
+        fetch('/api/genres')
+            .then(response => {
+                if (response.ok) {
+                    addStatus('✓ /api/genres API call successful');
+                    return response.json();
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            })
+            .then(data => {
+                addStatus(`✓ Genres data received: ${data.genres.length} genres, success=${data.success}`);
+            })
+            .catch(error => {
+                addStatus(`✗ /api/genres API call failed: ${error.message}`, 'error');
+            });
+        
+        // Test module loading simulation
+        window.addEventListener('load', () => {
+            addStatus('✓ Window load event fired');
+            
+            // Check if modules would be available
+            const modules = ['apiService', 'uiManager', 'stateManager', 'webSocketService', 'securityService'];
+            modules.forEach(module => {
+                if (window[module]) {
+                    addStatus(`✓ ${module} is available`);
+                } else {
+                    addStatus(`✗ ${module} is not available`, 'warning');
+                }
+            });
+        });
+        
+        // Simulate error events
+        window.addEventListener('error', (event) => {
+            addStatus(`✗ JavaScript Error: ${event.message} in ${event.filename}:${event.lineno}`, 'error');
+        });
+        
+        addStatus('Debug initialization complete. Waiting for results...');
+    </script>
+    
+    <!-- Add CSRF token meta tag for testing -->
+    <meta name="csrf-token" content="test-token-123" id="csrf-token">
+    
+    <!-- Load DOMPurify for testing -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js" integrity="sha384-VjcYOOqXN5QQzlw0OwJdA3ZHLqW7q3bOOSfUxlF3tHMqCm6QFQJ5x4KxNcP8d6Qr" crossorigin="anonymous"></script>
+</body>
+</html>

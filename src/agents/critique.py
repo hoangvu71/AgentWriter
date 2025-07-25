@@ -55,9 +55,9 @@ Balance honest assessment with encouragement. Prioritize issues by impact."""
         if not any(keyword in content for keyword in critique_keywords):
             self._logger.warning("Request may not be asking for critique")
     
-    def _prepare_message(self, request) -> str:
+    async def _prepare_message(self, request) -> str:
         """Prepare message with critique-specific context"""
-        message = super()._prepare_message(request)
+        message = await super()._prepare_message(request)
         
         # Add critique-specific guidance if context is available
         if request.context:

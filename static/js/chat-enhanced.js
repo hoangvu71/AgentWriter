@@ -203,8 +203,34 @@ class EnhancedChatApplication {
             this.cleanup.push(autoResizeCleanup);
         }
 
+        // Setup suggestion list click handlers
+        this.setupSuggestionHandlers();
+
         // Add enhanced styles for features
         this.addEnhancedStyles();
+    }
+
+    /**
+     * Setup suggestion list click handlers
+     */
+    setupSuggestionHandlers() {
+        const suggestionItems = document.querySelectorAll('.suggestion-list li');
+        suggestionItems.forEach(item => {
+            const cleanup = uiManager.addEventListenerToElement(item, 'click', () => {
+                const messageInput = uiManager.getElement('messageInput');
+                if (messageInput) {
+                    // Extract text from suggestion, removing the emoji
+                    const suggestionText = item.textContent.replace(/^[📖✍️🌟🌍]\s*"/, '').replace(/"$/, '');
+                    messageInput.value = suggestionText;
+                    messageInput.focus();
+                    
+                    // Trigger auto-resize
+                    messageInput.style.height = 'auto';
+                    messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+                }
+            });
+            if (cleanup) this.cleanup.push(cleanup);
+        });
     }
 
     /**
@@ -338,30 +364,55 @@ class EnhancedChatApplication {
         stateManager.set('loading', true);
 
         try {
-            // Load models
+            // Load models with enhanced error handling
             console.log('Loading models...');
             const modelsResult = await apiService.loadModels();
             console.log('Models result:', modelsResult);
             
             if (modelsResult.success && modelsResult.data) {
                 console.log('Setting model data:', modelsResult.data.current_model, modelsResult.data.available_models);
+                console.log('Available models count:', Object.keys(modelsResult.data.available_models).length);
+                
                 stateManager.setModelData(
                     modelsResult.data.current_model,
                     modelsResult.data.available_models
                 );
+                
+                // Force UI update after a short delay to ensure DOM is ready
+                setTimeout(() => {
+                    console.log('Forcing model display update...');
+                    this.updateModelDisplay();
+                }, 100);
             } else {
-                console.error('Models result unsuccessful or missing data');
+                console.error('Models result unsuccessful or missing data:', modelsResult);
+                // Show error in UI
+                const modelSelect = document.getElementById('modelSelect');
+                if (modelSelect) {
+                    modelSelect.innerHTML = '<option value="">Error loading models</option>';
+                }
             }
 
-            // Load parameters
+            // Load parameters with enhanced error handling
+            console.log('Loading parameters...');
             const paramsResult = await apiService.loadParameters();
+            console.log('Parameters result:', paramsResult);
+            
             if (paramsResult.success) {
-                if (paramsResult.genres.success) {
+                if (paramsResult.genres && paramsResult.genres.success) {
+                    console.log('Setting genre data - genres:', paramsResult.genres.genres.length);
                     stateManager.setGenreData(paramsResult.genres);
+                } else {
+                    console.error('Genres data unsuccessful:', paramsResult.genres);
                 }
-                if (paramsResult.audiences.success) {
+                
+                if (paramsResult.audiences && paramsResult.audiences.success) {
+                    console.log('Setting audience data - audiences:', paramsResult.audiences.audiences.length);
                     stateManager.set('allAudiences', paramsResult.audiences.audiences);
+                } else {
+                    console.error('Audiences data unsuccessful:', paramsResult.audiences);
                 }
+            } else {
+                console.error('Parameters result unsuccessful:', paramsResult);
             }
 
             // Load content
@@ -386,18 +437,23 @@ class EnhancedChatApplication {
         
         let currentMessage = document.getElementById('current-agent-message');
         if (!currentMessage) {
-            // Use enhanced message creation
-            currentMessage = uiManager.appendEnhancedChatMessage('', 'message agent-message', data);
+            // Create assistant message with modern structure
+            currentMessage = uiManager.appendChatMessage('', 'message assistant');
             currentMessage.id = 'current-agent-message';
-            currentMessage.style.whiteSpace = 'pre-wrap';
         }
         
-        // Get the content div
+        // Get the content div within the message bubble
         const contentDiv = currentMessage.querySelector('.message-content');
         if (contentDiv) {
             contentDiv.textContent += data.content;
         } else {
-            currentMessage.textContent += data.content;
+            // Fallback - find any content container
+            const fallbackContent = currentMessage.querySelector('.message-bubble') || currentMessage;
+            if (fallbackContent.querySelector('.message-content')) {
+                fallbackContent.querySelector('.message-content').textContent += data.content;
+            } else {
+                fallbackContent.textContent += data.content;
+            }
         }
         
         uiManager.scrollChatToBottom();
@@ -472,10 +528,8 @@ class EnhancedChatApplication {
         // Show typing indicator
         uiManager.showTypingIndicator();
 
-        // Display user message with enhanced formatting
-        uiManager.appendEnhancedChatMessage(message, 'message user-message', {
-            timestamp: new Date().toISOString()
-        });
+        // Display user message with modern structure
+        uiManager.appendChatMessage(message, 'message user');
 
         // Build context from current state
         const context = stateManager.buildContextObject();
@@ -711,14 +765,30 @@ class EnhancedChatApplication {
         const availableModels = stateManager.get('availableModels');
         
         console.log('Current model:', currentModel);
-        console.log('Available models:', availableModels);
+        console.log('Available models count:', availableModels ? Object.keys(availableModels).length : 0);
         
-        if (currentModel && availableModels) {
+        // Check if DOM element exists
+        const modelSelectElement = document.getElementById('modelSelect');
+        if (!modelSelectElement) {
+            console.error('Model select element not found in DOM!');
+            return;
+        }
+        
+        if (currentModel && availableModels && Object.keys(availableModels).length > 0) {
             console.log('Updating UI with model data');
-            uiManager.updateModelSelector(currentModel, availableModels);
-            uiManager.updateModelInfo(currentModel, availableModels);
+            try {
+                uiManager.updateModelSelector(currentModel, availableModels);
+                uiManager.updateModelInfo(currentModel, availableModels);
+                console.log('Model UI update completed successfully');
+            } catch (error) {
+                console.error('Error updating model UI:', error);
+                modelSelectElement.innerHTML = '<option value="">Error updating models</option>';
+            }
         } else {
             console.log('Missing model data - currentModel:', !!currentModel, 'availableModels:', !!availableModels);
+            if (modelSelectElement) {
+                modelSelectElement.innerHTML = '<option value="">Models not loaded</option>';
+            }
         }
     }
 

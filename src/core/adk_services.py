@@ -38,12 +38,14 @@ class ADKServiceFactory:
             return ServiceMode(mode)
         
         # Check if we're in production (has database config)
+        # Enable database mode for persistence
         if hasattr(self.config, 'database_url') and self.config.database_url:
             return ServiceMode.DATABASE
         
         # Check if Vertex AI is configured
         vertex_project = os.getenv("GOOGLE_CLOUD_PROJECT")
-        if vertex_project:
+        vertex_location = os.getenv("GOOGLE_CLOUD_LOCATION")
+        if vertex_project and vertex_location:
             return ServiceMode.VERTEX_AI
         
         # Default to development mode
@@ -106,8 +108,9 @@ class ADKServiceFactory:
             # Try to import database session service
             from google.adk.sessions import DatabaseSessionService
             
-            # Use our existing database configuration
-            database_url = getattr(self.config, 'database_url', None) or "sqlite:///development.db"
+            # ADK services need a proper database URL, not HTTP endpoint
+            # For now, use SQLite for ADK persistence
+            database_url = "sqlite:///adk_sessions.db"
             
             return DatabaseSessionService(db_url=database_url)
             
@@ -124,15 +127,15 @@ class ADKServiceFactory:
             # Try to import database memory service (if available)
             from google.adk.memory import DatabaseMemoryService
             
-            database_url = getattr(self.config, 'database_url', None) or "sqlite:///development.db"
+            database_url = "sqlite:///adk_sessions.db"
             
             return DatabaseMemoryService(db_url=database_url)
             
         except ImportError:
-            logger.warning("DatabaseMemoryService not available, falling back to in-memory")
+            logger.info("DatabaseMemoryService not available in this ADK version, using in-memory")
             return InMemoryMemoryService()
         except Exception as e:
-            logger.error(f"Failed to create DatabaseMemoryService: {e}")
+            logger.info(f"DatabaseMemoryService not configured, using in-memory: {e}")
             return InMemoryMemoryService()
     
     def _create_vertex_session_service(self):

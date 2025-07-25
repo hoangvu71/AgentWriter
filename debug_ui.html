@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug UI - BooksWriter</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        select, button { margin: 10px 0; padding: 5px; }
+        #output { background: #f5f5f5; padding: 10px; margin-top: 10px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>BooksWriter UI Debug Tool</h1>
+    
+    <div class="test-section">
+        <h2>1. Test Models API</h2>
+        <button onclick="testModels()">Load Models</button>
+        <select id="modelSelect">
+            <option value="">Loading models...</option>
+        </select>
+        <div id="modelOutput"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Test Genres API</h2>
+        <button onclick="testGenres()">Load Genres</button>
+        <select id="genreSelect">
+            <option value="">Loading genres...</option>
+        </select>
+        <div id="genreOutput"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Console Output</h2>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        // Simple logging to page
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'red' : (type === 'success' ? 'green' : 'blue');
+            output.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            console.log(message);
+        }
+        
+        // Test models endpoint
+        async function testModels() {
+            try {
+                log('Testing models API...');
+                const response = await fetch('/models');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                log(`Models API Success: ${data.current_model} (${Object.keys(data.available_models).length} available)`, 'success');
+                
+                // Update dropdown
+                const select = document.getElementById('modelSelect');
+                select.innerHTML = '<option value="">Select a model...</option>';
+                
+                Object.entries(data.available_models).forEach(([id, model]) => {
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.textContent = model.name;
+                    if (id === data.current_model) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+                
+                document.getElementById('modelOutput').innerHTML = 
+                    `<div class="success">✓ Loaded ${Object.keys(data.available_models).length} models</div>`;
+                    
+            } catch (error) {
+                log(`Models API Error: ${error.message}`, 'error');
+                document.getElementById('modelOutput').innerHTML = 
+                    `<div class="error">✗ Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Test genres endpoint
+        async function testGenres() {
+            try {
+                log('Testing genres API...');
+                const response = await fetch('/api/genres');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                log(`Genres API Success: ${data.success} (${data.genres.length} genres, ${data.subgenres.length} subgenres)`, 'success');
+                
+                // Update dropdown
+                const select = document.getElementById('genreSelect');
+                select.innerHTML = '<option value="">Select a genre...</option>';
+                
+                data.genres.forEach(genre => {
+                    const option = document.createElement('option');
+                    option.value = genre.id;
+                    option.textContent = genre.name;
+                    select.appendChild(option);
+                });
+                
+                document.getElementById('genreOutput').innerHTML = 
+                    `<div class="success">✓ Loaded ${data.genres.length} genres, ${data.subgenres.length} subgenres, ${data.microgenres.length} microgenres</div>`;
+                    
+            } catch (error) {
+                log(`Genres API Error: ${error.message}`, 'error');
+                document.getElementById('genreOutput').innerHTML = 
+                    `<div class="error">✗ Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Test on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            log('Debug page loaded - ready to test APIs');
+        });
+    </script>
+</body>
+</html>

@@ -65,9 +65,9 @@ Make substantial improvements that:
         if not any(keyword in content for keyword in enhancement_keywords):
             self._logger.warning("Request may not be asking for enhancement")
     
-    def _prepare_message(self, request) -> str:
+    async def _prepare_message(self, request) -> str:
         """Prepare message with enhancement-specific context"""
-        message = super()._prepare_message(request)
+        message = await super()._prepare_message(request)
         
         # Add enhancement-specific guidance if context is available
         if request.context:

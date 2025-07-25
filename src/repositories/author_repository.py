@@ -23,20 +23,30 @@ class AuthorRepository(BaseRepository[Author]):
             "biography": author.biography,
             "writing_style": author.writing_style,
             "user_id": author.user_id,
-            "session_id": author.session_id,
-            "genre_expertise": author.genre_expertise,
-            "target_audience_appeal": author.target_audience_appeal,
-            "credentials": author.credentials,
-            "personal_influences": author.personal_influences,
-            "current_projects": author.current_projects,
-            "updated_at": datetime.utcnow().isoformat()
+            "session_id": author.session_id
         }
         
-        # Only include created_at for new authors
-        if author.id is None:
-            data["created_at"] = datetime.utcnow().isoformat()
+        # Remove timestamp fields - let database handle them
+        # (created_at and updated_at may not exist in actual schema)
         
-        return data
+        # Remove None values to avoid database issues
+        return {k: v for k, v in data.items() if v is not None}
+    
+    async def create(self, entity: Author) -> str:
+        """Override create to use specialized save_author method if available"""
+        try:
+            self._logger.info(f"Creating author: {entity.author_name}")
+            
+            # Check if database has specialized save_author method
+            if hasattr(self._database, 'save_author'):
+                return await self._database.save_author(self._serialize(entity))
+            else:
+                # Use standard create method
+                return await super().create(entity)
+                
+        except Exception as e:
+            self._logger.error(f"Error creating author: {e}", error=e)
+            raise
     
     def _deserialize(self, data: Dict[str, Any]) -> Author:
         """Convert database data to author entity"""
@@ -48,13 +58,7 @@ class AuthorRepository(BaseRepository[Author]):
             writing_style=data.get("writing_style", ""),
             user_id=data.get("user_id", ""),
             session_id=data.get("session_id", ""),
-            genre_expertise=data.get("genre_expertise", ""),
-            target_audience_appeal=data.get("target_audience_appeal", ""),
-            credentials=data.get("credentials", ""),
-            personal_influences=data.get("personal_influences", ""),
-            current_projects=data.get("current_projects", ""),
-            created_at=self._parse_datetime(data.get("created_at")),
-            updated_at=self._parse_datetime(data.get("updated_at"))
+            created_at=self._parse_datetime(data.get("created_at"))
         )
     
     
@@ -77,7 +81,7 @@ class AuthorRepository(BaseRepository[Author]):
         matching_authors = [
             author for author in user_authors
             if (name_query_lower in author.author_name.lower() or
-                name_query_lower in author.pen_name.lower())
+                (author.pen_name and name_query_lower in author.pen_name.lower()))
         ]
         
         return matching_authors[:limit]

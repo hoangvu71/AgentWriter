@@ -5,15 +5,17 @@ Refactored FastAPI application with proper dependency injection and modular arch
 from fastapi import FastAPI, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from .core.configuration import config
 from .core.container import container
 from .core.logging import setup_logging, get_logger
+from .core.security import SecurityHeadersMiddleware, security_service
 from .websocket.connection_manager import ConnectionManager
 from .websocket.websocket_handler import WebSocketHandler
 from .agents.agent_factory import AgentFactory
-from .routers import plots, authors, websocket, content, models, health, sessions, parameters
+from .routers import plots, authors, websocket, content, models, health, sessions, parameters, openai_compat, metrics
 
 # Setup logging
 setup_logging()
@@ -24,6 +26,18 @@ app = FastAPI(
     title="Multi-Agent Book Writer",
     description="A sophisticated multi-agent system for book writing powered by Google ADK and Gemini AI",
     version="2.0.0"
+)
+
+# Add security middleware
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Add CORS middleware (configure as needed for production)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:8000"],  # Configure for production
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
 )
 
 # Mount static files
@@ -67,7 +81,16 @@ async def startup_event():
 async def shutdown_event():
     """Application shutdown cleanup"""
     logger.info("Shutting down Multi-Agent Book Writer application")
-    # Clean up resources here if needed
+    
+    # Close database connections gracefully
+    try:
+        await container.close_database_connections()
+        logger.info("Database connections closed successfully")
+    except Exception as e:
+        logger.error(f"Error closing database connections: {e}")
+    
+    # Additional cleanup if needed
+    logger.info("Application shutdown complete")
     
 
 # Add event handlers
@@ -78,10 +101,18 @@ app.add_event_handler("shutdown", shutdown_event)
 # Home page route
 @app.get("/", response_class=HTMLResponse)
 async def get_home():
-    """Serve the main HTML page"""
+    """Serve the main HTML page with CSRF token"""
     try:
         with open('templates/index.html', 'r', encoding='utf-8') as f:
             html_content = f.read()
+        
+        # Generate CSRF token
+        from .core.security import security_service
+        csrf_token = security_service.csrf_protection.generate_token()
+        
+        # Replace template variables
+        html_content = html_content.replace('{{csrf_token}}', csrf_token)
+        
         return HTMLResponse(content=html_content)
     except FileNotFoundError:
         return HTMLResponse(content="<h1>Template not found</h1>", status_code=404)
@@ -128,6 +159,8 @@ app.include_router(parameters.router, prefix="/api", tags=["parameters"])
 app.include_router(models.router, prefix="", tags=["models"])
 app.include_router(health.router, tags=["health"])
 app.include_router(sessions.router, tags=["sessions"])
+app.include_router(openai_compat.router, tags=["openai"])
+app.include_router(metrics.router, tags=["metrics"])
 
 
 def create_app() -> FastAPI:

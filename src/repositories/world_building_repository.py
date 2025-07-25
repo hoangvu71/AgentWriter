@@ -17,29 +17,36 @@ class WorldBuildingRepository(BaseRepository[WorldBuilding]):
         super().__init__(database, "world_building")
     
     def _serialize(self, world: WorldBuilding) -> Dict[str, Any]:
-        """Convert world building entity to database format matching actual schema"""
+        """Convert world building entity to database format matching simplified schema"""
         data = {
             "session_id": world.session_id,  # UUID reference to sessions table
             "user_id": world.user_id,  # UUID reference to users table
             "plot_id": world.plot_id,  # UUID reference to plots table (nullable)
             "world_name": world.world_name,  # TEXT
-            "world_type": world.world_type.value if isinstance(world.world_type, WorldType) else world.world_type,  # TEXT with CHECK constraint
-            "overview": world.overview,  # TEXT
-            
-            # JSONB fields for complex world data
-            "geography": world.geography,  # JSONB
-            "political_landscape": world.political_landscape,  # JSONB
-            "cultural_systems": world.cultural_systems,  # JSONB
-            "economic_framework": world.economic_framework,  # JSONB
-            "historical_timeline": world.historical_timeline,  # JSONB
-            "power_systems": world.power_systems,  # JSONB
-            "languages_and_communication": world.languages_and_communication,  # JSONB
-            "religious_and_belief_systems": world.religious_and_belief_systems,  # JSONB
-            "unique_elements": world.unique_elements,  # JSONB
+            "world_type": world.world_type,  # TEXT
+            "world_content": world.world_content  # TEXT - Complete world building content
         }
+        
+        # Remove timestamp fields - let database handle them
         
         # Remove None values to avoid issues
         return {k: v for k, v in data.items() if v is not None}
+    
+    async def create(self, entity: WorldBuilding) -> str:
+        """Override create to use specialized save_world_building method if available"""
+        try:
+            self._logger.info(f"Creating world: {entity.world_name}")
+            
+            # Check if database has specialized save_world_building method
+            if hasattr(self._database, 'save_world_building'):
+                return await self._database.save_world_building(self._serialize(entity))
+            else:
+                # Use standard create method
+                return await super().create(entity)
+                
+        except Exception as e:
+            self._logger.error(f"Error creating world building: {e}", error=e)
+            raise
     
     async def get_world_building_by_plot(self, plot_id: str) -> Optional[Dict[str, Any]]:
         """Get world building data for a specific plot ID"""
@@ -59,33 +66,16 @@ class WorldBuildingRepository(BaseRepository[WorldBuilding]):
             raise
     
     def _deserialize(self, data: Dict[str, Any]) -> WorldBuilding:
-        """Convert database data to world building entity"""
-        # Parse world_type enum
-        world_type_str = data.get("world_type", "other")
-        try:
-            world_type = WorldType(world_type_str)
-        except ValueError:
-            world_type = WorldType.OTHER
-        
+        """Convert database data to world building entity"""        
         return WorldBuilding(
             id=data.get("id"),
             session_id=data.get("session_id", ""),
             user_id=data.get("user_id", ""),
             plot_id=data.get("plot_id"),
             world_name=data.get("world_name", ""),
-            world_type=world_type,
-            overview=data.get("overview", ""),
-            geography=data.get("geography", {}),
-            political_landscape=data.get("political_landscape", {}),
-            cultural_systems=data.get("cultural_systems", {}),
-            economic_framework=data.get("economic_framework", {}),
-            historical_timeline=data.get("historical_timeline", {}),
-            power_systems=data.get("power_systems", {}),
-            languages_and_communication=data.get("languages_and_communication", {}),
-            religious_and_belief_systems=data.get("religious_and_belief_systems", {}),
-            unique_elements=data.get("unique_elements", {}),
-            created_at=self._parse_datetime(data.get("created_at")),
-            updated_at=self._parse_datetime(data.get("updated_at"))
+            world_type=data.get("world_type", ""),
+            world_content=data.get("world_content", ""),
+            created_at=self._parse_datetime(data.get("created_at"))
         )
     
     

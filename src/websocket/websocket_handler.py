@@ -69,29 +69,52 @@ class WebSocketHandler:
         return await self.content_saving_service.save_score_data(iteration_id, overall_score, category_scores, score_rationale, improvement_trajectory, recommendations)
     
     async def handle_connection(self, websocket: WebSocket, session_id: str):
-        """Handle a new WebSocket connection"""
+        """Handle a new WebSocket connection with enhanced error context"""
+        client_id = None
         try:
             # Validate session_id
             validated_session_id = self.validator.validate_alphanumeric(session_id)
             client_id = f"client_{validated_session_id}"
             
+            self.logger.info(f"Establishing WebSocket connection for session {validated_session_id}", 
+                           session_id=validated_session_id, client_id=client_id)
+            
             await self.connection_manager.connect(websocket, client_id)
             
-            # Send welcome message
+            # Send welcome message with enhanced context
             await self.connection_manager.send_json({
                 "type": "connection_established",
                 "session_id": validated_session_id,
-                "available_agents": self.agent_factory.get_available_agents()
+                "client_id": client_id,
+                "available_agents": self.agent_factory.get_available_agents(),
+                "server_info": {
+                    "version": "1.0.0",
+                    "supports_reconnection": True,
+                    "max_message_size": 50000
+                }
             }, client_id)
             
             # Handle messages
             await self._message_loop(client_id, validated_session_id)
             
         except ValidationError as e:
-            await websocket.close(code=1008, reason=str(e))
+            self.logger.warning(f"WebSocket validation error for session {session_id}: {e}", 
+                              session_id=session_id, error=e)
+            await websocket.close(code=1008, reason=f"Validation error: {str(e)}")
         except Exception as e:
-            self.logger.error(f"WebSocket connection error: {e}", error=e)
-            await websocket.close(code=1011, reason="Internal server error")
+            self.logger.error(f"WebSocket connection error for session {session_id}: {e}", 
+                             session_id=session_id, client_id=client_id, error=e)
+            try:
+                await websocket.close(code=1011, reason="Internal server error")
+            except Exception:
+                # WebSocket may already be closed
+                pass
+        finally:
+            # Ensure cleanup
+            if client_id:
+                self.connection_manager.disconnect(client_id)
+                self.logger.info(f"WebSocket connection cleanup completed for {client_id}", 
+                               client_id=client_id)
     
     async def _message_loop(self, client_id: str, session_id: str):
         """Main message processing loop"""
@@ -248,7 +271,7 @@ class WebSocketHandler:
                 "content": "\n[AI] Orchestrator coordinating workflow...\n"
             }, client_id)
             
-            # Let the orchestrator handle everything through tools
+            # Let the orchestrator handle everything through tools with enhanced error recovery
             orchestrator_response = await orchestrator.process_request(request)
             
             # Send orchestrator's reasoning and tool execution results
@@ -257,18 +280,26 @@ class WebSocketHandler:
                 "content": orchestrator_response.content
             }, client_id)
             
-            # If there were tool calls, show the results
+            # If there were tool calls, analyze results for failures and recovery
             if orchestrator_response.metadata and 'tool_calls' in orchestrator_response.metadata:
                 tool_calls = orchestrator_response.metadata['tool_calls']
+                
+                # Analyze tool execution results
+                successful_tools = [tc for tc in tool_calls if tc.get('result', {}).get('success', False)]
+                failed_tools = [tc for tc in tool_calls if not tc.get('result', {}).get('success', False)]
                 
                 await self.connection_manager.send_json({
                     "type": "workflow_complete",
                     "tool_calls": tool_calls,
-                    "results": [tc.get('result', {}) for tc in tool_calls]
+                    "results": [tc.get('result', {}) for tc in tool_calls],
+                    "summary": {
+                        "total_operations": len(tool_calls),
+                        "successful": len(successful_tools),
+                        "failed": len(failed_tools)
+                    }
                 }, client_id)
                 
-                # Send success message
-                successful_tools = [tc for tc in tool_calls if tc.get('result', {}).get('success', False)]
+                # Handle successful operations
                 if successful_tools:
                     success_msg = f"\n✅ Successfully completed {len(successful_tools)} operations:\n"
                     for tc in successful_tools:
@@ -278,6 +309,42 @@ class WebSocketHandler:
                     await self.connection_manager.send_json({
                         "type": "stream_chunk",
                         "content": success_msg
+                    }, client_id)
+                
+                # Handle failed operations with recovery options
+                if failed_tools:
+                    failure_msg = f"\n⚠️ {len(failed_tools)} operations encountered issues:\n"
+                    recovery_options = []
+                    
+                    for tc in failed_tools:
+                        result = tc.get('result', {})
+                        error_msg = result.get('error', 'Unknown error')
+                        failure_msg += f"- {tc['tool']}: {error_msg}\n"
+                        
+                        # Suggest recovery based on tool type
+                        if tc['tool'] == 'save_plot':
+                            recovery_options.append("You can try creating the plot again with different parameters")
+                        elif tc['tool'] == 'save_world_building':
+                            recovery_options.append("World building requires an existing plot - create a plot first")
+                        elif tc['tool'] == 'save_characters':
+                            recovery_options.append("Character creation requires both plot and world - ensure both exist")
+                    
+                    if recovery_options:
+                        failure_msg += f"\n💡 Recovery suggestions:\n"
+                        for option in recovery_options:
+                            failure_msg += f"- {option}\n"
+                    
+                    await self.connection_manager.send_json({
+                        "type": "stream_chunk",
+                        "content": failure_msg
+                    }, client_id)
+                    
+                    # Send recovery prompt to user
+                    await self.connection_manager.send_json({
+                        "type": "recovery_prompt",
+                        "failed_operations": failed_tools,
+                        "recovery_options": recovery_options,
+                        "message": "Some operations failed. Would you like to retry or modify your request?"
                     }, client_id)
             else:
                 # Fallback for agents that don't use tools yet

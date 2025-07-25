@@ -8,12 +8,13 @@ from typing import Dict, Any, List, Optional
 from supabase import create_client, Client
 from ..core.interfaces import IDatabase, ContentType
 from ..core.logging import get_logger
+from .connection_pool import SupabaseConnectionPool, ConnectionPoolConfig
 
 
 class SupabaseAdapter(IDatabase):
-    """Direct Supabase client adapter implementing IDatabase interface"""
+    """Supabase client adapter with connection pooling implementing IDatabase interface"""
     
-    def __init__(self, url: str = None, key: str = None):
+    def __init__(self, url: str = None, key: str = None, pool_config: Optional[ConnectionPoolConfig] = None):
         self.logger = get_logger("database.supabase")
         
         # Use provided credentials or get from environment
@@ -23,86 +24,108 @@ class SupabaseAdapter(IDatabase):
         if not self.url or not self.key:
             raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY must be provided")
         
+        # Initialize connection pool
+        self.pool_config = pool_config or ConnectionPoolConfig(
+            min_connections=2,
+            max_connections=8,
+            max_idle_time=300,
+            connection_timeout=30,
+            health_check_interval=60,
+            enable_metrics=True
+        )
+        
         try:
+            # Create primary client for immediate use
             self.client: Client = create_client(self.url, self.key)
-            self.logger.info("Supabase client initialized successfully")
+            
+            # Initialize connection pool
+            self.connection_pool = SupabaseConnectionPool(self.url, self.key, self.pool_config)
+            
+            self.logger.info("Supabase client and connection pool initialized successfully")
         except Exception as e:
             self.logger.error(f"Failed to initialize Supabase client: {e}")
             raise
     
     async def insert(self, table_name: str, data: Dict[str, Any]) -> str:
-        """Insert data into table and return ID"""
+        """Insert data into table and return ID using connection pool"""
         try:
-            response = self.client.table(table_name).insert(data).execute()
-            if response.data:
-                return response.data[0]["id"]
-            raise Exception("No data returned from insert")
+            async with self.connection_pool.get_connection() as conn:
+                response = conn.client.table(table_name).insert(data).execute()
+                if response.data:
+                    return response.data[0]["id"]
+                raise Exception("No data returned from insert")
         except Exception as e:
             self.logger.error(f"Error inserting into {table_name}: {e}", error=e)
             raise
     
     async def get_by_id(self, table_name: str, entity_id: str) -> Optional[Dict[str, Any]]:
-        """Get entity by ID"""
+        """Get entity by ID using connection pool"""
         try:
-            response = self.client.table(table_name).select("*").eq("id", entity_id).execute()
-            return response.data[0] if response.data else None
+            async with self.connection_pool.get_connection() as conn:
+                response = conn.client.table(table_name).select("*").eq("id", entity_id).execute()
+                return response.data[0] if response.data else None
         except Exception as e:
             self.logger.error(f"Error getting {table_name} by ID {entity_id}: {e}", error=e)
             raise
     
     async def update(self, table_name: str, entity_id: str, data: Dict[str, Any]) -> bool:
-        """Update entity by ID"""
+        """Update entity by ID using connection pool"""
         try:
-            response = self.client.table(table_name).update(data).eq("id", entity_id).execute()
-            return len(response.data) > 0
+            async with self.connection_pool.get_connection() as conn:
+                response = conn.client.table(table_name).update(data).eq("id", entity_id).execute()
+                return len(response.data) > 0
         except Exception as e:
             self.logger.error(f"Error updating {table_name} {entity_id}: {e}", error=e)
             raise
     
     async def delete(self, table_name: str, entity_id: str) -> bool:
-        """Delete entity by ID"""
+        """Delete entity by ID using connection pool"""
         try:
-            response = self.client.table(table_name).delete().eq("id", entity_id).execute()
-            return len(response.data) > 0
+            async with self.connection_pool.get_connection() as conn:
+                response = conn.client.table(table_name).delete().eq("id", entity_id).execute()
+                return len(response.data) > 0
         except Exception as e:
             self.logger.error(f"Error deleting {table_name} {entity_id}: {e}", error=e)
             raise
     
     async def get_all(self, table_name: str, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
-        """Get all entities with pagination"""
+        """Get all entities with pagination using connection pool"""
         try:
-            response = self.client.table(table_name).select("*").order("created_at", desc=True).range(offset, offset + limit - 1).execute()
-            return response.data
+            async with self.connection_pool.get_connection() as conn:
+                response = conn.client.table(table_name).select("*").order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+                return response.data
         except Exception as e:
             self.logger.error(f"Error getting all {table_name}: {e}", error=e)
             raise
     
     async def search(self, table_name: str, criteria: Dict[str, Any], limit: int = 50) -> List[Dict[str, Any]]:
-        """Search entities by criteria"""
+        """Search entities by criteria using connection pool"""
         try:
-            query = self.client.table(table_name).select("*")
-            
-            # Apply criteria as filters
-            for key, value in criteria.items():
-                query = query.eq(key, value)
-            
-            response = query.order("created_at", desc=True).limit(limit).execute()
-            return response.data
+            async with self.connection_pool.get_connection() as conn:
+                query = conn.client.table(table_name).select("*")
+                
+                # Apply criteria as filters
+                for key, value in criteria.items():
+                    query = query.eq(key, value)
+                
+                response = query.order("created_at", desc=True).limit(limit).execute()
+                return response.data
         except Exception as e:
             self.logger.error(f"Error searching {table_name}: {e}", error=e)
             raise
     
     async def count(self, table_name: str, criteria: Optional[Dict[str, Any]] = None) -> int:
-        """Count entities matching criteria"""
+        """Count entities matching criteria using connection pool"""
         try:
-            query = self.client.table(table_name).select("*", count="exact")
-            
-            if criteria:
-                for key, value in criteria.items():
-                    query = query.eq(key, value)
-            
-            response = query.execute()
-            return response.count or 0
+            async with self.connection_pool.get_connection() as conn:
+                query = conn.client.table(table_name).select("*", count="exact")
+                
+                if criteria:
+                    for key, value in criteria.items():
+                        query = query.eq(key, value)
+                
+                response = query.execute()
+                return response.count or 0
         except Exception as e:
             self.logger.error(f"Error counting {table_name}: {e}", error=e)
             raise
@@ -112,17 +135,25 @@ class SupabaseAdapter(IDatabase):
         """Save plot data and return ID"""
         try:
             # Extract metadata for proper Supabase format
-            session_id = plot_data.get("session_id")
-            user_id = plot_data.get("user_id")
+            external_session_id = plot_data.get("session_id")
+            external_user_id = plot_data.get("user_id")
             
             # Convert external IDs to internal UUIDs if needed
-            if session_id and user_id:
-                user_data = await self._create_or_get_user(user_id)
-                session_data = await self._create_session(session_id, user_id)
+            if external_session_id and external_user_id:
+                user_data = await self._create_or_get_user(external_user_id)
+                
+                # Get the session by external session_id to get internal UUID
+                session_response = self.client.table("sessions").select("*").eq("session_id", external_session_id).execute()
+                if not session_response.data:
+                    # Create session if it doesn't exist
+                    session_data = await self._create_session(external_session_id, external_user_id)
+                    session_uuid = session_data["id"]
+                else:
+                    session_uuid = session_response.data[0]["id"]
                 
                 # Update plot data with proper UUID references
-                plot_data["user_id"] = user_data["id"]
-                plot_data["session_id"] = session_data["id"]
+                plot_data["user_id"] = user_data["id"]  # internal user UUID
+                plot_data["session_id"] = session_uuid  # internal session UUID
             
             return await self.insert("plots", plot_data)
         except Exception as e:
@@ -133,17 +164,25 @@ class SupabaseAdapter(IDatabase):
         """Save author data and return ID"""
         try:
             # Extract metadata for proper Supabase format
-            session_id = author_data.get("session_id")
-            user_id = author_data.get("user_id")
+            external_session_id = author_data.get("session_id")
+            external_user_id = author_data.get("user_id")
             
             # Convert external IDs to internal UUIDs if needed
-            if session_id and user_id:
-                user_data = await self._create_or_get_user(user_id)
-                session_data = await self._create_session(session_id, user_id)
+            if external_session_id and external_user_id:
+                user_data = await self._create_or_get_user(external_user_id)
+                
+                # Get the session by external session_id to get internal UUID
+                session_response = self.client.table("sessions").select("*").eq("session_id", external_session_id).execute()
+                if not session_response.data:
+                    # Create session if it doesn't exist
+                    session_data = await self._create_session(external_session_id, external_user_id)
+                    session_uuid = session_data["id"]
+                else:
+                    session_uuid = session_response.data[0]["id"]
                 
                 # Update author data with proper UUID references
-                author_data["user_id"] = user_data["id"]
-                author_data["session_id"] = session_data["id"]
+                author_data["user_id"] = user_data["id"]  # internal user UUID
+                author_data["session_id"] = session_uuid  # internal session UUID
             
             return await self.insert("authors", author_data)
         except Exception as e:
@@ -234,33 +273,37 @@ class SupabaseAdapter(IDatabase):
     async def _create_or_get_user(self, user_id: str) -> Dict[str, Any]:
         """Create or get user by external user_id"""
         try:
-            # Try to get existing user
-            response = self.client.table("users").select("*").eq("id", user_id).execute()
+            # Try to get existing user (using correct field name)
+            response = self.client.table("users").select("*").eq("user_id", user_id).execute()
             if response.data:
                 return response.data[0]
             
-            # Create new user
-            user_data = {"id": user_id, "name": f"User {user_id}"}
+            # Create new user (matching actual database schema)
+            user_data = {"user_id": user_id}
             response = self.client.table("users").insert(user_data).execute()
             return response.data[0] if response.data else user_data
         except Exception as e:
             self.logger.error(f"Error creating/getting user: {e}")
-            return {"id": user_id, "name": f"User {user_id}"}
+            return {"user_id": user_id}
     
     async def _create_session(self, session_id: str, user_id: str) -> Dict[str, Any]:
         """Create a new session"""
         try:
+            # First ensure user exists and get their internal UUID
+            user_data = await self._create_or_get_user(user_id)
+            user_uuid = user_data["id"]  # Get the actual UUID from the database
+            
             session_data = {
-                "id": session_id,
-                "user_id": user_id,
-                "start_time": "now()",
-                "messages": []
+                "session_id": session_id,  # external session identifier
+                "user_id": user_uuid,      # internal user UUID for foreign key
+                "created_at": "now()",
+                "updated_at": "now()"
             }
             response = self.client.table("sessions").insert(session_data).execute()
             return response.data[0] if response.data else session_data
         except Exception as e:
             self.logger.error(f"Error creating session: {e}")
-            return {"id": session_id, "user_id": user_id}
+            return {"session_id": session_id, "user_id": user_id}
     
     async def _search_plots(self, user_id: str, query: str, limit: int = 20) -> List[Dict[str, Any]]:
         """Search plots for a user"""
@@ -316,3 +359,84 @@ class SupabaseAdapter(IDatabase):
         except Exception as e:
             self.logger.error(f"Error getting user authors: {e}")
             return []
+    
+    async def get_pool_metrics(self) -> Dict[str, Any]:
+        """Get connection pool performance metrics"""
+        if hasattr(self, 'connection_pool'):
+            metrics = self.connection_pool.get_metrics()
+            return {
+                "total_connections": metrics.total_connections,
+                "active_connections": metrics.active_connections,
+                "idle_connections": metrics.idle_connections,
+                "pool_hits": metrics.pool_hits,
+                "pool_misses": metrics.pool_misses,
+                "hit_rate": metrics.pool_hits / (metrics.pool_hits + metrics.pool_misses) if (metrics.pool_hits + metrics.pool_misses) > 0 else 0,
+                "health_check_failures": metrics.health_check_failures,
+                "avg_connection_time": metrics.avg_connection_time,
+                "query_count": metrics.query_count
+            }
+        return {}
+    
+    async def reset_pool_metrics(self):
+        """Reset connection pool metrics"""
+        if hasattr(self, 'connection_pool'):
+            self.connection_pool.reset_metrics()
+    
+    async def batch_insert(self, table_name: str, records: List[Dict[str, Any]]) -> List[str]:
+        """Insert multiple records using connection pool"""
+        if not records:
+            return []
+        
+        try:
+            async with self.connection_pool.get_connection() as conn:
+                response = conn.client.table(table_name).insert(records).execute()
+                return [record["id"] for record in response.data] if response.data else []
+        except Exception as e:
+            self.logger.error(f"Error in batch insert to {table_name}: {e}")
+            raise
+    
+    async def batch_select_by_ids(self, table_name: str, ids: List[str]) -> List[Dict[str, Any]]:
+        """Select multiple records by IDs using connection pool"""
+        if not ids:
+            return []
+        
+        try:
+            async with self.connection_pool.get_connection() as conn:
+                response = conn.client.table(table_name).select("*").in_("id", ids).execute()
+                return response.data if response.data else []
+        except Exception as e:
+            self.logger.error(f"Error in batch select from {table_name}: {e}")
+            raise
+    
+    async def batch_update(self, table_name: str, updates: List[Dict[str, Any]]) -> int:
+        """Update multiple records using connection pool"""
+        if not updates:
+            return 0
+        
+        updated_count = 0
+        
+        try:
+            async with self.connection_pool.get_connection() as conn:
+                for update in updates:
+                    record_id = update['id']
+                    data = update['data']
+                    
+                    response = conn.client.table(table_name).update(data).eq("id", record_id).execute()
+                    if response.data and len(response.data) > 0:
+                        updated_count += 1
+                
+                return updated_count
+        except Exception as e:
+            self.logger.error(f"Error in batch update to {table_name}: {e}")
+            raise
+    
+    async def start_background_tasks(self):
+        """Start background health monitoring tasks"""
+        if hasattr(self, 'connection_pool'):
+            await self.connection_pool.start_background_tasks()
+    
+    async def close(self):
+        """Close the database adapter and connection pool"""
+        if hasattr(self, 'connection_pool'):
+            await self.connection_pool.close()
+            self.logger.info("Supabase adapter closed")

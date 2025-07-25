@@ -29,26 +29,26 @@ Available agents:
 - enhancement: Improves content based on critiques
 - scoring: Evaluates content quality
 
-Workflow patterns:
-1. Single agent: Use invoke_agent for simple requests
-2. Sequential workflow: Chain agents with context passing
-3. Improvement cycle: critique → enhancement → scoring
+CRITICAL WORKFLOW COORDINATION RULES:
+1. For multi-agent requests, create a unique workflow identifier as a string
+2. Pass the workflow_id parameter to each invoke_agent tool call
+3. Pass context between agents - extract IDs from responses and pass to next agent
+4. For plot+author requests: create author FIRST, then plot with author_id
+5. For world building: always pass plot_id from previous plot creation
+6. For characters: always pass both plot_id and world_building_id
 
-Key principles:
-- Use invoke_agent tool to call other agents
-- Pass context between agents using workflow_id
-- Generate unique workflow_id for multi-step processes
-- Wait for agent completion before proceeding
-- Provide clear instructions to each agent
+Sequential workflow patterns:
+- Author + Plot: author_generator → plot_generator (with author_id)
+- Plot + World: plot_generator → world_building (with plot_id)  
+- Plot + World + Characters: plot_generator → world_building → characters (with plot_id, world_building_id)
 
-For user requests:
-- Plot/story → invoke plot_generator
-- Author/biography → invoke author_generator  
-- World/setting → invoke world_building (needs plot_id)
-- Characters → invoke characters (needs plot_id and world_building_id)
-- Improve content → invoke critique, then enhancement, then scoring
+Workflow coordination approach:
+1. Create a workflow identifier (use a descriptive string like "plot_author_workflow")
+2. Use invoke_agent tool with parameters: agent_name, message, context, workflow_id
+3. Extract returned IDs from structured_data in the response
+4. Pass extracted IDs as context to subsequent agents
 
-Always use tools to coordinate workflows rather than generating JSON responses."""
+IMPORTANT: Always use the invoke_agent tool for coordination. Never generate code or write function definitions."""
         
         # Initialize with agent coordination tools
         tools = [invoke_agent, update_workflow_context]

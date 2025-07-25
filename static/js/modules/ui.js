@@ -33,13 +33,20 @@ class UIManager {
     }
 
     /**
-     * Safely set element content
+     * Safely set element content with security validation
      */
     setContent(elementId, content, isHTML = false) {
         const element = this.getElement(elementId);
         if (element) {
             if (isHTML) {
-                element.innerHTML = content;
+                // Use security service for safe HTML setting
+                if (window.securityService) {
+                    window.securityService.safeSetHTML(element, content);
+                } else {
+                    // Fallback to textContent if security service not available
+                    console.warn('Security service not available, falling back to text content');
+                    element.textContent = content;
+                }
             } else {
                 element.textContent = content;
             }
@@ -127,8 +134,12 @@ class UIManager {
         const select = this.getElement(selectId);
         if (!select) return;
 
-        // Clear existing options
-        select.innerHTML = `<option value="">${defaultText}</option>`;
+        // Clear existing options safely
+        select.textContent = ''; // Clear all content first
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = defaultText;
+        select.appendChild(defaultOption);
 
         // Add new options
         options.forEach(option => {
@@ -205,20 +216,50 @@ class UIManager {
     }
 
     /**
-     * Create and append message element to chat
+     * Create and append message element to chat with modern UI structure
      */
     appendChatMessage(content, className = 'message', isHTML = false) {
         const chatContainer = this.getElement('chat');
         if (!chatContainer) return null;
 
+        // Remove welcome message if it exists
+        const welcomeMessage = chatContainer.querySelector('.welcome-message');
+        if (welcomeMessage) {
+            welcomeMessage.remove();
+        }
+
+        // Create message wrapper
         const messageElement = document.createElement('div');
         messageElement.className = className;
         
+        // Create message bubble
+        const messageBubble = document.createElement('div');
+        messageBubble.className = 'message-bubble';
+        
+        // Create message content
+        const messageContent = document.createElement('div');
+        messageContent.className = 'message-content';
+        
         if (isHTML) {
-            messageElement.innerHTML = content;
+            // Use security service for safe HTML setting
+            if (window.securityService) {
+                window.securityService.safeSetHTML(messageContent, content);
+            } else {
+                messageContent.textContent = content;
+            }
         } else {
-            messageElement.textContent = content;
+            messageContent.textContent = content;
         }
+        
+        // Add timestamp
+        const timestamp = document.createElement('div');
+        timestamp.className = 'message-time';
+        timestamp.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        // Assemble message
+        messageBubble.appendChild(messageContent);
+        messageBubble.appendChild(timestamp);
+        messageElement.appendChild(messageBubble);
 
         chatContainer.appendChild(messageElement);
         this.scrollChatToBottom();
@@ -279,7 +320,10 @@ class UIManager {
             return;
         }
 
-        select.innerHTML = '';
+        // Clear existing options safely
+        while (select.firstChild) {
+            select.removeChild(select.firstChild);
+        }
         
         Object.entries(availableModels).forEach(([modelId, info]) => {
             const option = document.createElement('option');
@@ -359,7 +403,12 @@ class UIManager {
             paramsText = '<em style="color: #6c757d;">No parameters selected. Select parameters above to automatically include them in your requests.</em>';
         }
         
-        selectedParamsDiv.innerHTML = paramsText;
+        // Use security service for safe HTML setting
+        if (window.securityService) {
+            window.securityService.safeSetHTML(selectedParamsDiv, paramsText);
+        } else {
+            selectedParamsDiv.textContent = paramsText.replace(/<[^>]*>/g, ''); // Strip HTML as fallback
+        }
     }
 
     /**
@@ -368,7 +417,12 @@ class UIManager {
     showLoading(elementId, message = 'Loading...') {
         const element = this.getElement(elementId);
         if (element) {
-            element.innerHTML = `<div class="loading">${message}</div>`;
+            // Create loading element safely
+            element.textContent = ''; // Clear existing content
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'loading';
+            loadingDiv.textContent = message;
+            element.appendChild(loadingDiv);
             element.classList.add('loading-state');
         }
     }
@@ -389,7 +443,12 @@ class UIManager {
     showError(elementId, message) {
         const element = this.getElement(elementId);
         if (element) {
-            element.innerHTML = `<div class="error">${message}</div>`;
+            // Create error element safely
+            element.textContent = ''; // Clear existing content
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            element.appendChild(errorDiv);
             element.classList.add('error-state');
         }
     }
@@ -484,6 +543,12 @@ class UIManager {
      * Show typing indicator
      */
     showTypingIndicator() {
+        // Hide the static typing indicator in the input container
+        const staticIndicator = this.getElement('typingIndicator');
+        if (staticIndicator) {
+            staticIndicator.style.display = 'none';
+        }
+
         const existingIndicator = document.getElementById('typing-indicator');
         if (existingIndicator) {
             return; // Already showing
@@ -491,18 +556,33 @@ class UIManager {
 
         const typingDiv = document.createElement('div');
         typingDiv.id = 'typing-indicator';
-        typingDiv.className = 'message agent-message typing';
-        typingDiv.innerHTML = `
-            <div class="typing-content">
-                <span class="typing-avatar">🤖</span>
-                <span class="typing-text">AI is thinking...</span>
-                <div class="typing-dots">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-            </div>
-        `;
+        typingDiv.className = 'message assistant typing';
+        
+        const typingBubble = document.createElement('div');
+        typingBubble.className = 'message-bubble';
+        
+        // Create typing indicator safely without innerHTML
+        const typingIndicator = document.createElement('div');
+        typingIndicator.className = 'typing-indicator';
+        
+        const typingDots = document.createElement('div');
+        typingDots.className = 'typing-dots';
+        
+        // Create three dots
+        for (let i = 0; i < 3; i++) {
+            const dot = document.createElement('span');
+            typingDots.appendChild(dot);
+        }
+        
+        const typingText = document.createElement('span');
+        typingText.className = 'typing-text';
+        typingText.textContent = 'AI is thinking...';
+        
+        typingIndicator.appendChild(typingDots);
+        typingIndicator.appendChild(typingText);
+        typingBubble.appendChild(typingIndicator);
+
+        typingDiv.appendChild(typingBubble);
 
         const chatContainer = this.getElement('chat');
         if (chatContainer) {
@@ -522,7 +602,7 @@ class UIManager {
     }
 
     /**
-     * Handle long messages with expand/collapse
+     * Handle long messages with expand/collapse (Security-Fixed)
      */
     handleLongMessage(messageElement, threshold = 500) {
         const textContent = messageElement.textContent || '';
@@ -531,22 +611,71 @@ class UIManager {
             const preview = textContent.substring(0, threshold) + '...';
             const fullText = textContent;
             
-            messageElement.innerHTML = `
-                <div class="message-preview">
-                    ${this.constructor.formatMessage(preview)}
-                    <button class="expand-btn" onclick="this.parentElement.parentElement.classList.add('expanded')">
-                        Read More
-                    </button>
-                </div>
-                <div class="message-full" style="display: none;">
-                    ${this.constructor.formatMessage(fullText)}
-                    <button class="collapse-btn" onclick="this.parentElement.parentElement.classList.remove('expanded')">
-                        Show Less
-                    </button>
-                </div>
-            `;
+            // Clear existing content safely
+            messageElement.textContent = '';
             
+            // Create preview section
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'message-preview';
+            
+            const previewContent = document.createElement('div');
+            if (window.securityService) {
+                const safePreview = window.securityService.formatMessageSafely(preview);
+                window.securityService.safeSetHTML(previewContent, safePreview);
+            } else {
+                previewContent.textContent = preview;
+            }
+            
+            const expandBtn = document.createElement('button');
+            expandBtn.className = 'expand-btn';
+            expandBtn.textContent = 'Read More';
+            
+            // Create full message section  
+            const fullDiv = document.createElement('div');
+            fullDiv.className = 'message-full';
+            fullDiv.style.display = 'none';
+            
+            const fullContent = document.createElement('div');
+            if (window.securityService) {
+                const safeFullText = window.securityService.formatMessageSafely(fullText);
+                window.securityService.safeSetHTML(fullContent, safeFullText);
+            } else {
+                fullContent.textContent = fullText;
+            }
+            
+            const collapseBtn = document.createElement('button');
+            collapseBtn.className = 'collapse-btn';
+            collapseBtn.textContent = 'Show Less';
+            
+            // Add secure event listeners instead of inline onclick
+            const expandHandler = () => {
+                messageElement.classList.add('expanded');
+                previewDiv.style.display = 'none';
+                fullDiv.style.display = 'block';
+            };
+            
+            const collapseHandler = () => {
+                messageElement.classList.remove('expanded');
+                previewDiv.style.display = 'block';
+                fullDiv.style.display = 'none';
+            };
+            
+            expandBtn.addEventListener('click', expandHandler);
+            collapseBtn.addEventListener('click', collapseHandler);
+            
+            // Assemble the elements
+            previewDiv.appendChild(previewContent);
+            previewDiv.appendChild(expandBtn);
+            fullDiv.appendChild(fullContent);
+            fullDiv.appendChild(collapseBtn);
+            
+            messageElement.appendChild(previewDiv);
+            messageElement.appendChild(fullDiv);
             messageElement.classList.add('expandable-message');
+            
+            // Track event listeners for cleanup
+            this.addEventListenerToElement(expandBtn, 'click', expandHandler);
+            this.addEventListenerToElement(collapseBtn, 'click', collapseHandler);
         }
     }
 
@@ -601,34 +730,67 @@ class UIManager {
      * Create enhanced message element with agent styling
      */
     createMessageElement(content, className = 'message', agent = null, timestamp = null) {
+        return this.createModernMessageElement(content, className, agent, timestamp);
+    }
+
+    /**
+     * Create modern message element with bubble design
+     */
+    createModernMessageElement(content, className = 'message', agent = null, timestamp = null) {
+        // Remove welcome message if it exists
+        const chatContainer = this.getElement('chat');
+        if (chatContainer) {
+            const welcomeMessage = chatContainer.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+        }
+
+        // Create message wrapper
         const messageElement = document.createElement('div');
         messageElement.className = className;
         
+        // Add agent-specific styling
         if (agent && window.agentManager) {
             const agentConfig = window.agentManager.getAgentConfig(agent);
             messageElement.classList.add(`${agent}-message`);
-            
-            // Add agent header
-            const agentHeader = window.agentManager.createAgentHeader(agentConfig);
-            messageElement.appendChild(agentHeader);
-            
-            // Ensure agent styles are loaded
             window.agentManager.addAgentStyle(agent);
+        }
+        
+        // Create message bubble
+        const messageBubble = document.createElement('div');
+        messageBubble.className = 'message-bubble';
+        
+        // Add agent header if applicable
+        if (agent && window.agentManager) {
+            const agentConfig = window.agentManager.getAgentConfig(agent);
+            const agentHeader = window.agentManager.createAgentHeader(agentConfig);
+            messageBubble.appendChild(agentHeader);
         }
         
         // Add content
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        contentDiv.innerHTML = this.constructor.formatMessage(content);
-        messageElement.appendChild(contentDiv);
-        
-        // Add timestamp if provided
-        if (timestamp) {
-            const timestampDiv = document.createElement('div');
-            timestampDiv.className = 'message-timestamp';
-            timestampDiv.textContent = this.formatTimestamp(timestamp);
-            messageElement.appendChild(timestampDiv);
+        // Use security service for safe message formatting
+        if (window.securityService) {
+            const safeContent = window.securityService.formatMessageSafely(content);
+            window.securityService.safeSetHTML(contentDiv, safeContent);
+        } else {
+            contentDiv.textContent = content;
         }
+        messageBubble.appendChild(contentDiv);
+        
+        // Add timestamp
+        const timestampDiv = document.createElement('div');
+        timestampDiv.className = 'message-time';
+        if (timestamp) {
+            timestampDiv.textContent = this.formatTimestamp(timestamp);
+        } else {
+            timestampDiv.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+        messageBubble.appendChild(timestampDiv);
+        
+        messageElement.appendChild(messageBubble);
         
         return messageElement;
     }
@@ -640,11 +802,17 @@ class UIManager {
         const chatContainer = this.getElement('chat');
         if (!chatContainer) return null;
 
+        // Remove welcome message if it exists
+        const welcomeMessage = chatContainer.querySelector('.welcome-message');
+        if (welcomeMessage) {
+            welcomeMessage.remove();
+        }
+
         // Detect agent from message data
         const agent = window.agentManager ? window.agentManager.detectAgentFromMessage(data) : null;
         
-        // Create message element
-        const messageElement = this.createMessageElement(content, className, agent, data.timestamp);
+        // Create message element with modern structure
+        const messageElement = this.createModernMessageElement(content, className, agent, data.timestamp);
         
         // Handle workflow visualization
         if (agent === 'orchestrator' && window.agentManager && window.agentManager.isOrchestratorWorkflow(content)) {
@@ -656,7 +824,10 @@ class UIManager {
         // Handle JSON responses
         if (data.json_data && window.agentManager) {
             const jsonElement = window.agentManager.createCollapsibleJSON(data.json_data, agent);
-            messageElement.appendChild(jsonElement);
+            const messageBubble = messageElement.querySelector('.message-bubble');
+            if (messageBubble) {
+                messageBubble.appendChild(jsonElement);
+            }
         }
         
         chatContainer.appendChild(messageElement);
@@ -672,7 +843,8 @@ class UIManager {
      * Update status with enhanced styling
      */
     updateStatus(status, message = '') {
-        const statusElement = this.getElement('statusIndicator') || this.getElement('status');
+        // Update connection status in chat header
+        const statusElement = this.getElement('statusIndicator');
         const statusText = this.getElement('statusText');
         
         if (statusElement) {
@@ -680,39 +852,53 @@ class UIManager {
         }
         
         if (statusText) {
-            statusText.textContent = message || status;
-        } else if (statusElement) {
-            statusElement.textContent = message || status;
+            statusText.textContent = message || this.getStatusMessage(status);
+        }
+        
+        // Also update status bar if it exists
+        const statusBarIndicator = document.querySelector('.status-bar .status-indicator');
+        const statusBarText = document.querySelector('.status-bar .status-text');
+        
+        if (statusBarIndicator) {
+            statusBarIndicator.className = `status-indicator ${status}`;
+        }
+        
+        if (statusBarText) {
+            statusBarText.textContent = message || this.getStatusMessage(status);
         }
     }
 
     /**
-     * Utility: Enhanced message formatting
+     * Get human-readable status message
+     */
+    getStatusMessage(status) {
+        const statusMessages = {
+            'connected': 'Connected',
+            'connecting': 'Connecting...',
+            'disconnected': 'Disconnected',
+            'reconnecting': 'Reconnecting...',
+            'error': 'Connection Error'
+        };
+        return statusMessages[status] || status;
+    }
+
+    /**
+     * Utility: Enhanced message formatting with security
+     * @deprecated Use securityService.formatMessageSafely() instead
      */
     static formatMessage(text) {
+        console.warn('formatMessage is deprecated, use securityService.formatMessageSafely() instead');
+        
+        // Delegate to security service if available
+        if (window.securityService) {
+            return window.securityService.formatMessageSafely(text);
+        }
+        
+        // Fallback to safe text content
         if (!text) return '';
-        
-        // Convert numbered lists to HTML
-        text = text.replace(/^(\d+\.\s\*\*)(.+?)(\*\*)/gm, '<strong>$1$2</strong>');
-        text = text.replace(/^(\d+\.\s)(.+?)$/gm, '<strong>$1</strong>$2');
-        
-        // Convert bold text
-        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        
-        // Convert italic text
-        text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-        
-        // Convert code blocks
-        text = text.replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>');
-        text = text.replace(/`(.*?)`/g, '<code>$1</code>');
-        
-        // Convert links
-        text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
-        
-        // Convert line breaks
-        text = text.replace(/\n/g, '<br>');
-        
-        return text;
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
 

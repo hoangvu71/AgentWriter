@@ -79,7 +79,14 @@ class WebSocketService {
         this.ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                this.handleMessage(data);
+                
+                // Validate and sanitize incoming message data
+                const validatedData = this.validateIncomingMessage(data);
+                if (validatedData) {
+                    this.handleMessage(validatedData);
+                } else {
+                    console.warn('Received invalid message data, ignoring');
+                }
             } catch (error) {
                 console.error('Error parsing WebSocket message:', error);
                 this.handleMessage({
@@ -135,7 +142,7 @@ class WebSocketService {
     }
 
     /**
-     * Send message through WebSocket
+     * Send message through WebSocket with validation
      */
     sendMessage(message, context = null) {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
@@ -144,17 +151,27 @@ class WebSocketService {
             return false;
         }
 
+        // Validate and sanitize message before sending
+        const validatedMessage = this.validateOutgoingMessage(message);
+        if (!validatedMessage) {
+            console.error('Invalid message content');
+            return false;
+        }
+
         try {
             const messageData = {
                 type: 'message',
-                content: message,
+                content: validatedMessage,
                 user_id: this.userId,
                 timestamp: new Date().toISOString()
             };
 
-            // Add context if provided
+            // Validate and add context if provided
             if (context) {
-                messageData.context = context;
+                const validatedContext = this.validateContext(context);
+                if (validatedContext) {
+                    messageData.context = validatedContext;
+                }
             }
 
             this.ws.send(JSON.stringify(messageData));
@@ -166,7 +183,7 @@ class WebSocketService {
     }
 
     /**
-     * Send structured data through WebSocket
+     * Send structured data through WebSocket with validation
      */
     sendData(type, data) {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
@@ -174,10 +191,17 @@ class WebSocketService {
             return false;
         }
 
+        // Validate message type
+        const validatedType = this.validateMessageType(type);
+        if (!validatedType) {
+            console.error('Invalid message type');
+            return false;
+        }
+
         try {
             const messageData = {
-                type: type,
-                data: data,
+                type: validatedType,
+                data: data, // Data validation depends on type
                 user_id: this.userId,
                 timestamp: new Date().toISOString()
             };
@@ -262,22 +286,112 @@ class WebSocketService {
     }
 
     /**
+     * Validate incoming WebSocket message
+     */
+    validateIncomingMessage(data) {
+        if (window.securityService) {
+            return window.securityService.validateWebSocketMessage(data);
+        }
+        
+        // Basic validation fallback
+        if (!data || typeof data !== 'object') {
+            return null;
+        }
+        
+        const validated = {};
+        
+        if (data.type && typeof data.type === 'string') {
+            validated.type = data.type.replace(/[^a-zA-Z0-9_-]/g, '');
+        }
+        
+        if (data.content && typeof data.content === 'string') {
+            validated.content = data.content.substring(0, 10000); // Limit content length
+        }
+        
+        return validated;
+    }
+
+    /**
+     * Validate outgoing message content
+     */
+    validateOutgoingMessage(message) {
+        if (window.securityService) {
+            return window.securityService.validateInput(message, 'message');
+        }
+        
+        // Basic validation fallback
+        if (!message || typeof message !== 'string') {
+            return '';
+        }
+        
+        // Basic length check and dangerous pattern removal
+        if (message.length > 2000) {
+            message = message.substring(0, 2000);
+        }
+        
+        // Remove potentially dangerous patterns
+        return message.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                     .replace(/javascript:/gi, '')
+                     .replace(/on\w+\s*=/gi, '');
+    }
+
+    /**
+     * Validate context object
+     */
+    validateContext(context) {
+        if (window.securityService) {
+            return window.securityService.validateContext(context);
+        }
+        
+        // Basic validation fallback
+        if (!context || typeof context !== 'object') {
+            return null;
+        }
+        
+        // Only allow specific known context properties
+        const allowedKeys = ['selectedGenre', 'selectedSubgenre', 'selectedMicrogenre', 'selectedTrope', 'selectedTone', 'selectedAudience', 'selectedContent'];
+        const validated = {};
+        
+        allowedKeys.forEach(key => {
+            if (context[key]) {
+                validated[key] = context[key];
+            }
+        });
+        
+        return validated;
+    }
+
+    /**
+     * Validate message type
+     */
+    validateMessageType(type) {
+        if (!type || typeof type !== 'string') {
+            return null;
+        }
+        
+        // Only allow alphanumeric characters, underscores, and hyphens
+        const cleanType = type.replace(/[^a-zA-Z0-9_-]/g, '');
+        
+        // Limit length
+        return cleanType.substring(0, 50);
+    }
+
+    /**
      * Format message text (utility function)
+     * @deprecated Use securityService.formatMessageSafely() instead
      */
     static formatMessage(text) {
+        console.warn('WebSocketService.formatMessage is deprecated, use securityService.formatMessageSafely() instead');
+        
+        if (window.securityService) {
+            return window.securityService.formatMessageSafely(text);
+        }
+        
+        // Safe fallback
         if (!text) return '';
-        
-        // Convert numbered lists to HTML
-        text = text.replace(/^(\d+\.\s\*\*)(.+?)(\*\*)/gm, '<strong>$1$2</strong>');
-        text = text.replace(/^(\d+\.\s)(.+?)$/gm, '<strong>$1</strong>$2');
-        
-        // Convert bold text
-        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        
-        // Convert line breaks
-        text = text.replace(/\n/g, '<br>');
-        
-        return text;
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
 

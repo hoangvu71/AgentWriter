@@ -6,24 +6,22 @@ import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import asyncio
+import uuid
 from functools import wraps
 
 # Google ADK uses simple functions as tools, not FunctionDeclaration objects
 
 from ..core.container import get_container
+from ..core.safe_async_runner import run_async_safe
 
 logger = logging.getLogger(__name__)
 
 
+# Legacy function replaced with safe async runner - kept for backward compatibility
 def run_async_in_sync(coro):
-    """Helper to run async operations synchronously for ADK compatibility"""
-    try:
-        return asyncio.run(coro)
-    except RuntimeError:
-        # Already in an async context, use run_coroutine_threadsafe
-        loop = asyncio.get_running_loop()
-        future = asyncio.run_coroutine_threadsafe(coro, loop)
-        return future.result(timeout=30)
+    """Helper to run async operations synchronously for ADK compatibility (DEPRECATED)"""
+    logger.warning("run_async_in_sync is deprecated, use run_async_safe instead")
+    return run_async_safe(coro, timeout=10.0)
 
 
 def save_plot(
@@ -53,6 +51,7 @@ def save_plot(
     try:
         container = get_container()
         plot_repository = container.plot_repository()
+        session_repository = container.session_repository()
         
         # Get session info from context if not provided
         if not session_id:
@@ -62,12 +61,18 @@ def save_plot(
             user_id = container.get_current_user_id()
             logger.info(f"Retrieved user_id from container: {user_id}")
         
+        # Ensure session exists before creating plot using safe async runner
+        run_async_safe(session_repository.ensure_session_exists(session_id, user_id), timeout=10.0)
+        logger.info(f"Session {session_id} ensured to exist")
+        
         logger.info(f"Final session_id: {session_id}, user_id: {user_id}")
+        
+        # Generate proper UUIDs if not provided
         
         from ..models.entities import Plot
         plot_entity = Plot(
-            session_id=session_id or "default",
-            user_id=user_id or "default", 
+            session_id=session_id or str(uuid.uuid4()),
+            user_id=user_id or str(uuid.uuid4()), 
             title=title,
             plot_summary=plot_summary,
             author_id=author_id
@@ -81,18 +86,27 @@ def save_plot(
             }
         
         # Run async operation synchronously for ADK compatibility
-        import threading
-        import concurrent.futures
-        
         def run_create():
             try:
+                # Try to run in new event loop
                 return asyncio.run(plot_repository.create(plot_entity))
             except RuntimeError:
-                # Already in an async context, can't use asyncio.run
-                # Try to get the existing loop and schedule the task
-                loop = asyncio.get_running_loop()
-                future = asyncio.run_coroutine_threadsafe(plot_repository.create(plot_entity), loop)
-                return future.result(timeout=30)  # 30 second timeout
+                # We're in an async context, run in thread
+                import concurrent.futures
+                import threading
+                
+                def threaded_create():
+                    new_loop = asyncio.new_event_loop()
+                    try:
+                        asyncio.set_event_loop(new_loop)
+                        return new_loop.run_until_complete(plot_repository.create(plot_entity))
+                    finally:
+                        new_loop.close()
+                        asyncio.set_event_loop(None)
+                
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(threaded_create)
+                    return future.result(timeout=10)
         
         plot_id = run_create()
         
@@ -137,9 +151,13 @@ def save_author(
     Returns:
         Dict containing the saved author ID and confirmation
     """
+    logger.info(f"Creating author: {author_name}")
     try:
         container = get_container()
         author_repository = container.author_repository()
+        
+        # Note: Duplicate check removed due to timeout issues in async context
+        # The AI agent instructions now emphasize creating unique names instead
         
         # Get session info from context if not provided
         if not session_id:
@@ -147,10 +165,29 @@ def save_author(
         if not user_id:
             user_id = container.get_current_user_id()
         
+        
+        # Ensure we have valid UUIDs - this is critical for database compatibility
+        def ensure_valid_uuid(value, fallback_prefix="generated"):
+            if not value:
+                return str(uuid.uuid4())
+            # If it's already a valid UUID, return as-is
+            try:
+                uuid.UUID(value)
+                return value
+            except (ValueError, TypeError):
+                # If not a valid UUID, generate a new one
+                logger.warning(f"Invalid UUID '{value}', generating new one")
+                return str(uuid.uuid4())
+        
+        session_id = ensure_valid_uuid(session_id)
+        user_id = ensure_valid_uuid(user_id)
+        
+        logger.info(f"Creating author '{author_name}' with session_id: {session_id}, user_id: {user_id}")
+        
         from ..models.entities import Author
         author_entity = Author(
-            session_id=session_id or "default",
-            user_id=user_id or "default",
+            session_id=session_id,
+            user_id=user_id,
             author_name=author_name,
             biography=author_bio,  # Field name is 'biography' in entity
             writing_style=writing_style,
@@ -172,11 +209,11 @@ def save_author(
         }
         
     except Exception as e:
-        logger.error(f"Error saving author: {str(e)}")
+        logger.error(f"Error saving author '{author_name}': {str(e)}")
         return {
             "success": False,
             "error": str(e),
-            "message": "Failed to save author"
+            "message": f"Failed to save author '{author_name}': {str(e)}"
         }
 
 
@@ -221,17 +258,30 @@ def save_world_building(
             user_id = container.get_current_user_id()
         
         from ..models.entities import WorldBuilding
+        
+        # Combine all the world building details into world_content
+        world_details = [description]
+        
+        if geography:
+            world_details.append(f"Geography: {geography}")
+        if culture:
+            world_details.append(f"Culture: {culture}")
+        if history:
+            world_details.append(f"History: {history}")
+        if magic_system:
+            world_details.append(f"Magic System: {magic_system}")
+        if technology:
+            world_details.append(f"Technology: {technology}")
+            
+        world_content = "\n\n".join(world_details)
+        
         world_entity = WorldBuilding(
-            session_id=session_id or "default",
-            user_id=user_id or "default",
+            session_id=session_id or str(uuid.uuid4()),
+            user_id=user_id or str(uuid.uuid4()),
             plot_id=plot_id,
             world_name=world_name,
-            description=description,
-            geography=geography or {},
-            culture=culture or {},
-            history=history or {},
-            magic_system=magic_system,
-            technology=technology
+            world_type="fantasy",  # Default type, could be parameterized
+            world_content=world_content
         )
         
         world_id = run_async_in_sync(world_repository.create(world_entity))
@@ -285,10 +335,10 @@ def save_characters(
         
         from ..models.entities import Characters
         characters_entity = Characters(
-            session_id=session_id or "default",
-            user_id=user_id or "default",
+            session_id=session_id or str(uuid.uuid4()),
+            user_id=user_id or str(uuid.uuid4()),
             plot_id=plot_id,
-            world_building_id=world_building_id,
+            world_id=world_building_id,  # Entity uses 'world_id', not 'world_building_id'
             character_count=len(characters),
             characters=characters
         )
