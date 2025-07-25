@@ -17,17 +17,25 @@ class AuthorGeneratorAgent(BaseAgent):
 
 Create believable author profiles matching the specified genre and target audience.
 
+CRITICAL: Generate UNIQUE, VARIED author names. Never repeat the same name combinations. Use diverse:
+- First names (avoid Jake, Rex, common repeating names)
+- Last names (mix ethnicities, regions, unique surnames) 
+- Cultural backgrounds and origins
+- Personal histories and career paths
+
 Generate:
-- Realistic author name and pen name
+- UNIQUE realistic author name and pen name (never repeat previous names)
 - Comprehensive biography with relevant background and experience
 - Writing style description that matches the genre
 - Genre expertise that feels authentic
 
 Ensure the author:
+- Has a COMPLETELY UNIQUE name combination not used before
 - Feels like a real person who could write in this genre
 - Has background that logically supports their expertise
 - Appeals to the target audience
 - Avoids stereotypes while maintaining authenticity
+- Represents diverse backgrounds, ethnicities, and experiences
 
 When you have generated a complete author profile, use the save_author tool to save it to the database.
 
@@ -69,24 +77,74 @@ Use the save_author tool with these parameters:
         if not any(keyword in content for keyword in author_keywords):
             self._logger.warning("Request may not be asking for author generation")
     
-    def _prepare_message(self, request) -> str:
+    async def _prepare_message(self, request) -> str:
         """Prepare message with author-specific context"""
-        message = super()._prepare_message(request)
+        message = await super()._prepare_message(request)
         
         # Add author-specific guidance if context is available
         if request.context:
+            # Handle both legacy and new structured context formats
+            
+            # Legacy format support
             plot_context = request.context.get("plot_context", "")
             genre_info = request.context.get("genre_context", "")
             audience_info = request.context.get("audience_context", "")
             
-            if plot_context or genre_info or audience_info:
+            # New structured format from frontend
+            genre_hierarchy = request.context.get("genre_hierarchy", {})
+            story_elements = request.context.get("story_elements", {})
+            target_audience = request.context.get("target_audience", {})
+            
+            # Build author generation focus from available context
+            focus_parts = []
+            
+            # Handle genre hierarchy
+            if genre_hierarchy:
+                genre_parts = []
+                if "genre" in genre_hierarchy:
+                    genre_parts.append(f"Genre: {genre_hierarchy['genre']['name']}")
+                if "subgenre" in genre_hierarchy:
+                    genre_parts.append(f"Subgenre: {genre_hierarchy['subgenre']['name']}")
+                if "microgenre" in genre_hierarchy:
+                    genre_parts.append(f"Microgenre: {genre_hierarchy['microgenre']['name']}")
+                if genre_parts:
+                    focus_parts.append("Genre Context: " + ", ".join(genre_parts))
+            elif genre_info:
+                focus_parts.append(f"Genre Context: {genre_info}")
+            
+            # Handle story elements
+            if story_elements:
+                story_parts = []
+                if "trope" in story_elements:
+                    story_parts.append(f"Trope: {story_elements['trope']['name']}")
+                if "tone" in story_elements:
+                    story_parts.append(f"Tone: {story_elements['tone']['name']}")
+                if story_parts:
+                    focus_parts.append("Story Elements: " + ", ".join(story_parts))
+            
+            # Handle target audience
+            if target_audience:
+                audience_parts = []
+                if "age_group" in target_audience:
+                    audience_parts.append(f"Age Group: {target_audience['age_group']}")
+                if "gender" in target_audience:
+                    audience_parts.append(f"Gender: {target_audience['gender']}")
+                if "sexual_orientation" in target_audience:
+                    audience_parts.append(f"Sexual Orientation: {target_audience['sexual_orientation']}")
+                if audience_parts:
+                    focus_parts.append("Target Audience: " + ", ".join(audience_parts))
+            elif audience_info:
+                focus_parts.append(f"Audience Context: {audience_info}")
+            
+            # Add plot context if available
+            if plot_context:
+                focus_parts.append(f"Plot Context: Create an author who could believably write this type of story: {plot_context}")
+            
+            # Build the final message
+            if focus_parts:
                 message += f"\n\nAUTHOR GENERATION FOCUS:"
-                if plot_context:
-                    message += f"\nPlot Context: Create an author who could believably write this type of story: {plot_context}"
-                if genre_info:
-                    message += f"\nGenre Context: {genre_info}"
-                if audience_info:
-                    message += f"\nAudience Context: {audience_info}"
-                message += "\nEnsure the author profile aligns with these specifications and could authentically write for this genre and audience."
+                for part in focus_parts:
+                    message += f"\n{part}"
+                message += "\n\nEnsure the author profile aligns with these specifications and could authentically write for this genre and audience."
         
         return message

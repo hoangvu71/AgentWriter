@@ -39,6 +39,7 @@ Use the save_plot tool with these parameters:
 - plot_summary: Detailed 2-3 paragraph plot summary  
 - session_id: Use the current session ID from context
 - user_id: Use the current user ID from context
+- author_id: Use the author_id from context if available (for linking plot to author)
 - genre: Genre if specified
 - themes: List of themes if applicable"""
         
@@ -69,21 +70,92 @@ Use the save_plot tool with these parameters:
         if not any(keyword in content for keyword in plot_keywords):
             self._logger.warning("Request may not be asking for plot generation")
     
-    def _prepare_message(self, request) -> str:
+    async def _prepare_message(self, request) -> str:
         """Prepare message with plot-specific context"""
-        message = super()._prepare_message(request)
+        message = await super()._prepare_message(request)
         
         # Add plot-specific guidance if context is available
         if request.context:
+            # Handle both legacy and new structured context formats
+            
+            # Legacy format support
             genre_info = request.context.get("genre_context", "")
             audience_info = request.context.get("audience_context", "")
+            author_id = request.context.get("author_id", "")
             
-            if genre_info or audience_info:
+            # New structured format from frontend
+            genre_hierarchy = request.context.get("genre_hierarchy", {})
+            story_elements = request.context.get("story_elements", {})
+            target_audience = request.context.get("target_audience", {})
+            
+            # Build plot generation focus from available context
+            focus_parts = []
+            
+            # Handle genre hierarchy
+            if genre_hierarchy:
+                genre_parts = []
+                if "genre" in genre_hierarchy:
+                    genre_parts.append(f"Genre: {genre_hierarchy['genre']['name']}")
+                    if "description" in genre_hierarchy['genre']:
+                        genre_parts.append(f"Genre Description: {genre_hierarchy['genre']['description']}")
+                if "subgenre" in genre_hierarchy:
+                    genre_parts.append(f"Subgenre: {genre_hierarchy['subgenre']['name']}")
+                if "microgenre" in genre_hierarchy:
+                    genre_parts.append(f"Microgenre: {genre_hierarchy['microgenre']['name']}")
+                if genre_parts:
+                    focus_parts.append("Genre Context:\n" + "\n".join(genre_parts))
+            elif genre_info:
+                focus_parts.append(f"Genre Context: {genre_info}")
+            
+            # Handle story elements
+            if story_elements:
+                story_parts = []
+                if "trope" in story_elements:
+                    story_parts.append(f"Trope: {story_elements['trope']['name']}")
+                    if "description" in story_elements['trope']:
+                        story_parts.append(f"Trope Description: {story_elements['trope']['description']}")
+                if "tone" in story_elements:
+                    story_parts.append(f"Tone: {story_elements['tone']['name']}")
+                    if "description" in story_elements['tone']:
+                        story_parts.append(f"Tone Description: {story_elements['tone']['description']}")
+                if story_parts:
+                    focus_parts.append("Story Elements:\n" + "\n".join(story_parts))
+            
+            # Handle target audience
+            if target_audience:
+                audience_parts = []
+                if "age_group" in target_audience:
+                    audience_parts.append(f"Age Group: {target_audience['age_group']}")
+                if "gender" in target_audience:
+                    audience_parts.append(f"Gender: {target_audience['gender']}")
+                if "sexual_orientation" in target_audience:
+                    audience_parts.append(f"Sexual Orientation: {target_audience['sexual_orientation']}")
+                if audience_parts:
+                    focus_parts.append("Target Audience: " + ", ".join(audience_parts))
+            elif audience_info:
+                focus_parts.append(f"Audience Context: {audience_info}")
+            
+            # Build the final message
+            if focus_parts:
                 message += f"\n\nPLOT GENERATION FOCUS:"
-                if genre_info:
-                    message += f"\nGenre Context: {genre_info}"
-                if audience_info:
-                    message += f"\nAudience Context: {audience_info}"
-                message += "\nEnsure the plot incorporates these specifications authentically."
+                for part in focus_parts:
+                    message += f"\n{part}"
+                message += "\n\nEnsure the plot incorporates these specifications authentically."
+            
+            # Always add author_id to context if present for tool linking
+            if author_id:
+                if "CONTEXT:" not in message:  # Add context section if not already there
+                    message += f"\n\nCONTEXT:"
+                # Add author_id in the format expected by tests
+                context_lines = []
+                if author_id:
+                    context_lines.append(f"AUTHOR_ID: {author_id}")
+                # Add other context items formatted properly
+                for key, value in request.context.items():
+                    if key not in ["author_id", "genre_hierarchy", "story_elements", "target_audience"] and value:
+                        context_lines.append(f"{key.upper()}: {value}")
+                
+                if context_lines:
+                    message += "\n" + "\n".join(context_lines)
         
         return message
