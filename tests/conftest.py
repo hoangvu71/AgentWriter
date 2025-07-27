@@ -13,6 +13,10 @@ from datetime import datetime
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# Install mocks before any imports
+from tests.mocks.google_adk import MockGoogleADK
+from tests.mocks import observability  # Install OpenTelemetry mocks
+
 # This ensures that imports like "from src.agents.agent_factory import ..." work correctly
 
 # Import core interfaces and entities after path setup
@@ -196,50 +200,47 @@ def complex_agent_request():
 # Vertex AI / ADK Mocking Fixtures
 @pytest.fixture
 def mock_vertex_ai():
-    """Mock Vertex AI components"""
-    with patch('google.adk.agents.Agent') as mock_agent_class, \
-         patch('google.adk.runners.InMemoryRunner') as mock_runner_class, \
-         patch('google.genai.types.Content') as mock_content_class, \
-         patch('google.genai.types.Part') as mock_part_class:
-        
-        # Mock Agent
-        mock_agent = MagicMock()
-        mock_agent_class.return_value = mock_agent
-        
-        # Mock Runner
-        mock_runner = AsyncMock()
-        mock_runner_class.return_value = mock_runner
-        
-        # Mock session service
-        mock_session_service = AsyncMock()
-        mock_session = AsyncMock()
-        mock_session.session_id = "vertex-session-123"
-        mock_session_service.create_session.return_value = mock_session
-        mock_runner.session_service = mock_session_service
-        
-        # Mock async iterator for run_async
-        async def mock_run_async(*args, **kwargs):
-            # Simulate streaming response
-            yield MagicMock(content="Part 1 of response")
-            yield MagicMock(content="Part 2 of response")
-            yield MagicMock(content="Final part")
-        
-        mock_runner.run_async = mock_run_async
-        
-        # Mock Content and Part
-        mock_content_class.return_value = MagicMock()
-        mock_part_class.return_value = MagicMock()
-        
-        yield {
-            'agent_class': mock_agent_class,
-            'agent': mock_agent,
-            'runner_class': mock_runner_class,
-            'runner': mock_runner,
-            'session_service': mock_session_service,
-            'session': mock_session,
-            'content_class': mock_content_class,
-            'part_class': mock_part_class
-        }
+    """Mock Vertex AI components - using our pre-installed mocks"""
+    import sys
+    
+    # Get mocks from already installed modules
+    mock_agent_class = sys.modules['google.adk.runners'].InMemoryRunner
+    mock_runner_class = sys.modules['google.adk.runners'].Runner
+    
+    # Create mock instances
+    mock_agent = MagicMock()
+    mock_runner = AsyncMock()
+    
+    # Mock session service
+    mock_session_service = AsyncMock()
+    mock_session = AsyncMock()
+    mock_session.session_id = "vertex-session-123"
+    mock_session_service.create_session.return_value = mock_session
+    mock_runner.session_service = mock_session_service
+    
+    # Mock async iterator for run_async
+    async def mock_run_async(*args, **kwargs):
+        # Simulate streaming response
+        yield MagicMock(content="Part 1 of response")
+        yield MagicMock(content="Part 2 of response")
+        yield MagicMock(content="Final part")
+    
+    mock_runner.run_async = mock_run_async
+    
+    # Mock Content and Part - return basic MagicMock if not available
+    mock_content_class = MagicMock()
+    mock_part_class = MagicMock()
+    
+    yield {
+        'agent_class': mock_agent_class,
+        'agent': mock_agent,
+        'runner_class': mock_runner_class,
+        'runner': mock_runner,
+        'session_service': mock_session_service,
+        'session': mock_session,
+        'content_class': mock_content_class,
+        'part_class': mock_part_class
+    }
 
 
 # ADK Services Mocking
