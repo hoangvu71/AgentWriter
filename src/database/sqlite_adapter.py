@@ -548,8 +548,9 @@ class SQLiteAdapter:
             if limit:
                 query += f" LIMIT {limit}"
             
-            # Execute using connection pool
-            results = await self._execute_select(query, params)
+            # Execute using thread pool to avoid blocking
+            loop = asyncio.get_event_loop()
+            results = await loop.run_in_executor(None, self._execute_select, query, params)
             
             return results
             
@@ -683,8 +684,9 @@ class SQLiteAdapter:
             query = f"SELECT * FROM {table_name} ORDER BY created_at DESC LIMIT ? OFFSET ?"
             params = [limit, offset]
             
-            # Execute using connection pool
-            results = await self._execute_select(query, params)
+            # Execute using thread pool to avoid blocking
+            loop = asyncio.get_event_loop()
+            results = await loop.run_in_executor(None, self._execute_select, query, params)
             
             return results
             
