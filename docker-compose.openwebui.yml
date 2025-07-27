@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: books-writer-openwebui
+    ports:
+      - "3000:8080"  # Open-WebUI on port 3000
+    environment:
+      # Basic configuration
+      - WEBUI_SECRET_KEY=your-secret-key-here-change-in-production
+      - WEBUI_NAME=BooksWriter AI Studio
+      
+      # Enable OpenAI-compatible API for your backend
+      - ENABLE_OPENAI_API=true
+      - OPENAI_API_BASE_URL=http://host.docker.internal:8000/openai
+      - OPENAI_API_KEY=books-writer-key
+      
+      # Database configuration (using local SQLite)
+      - DATABASE_URL=sqlite:////app/backend/data/webui.db
+      
+      # Features configuration
+      - ENABLE_RAG_WEB_SEARCH=true
+      - ENABLE_IMAGE_GENERATION=false
+      - ENABLE_SIGNUP=true
+      - DEFAULT_USER_ROLE=user
+      
+      # Model configuration
+      - DEFAULT_MODELS=books-writer-orchestrator
+      
+      # Custom branding
+      - WEBUI_AUTH_TRUSTED_EMAIL_HEADER=
+      - SHOW_ADMIN_DETAILS=true
+      
+    volumes:
+      - ./openwebui-data:/app/backend/data
+      - ./openwebui-docs:/app/backend/static/docs
+      - ./openwebui-functions:/app/backend/functions
+    
+    networks:
+      - books-writer-network
+    
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Access host machine
+
+  # Optional: Ollama for local models (if you want to test with local LLMs)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: books-writer-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama-data:/root/.ollama
+    networks:
+      - books-writer-network
+    profiles:
+      - ollama  # Only start with --profile ollama
+
+networks:
+  books-writer-network:
+    driver: bridge
+
+volumes:
+  openwebui-data:
+  openwebui-docs:
+  openwebui-functions:
+  ollama-data:

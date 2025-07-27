@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library - BooksWriter AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/main.css">
+    <style>
+        .library-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        
+        .placeholder {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 60px 40px;
+            margin-top: 40px;
+        }
+        
+        .placeholder h2 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+        
+        .placeholder p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 0;
+        }
+        
+        .nav-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s;
+            margin-top: 24px;
+        }
+        
+        .nav-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div id="header-placeholder"></div>
+
+    <!-- Library Container -->
+    <div class="library-container">
+        <h1>📚 Library</h1>
+        
+        <div class="placeholder">
+            <h2>Library Coming Soon</h2>
+            <p>The library functionality is currently being rebuilt. Please return to the main chat to create and manage your stories.</p>
+            <a href="/" class="nav-btn">← Back to Chat</a>
+        </div>
+    </div>
+
+    <script src="/static/js/shared-header.js"></script>
+    
+    <!-- Enhanced Modular JavaScript Architecture (minimal for library page) -->
+    <script src="/static/js/modules/theme.js"></script>
+    <script>
+        // Initialize shared header
+        document.addEventListener('DOMContentLoaded', function() {
+            applySharedHeader('library');
+        });
+    </script>
+</body>
+</html>

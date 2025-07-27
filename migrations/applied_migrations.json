@@ -1,0 +1,13 @@
+{
+  "applied": [
+    "001_initial_schema.sql",
+    "002_add_character_development_agent.sql",
+    "003_normalize_target_audience_and_genre_tables.sql",
+    "004_reverse_author_plot_relationship.sql",
+    "005_hierarchical_genre_system.sql",
+    "006_remove_target_audience_columns.sql",
+    "007_iterative_improvement_system.sql",
+    "008_world_building_and_characters_system.sql"
+  ],
+  "last_updated": "2025-07-18T14:05:33.842306"
+}

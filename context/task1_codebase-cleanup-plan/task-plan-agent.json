@@ -1,0 +1,177 @@
+{
+  "task_id": "codebase-cleanup-plan-001",
+  "agent": "task-plan-agent",
+  "timestamp": "2025-07-26T13:45:00Z",
+  "title": "BooksWriter Codebase Cleanup and Reorganization Plan",
+  "type": "refactor",
+  "description": "Comprehensive cleanup plan to remove unnecessary files, consolidate documentation, improve directory structure, and optimize the BooksWriter multi-agent system codebase",
+  "files_inspected": [
+    "/Users/devin/Documents/AI Writers/AgentWriter",
+    "/Users/devin/Documents/AI Writers/AgentWriter/CLAUDE.md",
+    "/Users/devin/Documents/AI Writers/AgentWriter/docs",
+    "/Users/devin/Documents/AI Writers/AgentWriter/src",
+    "/Users/devin/Documents/AI Writers/AgentWriter/tests",
+    "/Users/devin/Documents/AI Writers/AgentWriter/scripts",
+    "/Users/devin/Documents/AI Writers/AgentWriter/migrations",
+    "/Users/devin/Documents/AI Writers/AgentWriter/static",
+    "/Users/devin/Documents/AI Writers/AgentWriter/templates"
+  ],
+  "codebase_findings": {
+    "existing_functionality": "Well-structured multi-agent FastAPI application with TDD methodology, 9 specialized agents, dual database support (Supabase/SQLite), WebSocket real-time communication, and comprehensive documentation",
+    "architecture_patterns": "Modular separation of concerns with agents/, core/, database/, repositories/, services/, tools/, routers/, and websocket/ directories. Follows dependency injection and factory patterns",
+    "potential_conflicts": "Documentation duplication between root and docs/ directory, missing actual test files despite TDD claims, JavaScript test infrastructure without corresponding implementation files"
+  },
+  "recommendations": {
+    "files_to_delete": [
+      "/Users/devin/Documents/AI Writers/AgentWriter/CONNECTION_POOLING_IMPLEMENTATION.md",
+      "/Users/devin/Documents/AI Writers/AgentWriter/MCP_TOOLS_REFERENCE.md", 
+      "/Users/devin/Documents/AI Writers/AgentWriter/MCP_TROUBLESHOOTING.md",
+      "/Users/devin/Documents/AI Writers/AgentWriter/SECURITY_FIXES_SUMMARY.md",
+      "/Users/devin/Documents/AI Writers/AgentWriter/docs/CLAUDE.md",
+      "/Users/devin/Documents/AI Writers/AgentWriter/tests/setup.js",
+      "/Users/devin/Documents/AI Writers/AgentWriter/tests/unit/admin_interface.test.js",
+      "/Users/devin/Documents/AI Writers/AgentWriter/scripts/cleanup_config.json",
+      "/Users/devin/Documents/AI Writers/AgentWriter/scripts/cleanup_post_deployment_enhanced.py",
+      "/Users/devin/Documents/AI Writers/AgentWriter/scripts/migrate_cleanup.py"
+    ],
+    "files_to_move": [
+      {
+        "from": "/Users/devin/Documents/AI Writers/AgentWriter/CONNECTION_POOLING_IMPLEMENTATION.md",
+        "to": "/Users/devin/Documents/AI Writers/AgentWriter/docs/archive/CONNECTION_POOLING_IMPLEMENTATION.md"
+      },
+      {
+        "from": "/Users/devin/Documents/AI Writers/AgentWriter/MCP_TOOLS_REFERENCE.md",
+        "to": "/Users/devin/Documents/AI Writers/AgentWriter/docs/MCP_TOOLS_REFERENCE.md"
+      },
+      {
+        "from": "/Users/devin/Documents/AI Writers/AgentWriter/MCP_TROUBLESHOOTING.md", 
+        "to": "/Users/devin/Documents/AI Writers/AgentWriter/docs/MCP_TROUBLESHOOTING.md"
+      },
+      {
+        "from": "/Users/devin/Documents/AI Writers/AgentWriter/SECURITY_FIXES_SUMMARY.md",
+        "to": "/Users/devin/Documents/AI Writers/AgentWriter/docs/archive/SECURITY_FIXES_SUMMARY.md"
+      }
+    ],
+    "files_to_create": [
+      "/Users/devin/Documents/AI Writers/AgentWriter/docs/archive/.gitkeep",
+      "/Users/devin/Documents/AI Writers/AgentWriter/tests/unit/agents/.gitkeep",
+      "/Users/devin/Documents/AI Writers/AgentWriter/tests/unit/services/.gitkeep",
+      "/Users/devin/Documents/AI Writers/AgentWriter/tests/unit/repositories/.gitkeep",
+      "/Users/devin/Documents/AI Writers/AgentWriter/tests/integration/agents/.gitkeep",
+      "/Users/devin/Documents/AI Writers/AgentWriter/tests/integration/api/.gitkeep"
+    ],
+    "implementation_approach": "Phase-by-phase cleanup focusing on documentation consolidation first, followed by obsolete file removal, then test structure improvement",
+    "integration_points": "Maintain compatibility with existing MCP integration, Supabase connections, and FastAPI routing while cleaning up documentation and removing obsolete files"
+  },
+  "testing_requirements": {
+    "test_files_to_create": [
+      "/Users/devin/Documents/AI Writers/AgentWriter/tests/test_cleanup_validation.py"
+    ],
+    "test_files_to_modify": [],
+    "testing_strategy": "Create validation test to ensure all critical files remain intact after cleanup, verify all imports and dependencies still work properly"
+  },
+  "cleanup_phases": {
+    "phase_1_documentation_consolidation": {
+      "description": "Consolidate duplicate documentation and create proper archive structure",
+      "actions": [
+        "Create docs/archive/ directory",
+        "Move obsolete docs to archive",
+        "Remove duplicate CLAUDE.md from docs/ (keep root version)",
+        "Consolidate MCP documentation into docs/ directory",
+        "Update any references to moved files"
+      ]
+    },
+    "phase_2_obsolete_file_removal": {
+      "description": "Remove files that are no longer needed",
+      "actions": [
+        "Remove cleanup scripts that were one-time use",
+        "Remove JavaScript test files that don't correspond to actual implementations",
+        "Remove obsolete configuration files",
+        "Remove temporary migration files that are no longer needed"
+      ]
+    },
+    "phase_3_test_structure_improvement": {
+      "description": "Improve test directory organization for future TDD work",
+      "actions": [
+        "Create proper test subdirectories with .gitkeep files",
+        "Organize test structure to match src/ directory hierarchy",
+        "Create placeholder directories for unit and integration tests",
+        "Remove JavaScript test infrastructure since project is Python-based"
+      ]
+    },
+    "phase_4_directory_optimization": {
+      "description": "Final directory structure improvements",
+      "actions": [
+        "Ensure all directories have proper organization",
+        "Verify no broken imports after file moves",
+        "Update any hardcoded file paths in code",
+        "Clean up any empty directories"
+      ]
+    }
+  },
+  "risks": [
+    "Moving documentation files might break internal links or references",
+    "Removing JavaScript test files might indicate incomplete TDD implementation",
+    "Cleanup might accidentally remove files that are referenced by other parts of the system",
+    "MCP configuration references might need updating after file moves"
+  ],
+  "dependencies": [
+    "Verify all file references in code before moving/deleting",
+    "Check for any hardcoded paths in configuration files",
+    "Ensure MCP integration continues to work after cleanup",
+    "Maintain git history for moved files where possible"
+  ],
+  "completion_criteria": [
+    "No duplicate documentation files exist",
+    "All obsolete/temporary files have been removed",
+    "Documentation is properly organized in docs/ directory with archive/ subdirectory",
+    "Test directory structure supports future TDD development",
+    "All existing functionality continues to work",
+    "No broken imports or file references",
+    "Directory structure is clean and follows project conventions",
+    "Total line count of documentation is reduced while maintaining all essential information"
+  ],
+  "detailed_file_analysis": {
+    "documentation_issues": {
+      "duplicate_claude_md": "CLAUDE.md exists in both root (286 lines) and docs/ (694 lines) - root version should be kept as it's referenced in project instructions",
+      "scattered_mcp_docs": "MCP-related documentation scattered across root and docs/, should be consolidated in docs/",
+      "obsolete_implementation_docs": "CONNECTION_POOLING_IMPLEMENTATION.md and SECURITY_FIXES_SUMMARY.md appear to be historical/completed work that should be archived"
+    },
+    "obsolete_files": {
+      "cleanup_scripts": "cleanup_post_deployment_enhanced.py and migrate_cleanup.py appear to be one-time use scripts",
+      "javascript_tests": "Extensive JavaScript test infrastructure (setup.js, admin_interface.test.js) exists but no corresponding JavaScript implementation files - project is Python-based",
+      "config_files": "cleanup_config.json appears to be for a cleanup process that may no longer be needed"
+    },
+    "missing_test_structure": {
+      "tdd_claims_vs_reality": "Documentation claims 54+ TDD components but tests/ directory mostly contains infrastructure, not actual test files",
+      "test_organization": "Test directory structure doesn't match src/ organization, making it hard to locate tests for specific components"
+    }
+  },
+  "files_to_definitely_keep": [
+    "/Users/devin/Documents/AI Writers/AgentWriter/main.py",
+    "/Users/devin/Documents/AI Writers/AgentWriter/requirements.txt", 
+    "/Users/devin/Documents/AI Writers/AgentWriter/pytest.ini",
+    "/Users/devin/Documents/AI Writers/AgentWriter/.gitignore",
+    "/Users/devin/Documents/AI Writers/AgentWriter/.mcp.json",
+    "/Users/devin/Documents/AI Writers/AgentWriter/docker-compose.openwebui.yml",
+    "/Users/devin/Documents/AI Writers/AgentWriter/CLAUDE.md",
+    "/Users/devin/Documents/AI Writers/AgentWriter/README.md",
+    "/Users/devin/Documents/AI Writers/AgentWriter/src/**/*",
+    "/Users/devin/Documents/AI Writers/AgentWriter/static/**/*",
+    "/Users/devin/Documents/AI Writers/AgentWriter/templates/**/*",
+    "/Users/devin/Documents/AI Writers/AgentWriter/migrations/**/*",
+    "/Users/devin/Documents/AI Writers/AgentWriter/docs/SETUP_GUIDE.md",
+    "/Users/devin/Documents/AI Writers/AgentWriter/docs/MCP_SUPABASE_INTEGRATION.md",
+    "/Users/devin/Documents/AI Writers/AgentWriter/docs/DATABASE_MIGRATIONS_GUIDE.md",
+    "/Users/devin/Documents/AI Writers/AgentWriter/docs/ADK_HYBRID_ARCHITECTURE.md",
+    "/Users/devin/Documents/AI Writers/AgentWriter/docs/CLAUDE_AGENTS_MCP_ACCESS.md"
+  ],
+  "estimated_cleanup_impact": {
+    "files_to_remove": 8,
+    "files_to_move": 4,
+    "directories_to_create": 6,
+    "documentation_lines_consolidated": "~500 lines of duplicate content",
+    "obsolete_code_lines_removed": "~800 lines of unused test infrastructure"
+  },
+  "notes": "This cleanup focuses on organization and removing obsolete files while preserving all functional code and essential documentation. The JavaScript test infrastructure removal is justified since this is a Python-based project with FastAPI backend. The documentation consolidation will improve maintainability while preserving all essential information."
+}
