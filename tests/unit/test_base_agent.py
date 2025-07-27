@@ -18,8 +18,27 @@ Test Coverage:
 
 import pytest
 import uuid
+import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
+
+# Mock Google ADK dependencies before importing BaseAgent
+mock_google_adk = MagicMock()
+mock_google_adk.agents = MagicMock()
+mock_google_adk.agents.Agent = MagicMock()
+mock_google_adk.runners = MagicMock()
+mock_google_adk.runners.InMemoryRunner = MagicMock()
+
+mock_google_genai = MagicMock()
+mock_google_genai.types = MagicMock()
+mock_google_genai.types.Content = MagicMock()
+mock_google_genai.types.Part = MagicMock()
+
+sys.modules['google.adk'] = mock_google_adk
+sys.modules['google.adk.agents'] = mock_google_adk.agents
+sys.modules['google.adk.runners'] = mock_google_adk.runners
+sys.modules['google.genai'] = mock_google_genai
+sys.modules['google.genai.types'] = mock_google_genai.types
 
 from src.core.base_agent import BaseAgent
 from src.core.interfaces import AgentRequest, AgentResponse, ContentType
