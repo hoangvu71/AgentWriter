@@ -1,0 +1,246 @@
+name: Troubleshooting & Diagnostics
+
+on:
+  workflow_dispatch:
+    inputs:
+      diagnostic_level:
+        description: 'Diagnostic level'
+        required: false
+        default: 'basic'
+        type: choice
+        options:
+          - 'basic'     # Quick system checks
+          - 'detailed'  # Comprehensive diagnostics
+          - 'debug'     # Deep debugging info
+
+jobs:
+  system-diagnostics:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: System Environment Check
+      run: |
+        echo "# 🔍 System Diagnostics Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "## System Information" >> $GITHUB_STEP_SUMMARY
+        echo "- **OS**: $(uname -a)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Python**: $(python --version)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Pip**: $(pip --version)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Available Memory**: $(free -h | head -2 | tail -1)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Disk Space**: $(df -h . | tail -1)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+    - name: Repository Structure Analysis
+      run: |
+        echo "## Repository Structure" >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
+        find . -type f -name "*.py" | head -20 >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Check for critical files
+        critical_files=("requirements.txt" "src/app.py" "src/core/base_agent.py")
+        echo "### Critical Files Check:" >> $GITHUB_STEP_SUMMARY
+        
+        for file in "${critical_files[@]}"; do
+          if [ -f "$file" ]; then
+            size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo "unknown")
+            echo "- ✅ **$file** exists ($size bytes)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ❌ **$file** missing" >> $GITHUB_STEP_SUMMARY
+          fi
+        done
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+    - name: Dependency Analysis
+      run: |
+        echo "## Dependency Analysis" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f requirements.txt ]; then
+          echo "### Requirements.txt Analysis:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total packages**: $(wc -l < requirements.txt)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Size**: $(stat -c%s requirements.txt 2>/dev/null || stat -f%z requirements.txt) bytes" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### Top 10 Requirements:" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          head -10 requirements.txt >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Test installation of key packages
+          echo "### Package Installation Test:" >> $GITHUB_STEP_SUMMARY
+          
+          key_packages=("fastapi" "uvicorn" "websockets")
+          for package in "${key_packages[@]}"; do
+            if pip install "$package" --dry-run --quiet 2>/dev/null; then
+              echo "- ✅ **$package** can be installed" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ⚠️ **$package** installation may have issues" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+        else
+          echo "❌ **requirements.txt not found**" >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+    - name: Code Quality Quick Check
+      run: |
+        echo "## Code Quality Quick Check" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -d src ]; then
+          # Count Python files
+          py_files=$(find src -name "*.py" | wc -l)
+          echo "- **Python files**: $py_files" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for syntax errors
+          syntax_errors=0
+          for file in $(find src -name "*.py" | head -10); do
+            if ! python -m py_compile "$file" 2>/dev/null; then
+              syntax_errors=$((syntax_errors + 1))
+            fi
+          done
+          
+          if [ $syntax_errors -eq 0 ]; then
+            echo "- ✅ **No syntax errors** in first 10 files" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ **$syntax_errors syntax errors** found in first 10 files" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "❌ **src directory not found**" >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+    - name: Detailed Diagnostics
+      if: inputs.diagnostic_level == 'detailed' || inputs.diagnostic_level == 'debug'
+      run: |
+        echo "## Detailed Diagnostics" >> $GITHUB_STEP_SUMMARY
+        
+        # Try installing requirements
+        echo "### Full Requirements Installation Test:" >> $GITHUB_STEP_SUMMARY
+        
+        if pip install -r requirements.txt --dry-run 2>&1 | head -20; then
+          echo "✅ **Requirements installation simulation successful**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ **Requirements installation may have conflicts**" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Network connectivity
+        echo "### Network Connectivity:" >> $GITHUB_STEP_SUMMARY
+        if curl -s --max-time 5 https://pypi.org > /dev/null; then
+          echo "- ✅ **PyPI connectivity**: Working" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- ⚠️ **PyPI connectivity**: Issues detected" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if curl -s --max-time 5 https://github.com > /dev/null; then
+          echo "- ✅ **GitHub connectivity**: Working" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- ⚠️ **GitHub connectivity**: Issues detected" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Debug Information
+      if: inputs.diagnostic_level == 'debug'
+      run: |
+        echo "## Debug Information" >> $GITHUB_STEP_SUMMARY
+        
+        # Environment variables
+        echo "### Environment Variables:" >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
+        env | grep -E "(PYTHON|PIP|PATH)" | head -10 >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
+        
+        # Installed packages
+        echo "### Currently Installed Packages:" >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
+        pip list | head -20 >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
+        
+        # Process information
+        echo "### Process Information:" >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
+        ps aux | head -10 >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
+
+  test-recommendations:
+    runs-on: ubuntu-latest
+    needs: system-diagnostics
+    
+    steps:
+    - name: Generate Recommendations
+      run: |
+        echo "# 💡 Troubleshooting Recommendations" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "## Common Issues & Solutions:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### 1. 📦 Dependency Issues" >> $GITHUB_STEP_SUMMARY
+        echo "**Symptoms**: Pip install failures, import errors" >> $GITHUB_STEP_SUMMARY
+        echo "**Solutions**:" >> $GITHUB_STEP_SUMMARY
+        echo "- Update pip: \`pip install --upgrade pip\`" >> $GITHUB_STEP_SUMMARY
+        echo "- Clear cache: \`pip cache purge\`" >> $GITHUB_STEP_SUMMARY
+        echo "- Use specific versions in requirements.txt" >> $GITHUB_STEP_SUMMARY
+        echo "- Consider using virtual environments" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### 2. 🚀 Application Startup Issues" >> $GITHUB_STEP_SUMMARY
+        echo "**Symptoms**: Server won't start, connection refused" >> $GITHUB_STEP_SUMMARY
+        echo "**Solutions**:" >> $GITHUB_STEP_SUMMARY
+        echo "- Check port availability: \`netstat -tlnp | grep 8000\`" >> $GITHUB_STEP_SUMMARY
+        echo "- Verify environment variables are set" >> $GITHUB_STEP_SUMMARY
+        echo "- Check application logs for specific errors" >> $GITHUB_STEP_SUMMARY
+        echo "- Try starting with minimal configuration" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### 3. 🔌 WebSocket Connection Issues" >> $GITHUB_STEP_SUMMARY
+        echo "**Symptoms**: WebSocket connection failures" >> $GITHUB_STEP_SUMMARY
+        echo "**Solutions**:" >> $GITHUB_STEP_SUMMARY
+        echo "- Ensure WebSocket endpoints are properly configured" >> $GITHUB_STEP_SUMMARY
+        echo "- Check firewall settings" >> $GITHUB_STEP_SUMMARY
+        echo "- Verify WebSocket dependencies are installed" >> $GITHUB_STEP_SUMMARY
+        echo "- Test with simple WebSocket client first" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### 4. 🤖 Agent System Issues" >> $GITHUB_STEP_SUMMARY
+        echo "**Symptoms**: Agent responses not working" >> $GITHUB_STEP_SUMMARY
+        echo "**Solutions**:" >> $GITHUB_STEP_SUMMARY
+        echo "- Check Google Cloud credentials are configured" >> $GITHUB_STEP_SUMMARY
+        echo "- Verify API quotas and limits" >> $GITHUB_STEP_SUMMARY
+        echo "- Test with simpler agent requests first" >> $GITHUB_STEP_SUMMARY
+        echo "- Check agent factory configuration" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "## 🔧 Quick Fix Commands:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "```bash" >> $GITHUB_STEP_SUMMARY
+        echo "# Reset Python environment" >> $GITHUB_STEP_SUMMARY
+        echo "pip install --upgrade pip setuptools wheel" >> $GITHUB_STEP_SUMMARY
+        echo "pip cache purge" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# Install core dependencies only" >> $GITHUB_STEP_SUMMARY
+        echo "pip install fastapi uvicorn websockets requests" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# Test basic functionality" >> $GITHUB_STEP_SUMMARY
+        echo "python -c \"from fastapi import FastAPI; print('FastAPI OK')\"" >> $GITHUB_STEP_SUMMARY
+        echo "python -c \"import uvicorn; print('Uvicorn OK')\"" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# Start minimal server" >> $GITHUB_STEP_SUMMARY
+        echo "uvicorn --version" >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "## 📞 Getting Help:" >> $GITHUB_STEP_SUMMARY
+        echo "1. Check the specific error messages in job logs" >> $GITHUB_STEP_SUMMARY
+        echo "2. Review the system diagnostics above" >> $GITHUB_STEP_SUMMARY
+        echo "3. Try running the troubleshooting workflow with 'detailed' level" >> $GITHUB_STEP_SUMMARY
+        echo "4. Test locally with the same Python version (3.10)" >> $GITHUB_STEP_SUMMARY
+        echo "5. Check if the issue is reproducible in different environments" >> $GITHUB_STEP_SUMMARY
