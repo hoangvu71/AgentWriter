@@ -95,7 +95,7 @@ jobs:
         fi
 
     - name: Upload application info
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: app-info
         path: |
@@ -170,7 +170,7 @@ except Exception as e:
         " 2>&1 | tee -a $GITHUB_STEP_SUMMARY
 
     - name: Upload core test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: core-e2e-results
@@ -244,7 +244,7 @@ asyncio.run(test_agents())
         " 2>&1 | tee -a $GITHUB_STEP_SUMMARY
 
     - name: Upload agent test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: agent-e2e-results
@@ -263,7 +263,7 @@ asyncio.run(test_agents())
       with:
         python-version: '3.10'
         
-    - uses: actions/setup-node@v3
+    - uses: actions/setup-node@v4
       with:
         node-version: '18'
 
@@ -332,7 +332,7 @@ asyncio.run(test_websocket())
         " 2>&1 | tee -a $GITHUB_STEP_SUMMARY
 
     - name: Upload WebSocket test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: websocket-e2e-results
@@ -422,7 +422,7 @@ asyncio.run(test_websocket())
         pkill -f uvicorn || true
 
     - name: Upload browser test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: browser-e2e-results
@@ -472,7 +472,7 @@ asyncio.run(test_websocket())
         echo "- ✅ Open-WebUI compatibility (when available)" >> $GITHUB_STEP_SUMMARY
 
     - name: Download all test artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         path: all-test-results
 
@@ -491,7 +491,7 @@ asyncio.run(test_websocket())
         echo "- Browser/UI: ${{ needs.e2e-playwright-browser.result }}" >> final-report/README.md
 
     - name: Upload final E2E report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: e2e-final-report
         path: final-report/

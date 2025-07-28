@@ -96,7 +96,7 @@ jobs:
         echo '```' >> release_notes.md
 
     - name: Upload release notes
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: release-notes
         path: release_notes.md
@@ -148,7 +148,7 @@ jobs:
         docker save agentwriter:${{ github.ref_name }} > agentwriter-image.tar
 
     - name: Upload Docker image
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: docker-image
         path: agentwriter-image.tar

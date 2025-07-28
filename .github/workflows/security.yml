@@ -86,7 +86,7 @@ jobs:
         fi
 
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-reports
@@ -165,7 +165,7 @@ jobs:
         echo '```' >> dependency-report.md
 
     - name: Upload dependency reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: dependency-reports
         path: |
@@ -215,7 +215,7 @@ jobs:
         pip-licenses --format=html --output-file=licenses.html
 
     - name: Upload license reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: license-reports
         path: |
