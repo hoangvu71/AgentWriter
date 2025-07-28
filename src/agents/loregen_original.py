@@ -1,36 +1,34 @@
 """
-LoreGen Agent - Refactored Version
+LoreGen Agent
 Generates expanded world building by detecting sparse areas and creating detailed lore.
-Uses modular services following the successful Phase 1A pattern.
-
-This refactored version maintains 100% API compatibility while providing
-improved modularity, maintainability, and testability.
+Based on confirmed requirements:
+- Input: "Use this plot's worldbuilding and expand"
+- Output: Complete expanded world building (Option B format)
+- Uses k-means clustering + sparse detection to find top 5 areas needing expansion
+- Real-time processing (~20-30 seconds acceptable)
+- No user interaction during processing
 """
 
 import asyncio
 import time
 import logging
 from typing import Dict, Any, List, Optional
+import json
 
 from ..core.base_agent import BaseAgent
 from ..core.interfaces import AgentRequest, AgentResponse, ContentType
 from ..core.configuration import Configuration
-
-# Import modular services
-from .loregen_modules.rag_service import LoreRAGService
-from .loregen_modules.clustering_service import LoreClusteringService
-from .loregen_modules.document_processor import LoreDocumentProcessor
-from .loregen_modules.embedding_manager import LoreEmbeddingManager
+from ..services.vertex_rag_service import VertexRAGService
+from ..services.clustering_service import ClusteringService
 
 
 class LoreGenAgent(BaseAgent):
     """
-    Refactored LoreGen agent using modular architecture.
-    Maintains full API compatibility with the original implementation.
+    Agent for generating expanded world building through sparse lore detection and expansion.
     """
     
     def __init__(self, config: Configuration):
-        """Initialize LoreGen agent with modular services"""
+        """Initialize LoreGen agent with RAG and clustering services"""
         
         instruction = """
         You are the LoreGen agent, specialized in expanding world building by detecting and filling sparse areas in existing lore.
@@ -72,11 +70,9 @@ class LoreGenAgent(BaseAgent):
             config=config
         )
         
-        # Initialize modular services
-        self._rag_service = LoreRAGService(config)
-        self._clustering_service = LoreClusteringService()
-        self._document_processor = LoreDocumentProcessor()
-        self._embedding_manager = LoreEmbeddingManager(config)
+        # Initialize services
+        self._rag_service = VertexRAGService(config)
+        self._clustering_service = ClusteringService()
         
         # Database service will be injected
         self._database_service = None
@@ -117,7 +113,7 @@ class LoreGenAgent(BaseAgent):
                     error="No world building data available"
                 )
             
-            # Detect sparse areas using modular services
+            # Detect sparse areas
             sparse_areas = await self._detect_sparse_areas(world_data['world_content'], plot_id)
             
             # Generate expansions for sparse areas
@@ -195,36 +191,80 @@ class LoreGenAgent(BaseAgent):
     
     async def _detect_sparse_areas(self, world_content: str, plot_id: str = None) -> List[Dict[str, Any]]:
         """
-        Detect sparse areas in world building content using modular services.
+        Detect sparse areas in world building content using clustering analysis.
         Returns top 5 sparse areas ranked by pairwise distance.
         """
         try:
-            # Use document processor to create semantic chunks
-            chunks = await self._document_processor.create_semantic_chunks(
+            # Chunk the content semantically
+            chunks = await self._rag_service.chunk_content(
                 content=world_content,
                 chunk_size=80,
-                overlap=20
+                chunk_overlap=20
             )
             
             if not chunks:
                 self.logger.warning("No chunks created from world content")
                 return []
             
-            # Save chunks to database and Vertex AI RAG corpus if plot_id provided
+            # Save chunks to database and Vertex AI RAG corpus
             if plot_id and self._database_service:
-                await self._save_chunks_to_corpus(chunks, plot_id)
+                try:
+                    # Check if corpus already exists for this plot
+                    corpus_data = await self._database_service.get_rag_corpus_by_plot(plot_id)
+                    corpus_name = f"corpus-book-{plot_id}"
+                    
+                    if not corpus_data:
+                        # Create new Vertex AI corpus
+                        vertex_corpus_id = await self._rag_service.create_corpus_for_plot(plot_id)
+                        
+                        # Save corpus metadata to database
+                        corpus_data = await self._database_service.save_rag_corpus(
+                            vertex_corpus_id=vertex_corpus_id,
+                            plot_id=plot_id,
+                            corpus_name=corpus_name
+                        )
+                        self.logger.info(f"Created new Vertex AI RAG corpus for plot {plot_id}")
+                        
+                        # Import chunks to Vertex AI corpus
+                        await self._rag_service.import_chunks_to_corpus(corpus_name, chunks)
+                        self.logger.info(f"Imported {len(chunks)} chunks to Vertex AI corpus")
+                        
+                    else:
+                        self.logger.info(f"Using existing RAG corpus for plot {plot_id}")
+                        
+                        # Check if we need to add new chunks to existing corpus
+                        existing_chunk_count = corpus_data.get('chunk_count', 0)
+                        if len(chunks) > existing_chunk_count:
+                            # Add new chunks to existing corpus
+                            new_chunks = chunks[existing_chunk_count:]
+                            await self._rag_service.import_chunks_to_corpus(corpus_name, new_chunks)
+                            self.logger.info(f"Added {len(new_chunks)} new chunks to existing corpus")
+                    
+                    if corpus_data:
+                        # Save chunks metadata to database
+                        await self._database_service.save_rag_chunks(
+                            corpus_uuid=corpus_data['id'],
+                            chunks=chunks,
+                            source_type="world_building",
+                            source_id=plot_id
+                        )
+                        self.logger.info(f"Saved {len(chunks)} chunks metadata to database for plot {plot_id}")
+                        
+                except Exception as e:
+                    self.logger.warning(f"Failed to save chunks to database/Vertex AI: {e}")
+                    # Continue processing even if save fails
             
-            # Use embedding manager to get embeddings
+            # Get embeddings for clustering
             chunk_texts = [chunk['text'] for chunk in chunks]
-            embeddings = await self._embedding_manager.get_embeddings(chunk_texts)
+            embeddings = await self._rag_service.get_embeddings(chunk_texts)
             
-            # Use clustering service to perform k-means clustering
+            # Perform k-means clustering
             clusters = await self._clustering_service.perform_kmeans_clustering(
                 embeddings=embeddings,
                 chunks=chunks
             )
             
-            # Use clustering service to detect sparse areas
+            # Detect sparse areas using pairwise distance analysis
             sparse_areas = await self._clustering_service.detect_sparse_areas(
                 embeddings=embeddings,
                 chunks=chunks,
@@ -238,54 +278,6 @@ class LoreGenAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Sparse area detection failed: {e}")
             return []
-    
-    async def _save_chunks_to_corpus(self, chunks: List[Dict[str, Any]], plot_id: str):
-        """Save chunks to database and Vertex AI RAG corpus"""
-        try:
-            # Check if corpus already exists for this plot
-            corpus_data = await self._database_service.get_rag_corpus_by_plot(plot_id)
-            corpus_name = f"corpus-book-{plot_id}"
-            
-            if not corpus_data:
-                # Create new Vertex AI corpus using RAG service
-                vertex_corpus_id = await self._rag_service.create_corpus_for_plot(plot_id)
-                
-                # Save corpus metadata to database
-                corpus_data = await self._database_service.save_rag_corpus(
-                    vertex_corpus_id=vertex_corpus_id,
-                    plot_id=plot_id,
-                    corpus_name=corpus_name
-                )
-                self.logger.info(f"Created new Vertex AI RAG corpus for plot {plot_id}")
-                
-                # Import chunks to Vertex AI corpus using RAG service
-                await self._rag_service.import_chunks_to_corpus(corpus_name, chunks)
-                self.logger.info(f"Imported {len(chunks)} chunks to Vertex AI corpus")
-                
-            else:
-                self.logger.info(f"Using existing RAG corpus for plot {plot_id}")
-                
-                # Check if we need to add new chunks to existing corpus
-                existing_chunk_count = corpus_data.get('chunk_count', 0)
-                if len(chunks) > existing_chunk_count:
-                    # Add new chunks to existing corpus
-                    new_chunks = chunks[existing_chunk_count:]
-                    await self._rag_service.import_chunks_to_corpus(corpus_name, new_chunks)
-                    self.logger.info(f"Added {len(new_chunks)} new chunks to existing corpus")
-            
-            if corpus_data:
-                # Save chunks metadata to database
-                await self._database_service.save_rag_chunks(
-                    corpus_uuid=corpus_data['id'],
-                    chunks=chunks,
-                    source_type="world_building",
-                    source_id=plot_id
-                )
-                self.logger.info(f"Saved {len(chunks)} chunks metadata to database for plot {plot_id}")
-                
-        except Exception as e:
-            self.logger.warning(f"Failed to save chunks to database/Vertex AI: {e}")
-            # Continue processing even if save fails
     
     async def _generate_expansions(self, sparse_areas: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -470,7 +462,7 @@ class LoreGenAgent(BaseAgent):
             self.logger.error(f"Content generation failed: {e}")
             return ""
     
-    # Methods for orchestrator integration (maintain API compatibility)
+    # Additional methods for integration with existing agent factory
     
     async def _analyze_lore_density(self, request: AgentRequest) -> Dict[str, Any]:
         """
@@ -570,21 +562,3 @@ class LoreGenAgent(BaseAgent):
             },
             'expansion_details': expansion_details
         }
-    
-    # Service access methods for advanced usage
-    
-    def get_rag_service(self) -> LoreRAGService:
-        """Get the RAG service instance"""
-        return self._rag_service
-    
-    def get_clustering_service(self) -> LoreClusteringService:
-        """Get the clustering service instance"""
-        return self._clustering_service
-    
-    def get_document_processor(self) -> LoreDocumentProcessor:
-        """Get the document processor instance"""
-        return self._document_processor
-    
-    def get_embedding_manager(self) -> LoreEmbeddingManager:
-        """Get the embedding manager instance"""
-        return self._embedding_manager

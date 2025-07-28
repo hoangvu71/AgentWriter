@@ -71,92 +71,6 @@ class BaseAgent(MCPAgentMixin, IAgent):
         """Get the dynamic schema for this agent"""
         return self._config_manager.dynamic_schema
     
-    # Backward compatibility properties (maintain exact API)
-    @property
-    def _name(self) -> str:
-        return self._config_manager.name
-    
-    @property
-    def _description(self) -> str:
-        return self._config_manager.description
-    
-    @property
-    def _base_instruction(self) -> str:
-        return self._config_manager.base_instruction
-    
-    @property
-    def _instruction(self) -> str:
-        return self._config_manager.instruction
-    
-    @property
-    def _config(self):
-        return self._config_manager.config
-    
-    @property
-    def _tools(self):
-        return self._config_manager.tools
-    
-    @property
-    def _logger(self):
-        return self._config_manager.logger
-    
-    @property
-    def _dynamic_schema(self):
-        return self._config_manager.dynamic_schema
-    
-    @property
-    def _agent(self):
-        return self._config_manager.adk_agent
-    
-    @property
-    def _runner(self):
-        return self._config_manager.adk_runner
-    
-    @property
-    def _adk_factory(self):
-        return self._config_manager.adk_factory
-    
-    @property
-    def _observability(self):
-        return self._config_manager.observability
-    
-    @property
-    def _agent_tracker(self):
-        return self._config_manager.agent_tracker
-    
-    @property
-    def _conversation_manager(self):
-        return self._message_handler.conversation_manager
-    
-    # Backward compatibility methods (delegate to modules)
-    async def _prepare_message(self, request: AgentRequest) -> str:
-        """Backward compatibility: delegate to message handler"""
-        return await self._message_handler.prepare_message(request)
-    
-    def _parse_response(self, content: str) -> Optional[Dict[str, Any]]:
-        """Backward compatibility: delegate to response processor"""
-        return self._response_processor.parse_response(content)
-    
-    def _get_content_type(self) -> ContentType:
-        """Backward compatibility: delegate to response processor"""
-        return self._response_processor.get_content_type()
-    
-    def _is_valid_tool_call(self, function_name: str) -> bool:
-        """Backward compatibility: delegate to tool manager"""
-        return self._tool_manager.is_valid_tool_call(function_name)
-    
-    def _clean_tool_calls_for_serialization(self, tool_calls: List[Dict]) -> List[Dict]:
-        """Backward compatibility: delegate to tool manager"""
-        return self._tool_manager.clean_tool_calls_for_serialization(tool_calls)
-    
-    def _validate_request(self, request: AgentRequest) -> None:
-        """Backward compatibility: delegate to error handler"""
-        return self._error_handler.validate_request(request)
-    
-    def _format_context(self, context: Dict[str, Any]) -> str:
-        """Backward compatibility: delegate to message handler"""
-        return self._message_handler.format_context(context)
-    
     # Main processing methods
     async def process_request(self, request: AgentRequest) -> AgentResponse:
         """Process a request and return a response"""
@@ -536,8 +450,7 @@ class BaseAgent(MCPAgentMixin, IAgent):
             }
             
             # Save to memory through message handler
-            conversation_manager = await self._message_handler._get_conversation_manager()
-            await conversation_manager.save_interaction_to_memory(
+            await self._message_handler._get_conversation_manager().save_interaction_to_memory(
                 request.session_id, request.user_id, interaction_data
             )
             

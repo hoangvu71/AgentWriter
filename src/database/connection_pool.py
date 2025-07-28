@@ -1,6 +1,9 @@
 """
 Database connection pooling implementation for high-performance database operations.
 Provides connection pooling for both SQLite and Supabase adapters with health monitoring.
+
+IMPORTANT: This module has been refactored into modular components for better maintainability.
+The original API is preserved for backward compatibility.
 """
 
 import sqlite3
@@ -15,22 +18,20 @@ from queue import Queue, Empty, Full
 from supabase import Client as SupabaseClient
 from ..core.logging import get_logger
 
+# Import modular components
+from .pool_configuration import ConnectionPoolConfig as ModularConnectionPoolConfig
+from .pool_metrics import PoolMetrics as ModularPoolMetrics
+from .connection_validator import SQLiteConnectionValidator, SupabaseConnectionValidator
 
-@dataclass
-class ConnectionPoolConfig:
-    """Configuration for database connection pools"""
-    min_connections: int = 2
-    max_connections: int = 10
-    max_idle_time: int = 300  # 5 minutes
-    connection_timeout: int = 30  # seconds
-    health_check_interval: int = 60  # seconds
-    max_retries: int = 3
-    enable_metrics: bool = True
+# Maintain backward compatibility with original API
 
+
+# Re-export modular components with original names for backward compatibility
+ConnectionPoolConfig = ModularConnectionPoolConfig
 
 @dataclass
 class PoolMetrics:
-    """Connection pool performance metrics"""
+    """Connection pool performance metrics - backward compatibility wrapper"""
     total_connections: int = 0
     active_connections: int = 0
     idle_connections: int = 0
