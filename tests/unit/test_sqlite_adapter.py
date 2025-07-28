@@ -30,7 +30,7 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch, mock_open
 from typing import Dict, Any, List, Optional
 
-from src.database.sqlite_adapter import SQLiteAdapter
+from src.database.sqlite.adapter import SQLiteAdapter
 from src.core.interfaces import IDatabase
 
 

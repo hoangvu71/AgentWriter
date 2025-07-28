@@ -35,7 +35,7 @@ mock_httpx = MagicMock()
 sys.modules['httpx'] = mock_httpx
 
 from src.database.database_factory import DatabaseFactory, db_factory
-from src.database.sqlite_adapter import SQLiteAdapter
+from src.database.sqlite.adapter import SQLiteAdapter
 from src.database.supabase_adapter import SupabaseAdapter
 
 
