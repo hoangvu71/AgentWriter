@@ -177,7 +177,7 @@ class SQLiteDataOperations:
             
         except Exception as e:
             self.logger.error(f"Error updating {table} record {record_id}: {e}")
-            return False
+            raise
     
     async def delete(self, table: str, record_id: str) -> bool:
         """Delete a record from the specified table"""
@@ -198,7 +198,7 @@ class SQLiteDataOperations:
             
         except Exception as e:
             self.logger.error(f"Error deleting from {table}: {e}")
-            return False
+            raise
     
     async def count(self, table: str, filters: Optional[Dict[str, Any]] = None) -> int:
         """Count records in the specified table"""

@@ -5,6 +5,7 @@ This replaces the monolithic SQLiteAdapter with a composition-based approach.
 
 from typing import Dict, Any, List, Optional
 from ...core.logging import get_logger
+from ..schema_synchronizer import SchemaSynchronizer
 from .connection_manager import SQLiteConnectionManager
 from .query_builder import SQLiteQueryBuilder  
 from .table_manager import SQLiteTableManager
@@ -28,6 +29,7 @@ class SQLiteAdapter:
         self.connection_manager = SQLiteConnectionManager(db_path)
         self.query_builder = SQLiteQueryBuilder()
         self.table_manager = SQLiteTableManager(self.connection_manager)
+        self.synchronizer = SchemaSynchronizer(db_path)
         self.data_operations = SQLiteDataOperations(
             self.connection_manager, 
             self.query_builder, 
