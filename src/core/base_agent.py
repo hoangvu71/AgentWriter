@@ -1,6 +1,8 @@
 """
 Base agent implementation for the multi-agent book writing system.
 REFACTORED VERSION using modular architecture.
+
+CI/CD Pipeline Test: This comment demonstrates automated testing workflows.
 """
 
 import uuid
