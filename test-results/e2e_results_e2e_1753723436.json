@@ -1,0 +1,170 @@
+{
+  "test_run_id": "e2e_1753723436",
+  "environment": "local",
+  "start_time": "2025-07-28T10:23:56.207745",
+  "end_time": "2025-07-28T10:23:57.647806",
+  "duration_ms": 1440,
+  "summary": {
+    "total_suites": 3,
+    "total_tests": 13,
+    "passed": 3,
+    "failed": 10,
+    "partial": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "suite_name": "Core Functionality",
+      "total_tests": 4,
+      "passed": 1,
+      "failed": 3,
+      "tests": [
+        {
+          "test_name": "Application Startup",
+          "status": "failed",
+          "details": [
+            "\u274c Application startup test failed: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10e463b80>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+          ],
+          "performance": {}
+        },
+        {
+          "test_name": "WebSocket Connection",
+          "status": "failed",
+          "details": [
+            "\u274c WebSocket test failed: Multiple exceptions: [Errno 61] Connect call failed ('::1', 8000, 0, 0), [Errno 61] Connect call failed ('127.0.0.1', 8000)"
+          ],
+          "performance": {}
+        },
+        {
+          "test_name": "Database Connectivity",
+          "status": "failed",
+          "details": [
+            "\u274c Database connectivity test failed: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10e57f130>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+          ],
+          "performance": {}
+        },
+        {
+          "test_name": "Static File Serving",
+          "status": "passed",
+          "details": [
+            "\u26a0\ufe0f /static/index.html test failed: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /static/index.html (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10e57fc10>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+            "\u26a0\ufe0f /static/css/style.css test failed: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /static/css/style.css (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10e5895b0>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+            "\u26a0\ufe0f /static/js/app.js test failed: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /static/js/app.js (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10e589f10>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+            "\u26a0\ufe0f /favicon.ico test failed: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /favicon.ico (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10e589850>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+            "\u2139\ufe0f No static files found (may not be configured)"
+          ],
+          "performance": {}
+        }
+      ]
+    },
+    {
+      "suite_name": "Agent Workflows",
+      "total_tests": 4,
+      "passed": 0,
+      "failed": 4,
+      "partial": 0,
+      "tests": [
+        {
+          "test_name": "Plot Generation Workflow",
+          "status": "failed",
+          "details": [
+            "\u274c Plot generation workflow failed: Multiple exceptions: [Errno 61] Connect call failed ('::1', 8000, 0, 0), [Errno 61] Connect call failed ('127.0.0.1', 8000)"
+          ],
+          "performance": {},
+          "artifacts": []
+        },
+        {
+          "test_name": "Character Creation Workflow",
+          "status": "failed",
+          "details": [
+            "\u274c Character creation workflow failed: Multiple exceptions: [Errno 61] Connect call failed ('::1', 8000, 0, 0), [Errno 61] Connect call failed ('127.0.0.1', 8000)"
+          ],
+          "performance": {},
+          "artifacts": []
+        },
+        {
+          "test_name": "Orchestrator Workflow",
+          "status": "failed",
+          "details": [
+            "\u274c Orchestrator workflow failed: Multiple exceptions: [Errno 61] Connect call failed ('::1', 8000, 0, 0), [Errno 61] Connect call failed ('127.0.0.1', 8000)"
+          ],
+          "performance": {},
+          "artifacts": []
+        },
+        {
+          "test_name": "Agent Factory Functionality",
+          "status": "failed",
+          "details": [
+            "\u26a0\ufe0f Models endpoint test failed: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /models (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10e57f190>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+            "\u274c Agent factory test failed: Multiple exceptions: [Errno 61] Connect call failed ('::1', 8000, 0, 0), [Errno 61] Connect call failed ('127.0.0.1', 8000)"
+          ],
+          "performance": {}
+        }
+      ]
+    },
+    {
+      "suite_name": "Browser Interactions",
+      "total_tests": 5,
+      "passed": 2,
+      "failed": 3,
+      "partial": 0,
+      "skipped": 0,
+      "tests": [
+        {
+          "test_name": "Main Application UI",
+          "status": "failed",
+          "details": [
+            "\u274c Main UI test failed: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: / (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10e6da730>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+          ],
+          "performance": {},
+          "screenshots": []
+        },
+        {
+          "test_name": "Chat Interface",
+          "status": "failed",
+          "details": [
+            "\u274c Chat interface test failed: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: / (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10e57f160>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+          ],
+          "performance": {},
+          "screenshots": []
+        },
+        {
+          "test_name": "Plot Generation UI",
+          "status": "failed",
+          "details": [
+            "\u274c Plot generation UI test failed: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: / (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10e57fe50>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+          ],
+          "performance": {},
+          "screenshots": []
+        },
+        {
+          "test_name": "Open-WebUI Integration",
+          "status": "passed",
+          "details": [
+            "\u2705 Open-WebUI loaded",
+            "\u2705 Message entered in Open-WebUI",
+            "\u2705 Message sent through Open-WebUI",
+            "\u2705 Open-WebUI response: 602ms"
+          ],
+          "performance": {
+            "openwebui_response_time": 602.0781993865967
+          },
+          "screenshots": [
+            "screenshots/openwebui_1753723437.png"
+          ]
+        },
+        {
+          "test_name": "Responsive Design",
+          "status": "passed",
+          "details": [
+            "\u26a0\ufe0f Desktop viewport test: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: / (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10e5898b0>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+            "\u26a0\ufe0f Tablet viewport test: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: / (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10e6da370>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+            "\u26a0\ufe0f Mobile viewport test: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: / (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10e6dadf0>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+          ],
+          "performance": {},
+          "screenshots": []
+        }
+      ]
+    }
+  ]
+}
