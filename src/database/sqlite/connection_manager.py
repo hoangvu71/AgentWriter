@@ -68,34 +68,58 @@ class SQLiteConnectionManager:
         if params is None:
             params = []
         
-        with self.get_connection() as conn:
+        conn = self.get_connection()
+        try:
             cursor = conn.cursor()
             cursor.execute(query, params)
             conn.commit()
+        finally:
+            conn.close()
+    
+    def execute_query_with_rowcount(self, query: str, params: Optional[List[Any]] = None) -> int:
+        """Execute a query and return the number of affected rows"""
+        if params is None:
+            params = []
+        
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            rowcount = cursor.rowcount
+            conn.commit()
+            return rowcount
+        finally:
+            conn.close()
     
     def execute_select(self, query: str, params: Optional[List[Any]] = None) -> List[Dict[str, Any]]:
         """Execute a SELECT query and return results as list of dictionaries"""
         if params is None:
             params = []
         
-        with self.get_connection() as conn:
+        conn = self.get_connection()
+        try:
             cursor = conn.cursor()
             cursor.execute(query, params)
             rows = cursor.fetchall()
             
             # Convert Row objects to dictionaries
             return [dict(row) for row in rows]
+        finally:
+            conn.close()
     
     def execute_count(self, query: str, params: Optional[List[Any]] = None) -> int:
         """Execute a COUNT query and return the count value"""
         if params is None:
             params = []
         
-        with self.get_connection() as conn:
+        conn = self.get_connection()
+        try:
             cursor = conn.cursor()
             cursor.execute(query, params)
             result = cursor.fetchone()
             return result[0] if result else 0
+        finally:
+            conn.close()
     
     def close(self):
         """Close connection manager (placeholder for future cleanup)"""

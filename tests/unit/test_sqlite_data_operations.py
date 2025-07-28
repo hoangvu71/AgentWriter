@@ -399,24 +399,18 @@ class TestSQLiteDataOperations:
     @pytest.mark.asyncio
     async def test_json_serialization_handling(self, data_operations):
         """Test JSON serialization in data operations"""
-        # Create test data with complex JSON
-        user_id = str(uuid4())
-        await data_operations.insert("users", {"id": user_id, "name": "Test User"})
-        
+        # Create test data with complex JSON using lore_documents table which has metadata
         complex_data = {
-            "title": "JSON Test",
-            "plot_summary": "Test summary",
-            "genre": "Tech",
+            "content": "Test lore content",
             "metadata": {
                 "tags": ["test", "json"],
                 "settings": {"draft": True},
                 "characters": ["Alice", "Bob"]
-            },
-            "user_id": user_id
+            }
         }
         
-        plot_id = await data_operations.insert("plots", complex_data)
-        retrieved = await data_operations.get_by_id("plots", plot_id)
+        lore_id = await data_operations.insert("lore_documents", complex_data)
+        retrieved = await data_operations.get_by_id("lore_documents", lore_id)
         
         assert retrieved is not None
         # Note: metadata might be stored as JSON string depending on implementation
