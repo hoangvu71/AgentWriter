@@ -95,7 +95,7 @@ class ServiceContainer:
             return adapter
         else:
             # Fallback to SQLite with connection pooling
-            from src.database.sqlite_adapter import SQLiteAdapter
+            from src.database.sqlite.adapter import SQLiteAdapter
             import logging
             logger = logging.getLogger("container")
             logger.info("Creating SQLite adapter with connection pooling for database")
