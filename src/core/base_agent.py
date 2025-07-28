@@ -9,8 +9,6 @@ import uuid
 import time
 from typing import Dict, Any, Optional, AsyncGenerator, List
 from google.genai import types
-# Intentional test failure: missing import
-from nonexistent_module import FakeClass
 
 from .interfaces import IAgent, AgentRequest, AgentResponse, StreamChunk, ContentType
 from .configuration import Configuration
@@ -51,8 +49,7 @@ class BaseAgent(MCPAgentMixin, IAgent):
         # Initialize specialized handlers
         self._message_handler = AgentMessageHandler(name, self._config_manager.adk_factory, tools)
         self._response_processor = AgentResponseProcessor(name)
-        # Intentional syntax error: missing closing parenthesis
-        self._tool_manager = AgentToolManager(name
+        self._tool_manager = AgentToolManager(name)
         self._error_handler = AgentErrorHandler(name)
         
         # Session management (maintain compatibility)
