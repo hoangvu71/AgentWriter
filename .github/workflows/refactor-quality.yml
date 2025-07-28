@@ -1,0 +1,252 @@
+name: Refactoring Quality Check
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  schedule:
+    # Run monthly to track technical debt
+    - cron: '0 3 1 * *'
+
+jobs:
+  file-size-analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install analysis tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install radon lizard
+
+    - name: Analyze file sizes (Issue #4 compliance)
+      run: |
+        echo "## 📏 File Size Analysis (Issue #4 Refactoring)" >> $GITHUB_STEP_SUMMARY
+        echo "Target: All files should be under 400 lines" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Find all Python files and their line counts
+        echo "### File Size Report" >> $GITHUB_STEP_SUMMARY
+        echo "| File | Lines | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|-------|--------|" >> $GITHUB_STEP_SUMMARY
+        
+        oversized_count=0
+        total_files=0
+        
+        find src -name "*.py" -exec wc -l {} + | sort -nr | head -20 | while read lines file; do
+          total_files=$((total_files + 1))
+          
+          if [ "$lines" -gt 400 ]; then
+            status="❌ OVERSIZED"
+            oversized_count=$((oversized_count + 1))
+            echo "::warning file=$file::File exceeds 400 lines ($lines lines)"
+          elif [ "$lines" -gt 300 ]; then
+            status="⚠️ LARGE"
+          else
+            status="✅ GOOD"
+          fi
+          
+          echo "| $file | $lines | $status |" >> $GITHUB_STEP_SUMMARY
+        done
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- **Files analyzed**: $(find src -name "*.py" | wc -l)" >> $GITHUB_STEP_SUMMARY
+        
+        # Count oversized files
+        oversized=$(find src -name "*.py" -exec wc -l {} + | awk '$1 > 400 {count++} END {print count+0}')
+        echo "- **Oversized files (>400 lines)**: $oversized" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "$oversized" -eq 0 ]; then
+          echo "🎉 **All files comply with issue #4 refactoring goals!**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "📋 **Files still need refactoring as per issue #4**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Analyze code complexity
+      run: |
+        echo "## 🧮 Code Complexity Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### Cyclomatic Complexity (Top 10 most complex)" >> $GITHUB_STEP_SUMMARY
+        echo "| File | Average Complexity | Grade |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|-------------------|-------|" >> $GITHUB_STEP_SUMMARY
+        
+        # Analyze complexity for Python files
+        find src -name "*.py" -exec radon cc {} -a -s \; | grep -v "^$" | sort -k4 -nr | head -10 | while read file complexity rest; do
+          # Extract numerical complexity
+          numeric_complexity=$(echo "$complexity" | sed 's/[^0-9.]//g')
+          
+          if (( $(echo "$numeric_complexity > 10" | bc -l) )); then
+            grade="❌ HIGH"
+            echo "::warning file=$file::High complexity: $complexity"
+          elif (( $(echo "$numeric_complexity > 5" | bc -l) )); then
+            grade="⚠️ MEDIUM"
+          else
+            grade="✅ LOW"
+          fi
+          
+          echo "| $file | $complexity | $grade |" >> $GITHUB_STEP_SUMMARY
+        done
+
+    - name: Check modular architecture compliance
+      run: |
+        echo "## 🏗️ Modular Architecture Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Check for modular patterns from our refactoring
+        module_dirs=$(find src -type d -name "*modules" | wc -l)
+        manager_files=$(find src -name "*_manager.py" | wc -l)
+        service_files=$(find src -name "*_service.py" | wc -l)
+        processor_files=$(find src -name "*_processor.py" | wc -l)
+        
+        echo "### Modular Components" >> $GITHUB_STEP_SUMMARY
+        echo "- **Module directories**: $module_dirs" >> $GITHUB_STEP_SUMMARY
+        echo "- **Manager files**: $manager_files" >> $GITHUB_STEP_SUMMARY
+        echo "- **Service files**: $service_files" >> $GITHUB_STEP_SUMMARY
+        echo "- **Processor files**: $processor_files" >> $GITHUB_STEP_SUMMARY
+        
+        total_modular=$((manager_files + service_files + processor_files))
+        echo "- **Total modular components**: $total_modular" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "$total_modular" -gt 10 ]; then
+          echo "🎉 **Excellent modular architecture!**" >> $GITHUB_STEP_SUMMARY
+        elif [ "$total_modular" -gt 5 ]; then
+          echo "✅ **Good modular structure**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "📋 **Consider more modular decomposition**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Generate technical debt report
+      run: |
+        echo "## 📊 Technical Debt Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Calculate maintainability index
+        echo "### Maintainability Index (Higher is better)" >> $GITHUB_STEP_SUMMARY
+        echo "| File | Maintainability Index | Rating |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|----------------------|--------|" >> $GITHUB_STEP_SUMMARY
+        
+        find src -name "*.py" -exec radon mi {} -s \; | grep -v "^$" | sort -k2 -nr | head -10 | while read file mi rest; do
+          # Extract numerical MI
+          numeric_mi=$(echo "$mi" | sed 's/[^0-9.]//g')
+          
+          if (( $(echo "$numeric_mi > 20" | bc -l) )); then
+            rating="✅ EXCELLENT"
+          elif (( $(echo "$numeric_mi > 10" | bc -l) )); then
+            rating="👍 GOOD"
+          elif (( $(echo "$numeric_mi > 0" | bc -l) )); then
+            rating="⚠️ NEEDS WORK"
+          else
+            rating="❌ POOR"
+          fi
+          
+          echo "| $file | $mi | $rating |" >> $GITHUB_STEP_SUMMARY
+        done
+
+  test-coverage-analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+
+    - name: Run coverage analysis
+      run: |
+        # Run tests with detailed coverage
+        pytest --cov=src --cov-report=term-missing --cov-report=json tests/ || true
+        
+        echo "## 🧪 Test Coverage Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f coverage.json ]; then
+          # Extract coverage data
+          python -c "
+import json
+with open('coverage.json') as f:
+    data = json.load(f)
+
+total_coverage = data['totals']['percent_covered']
+total_lines = data['totals']['num_statements']
+covered_lines = data['totals']['covered_lines']
+
+print(f'### Overall Coverage: {total_coverage:.1f}%')
+print(f'- **Total lines**: {total_lines}')
+print(f'- **Covered lines**: {covered_lines}')
+print(f'- **Missing lines**: {total_lines - covered_lines}')
+print()
+
+if total_coverage >= 90:
+    print('🎉 **Excellent test coverage!**')
+elif total_coverage >= 80:
+    print('✅ **Good test coverage**')
+elif total_coverage >= 70:
+    print('⚠️ **Moderate test coverage - could be improved**')
+else:
+    print('❌ **Low test coverage - needs significant improvement**')
+
+print()
+print('### Files with Low Coverage (<80%):')
+print('| File | Coverage | Missing Lines |')
+print('|------|----------|---------------|')
+
+for file_path, file_data in data['files'].items():
+    coverage = file_data['summary']['percent_covered']
+    missing = len(file_data['missing_lines'])
+    
+    if coverage < 80:
+        print(f'| {file_path} | {coverage:.1f}% | {missing} |')
+          " >> $GITHUB_STEP_SUMMARY
+        fi
+
+  refactoring-progress:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Track refactoring progress over time
+      run: |
+        echo "## 📈 Refactoring Progress Tracking" >> $GITHUB_STEP_SUMMARY
+        echo "Monthly report for technical debt reduction" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Get current metrics
+        total_files=$(find src -name "*.py" | wc -l)
+        oversized_files=$(find src -name "*.py" -exec wc -l {} + | awk '$1 > 400 {count++} END {print count+0}')
+        avg_file_size=$(find src -name "*.py" -exec wc -l {} + | awk '{sum+=$1; count++} END {if(count>0) print sum/count; else print 0}')
+        
+        echo "### Current Metrics" >> $GITHUB_STEP_SUMMARY
+        echo "- **Total Python files**: $total_files" >> $GITHUB_STEP_SUMMARY
+        echo "- **Oversized files (>400 lines)**: $oversized_files" >> $GITHUB_STEP_SUMMARY
+        echo "- **Average file size**: ${avg_file_size} lines" >> $GITHUB_STEP_SUMMARY
+        echo "- **Refactoring compliance**: $(echo "scale=1; (($total_files - $oversized_files) * 100) / $total_files" | bc)%" >> $GITHUB_STEP_SUMMARY
+        
+        # Calculate technical debt score
+        if [ "$oversized_files" -eq 0 ]; then
+          echo "🏆 **GOAL ACHIEVED: All files comply with 400-line limit!**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "📋 **Remaining work**: $oversized_files files need refactoring" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Issue #4 Progress" >> $GITHUB_STEP_SUMMARY
+        echo "This automated report tracks our progress on issue #4: refactoring oversized files." >> $GITHUB_STEP_SUMMARY

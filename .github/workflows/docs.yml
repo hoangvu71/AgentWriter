@@ -1,0 +1,174 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - 'CLAUDE.md'
+      - 'src/**/*.py'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - 'CLAUDE.md'
+
+jobs:
+  validate-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install documentation tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install pydoc-markdown mkdocs mkdocs-material
+
+    - name: Validate README and documentation
+      run: |
+        echo "## 📚 Documentation Validation" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Check if README exists
+        if [ -f README.md ]; then
+          readme_lines=$(wc -l < README.md)
+          echo "✅ **README.md exists** ($readme_lines lines)" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ **README.md missing**" >> $GITHUB_STEP_SUMMARY
+          echo "::warning::README.md file is missing"
+        fi
+        
+        # Check if CLAUDE.md exists (our project context file)
+        if [ -f CLAUDE.md ]; then
+          claude_lines=$(wc -l < CLAUDE.md)
+          echo "✅ **CLAUDE.md exists** ($claude_lines lines)" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ **CLAUDE.md missing**" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Check for docstrings in Python files
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Docstring Coverage" >> $GITHUB_STEP_SUMMARY
+        
+        total_functions=0
+        documented_functions=0
+        
+        for file in $(find src -name "*.py"); do
+          # Count functions and classes
+          functions=$(grep -c "^def \|^class " "$file" 2>/dev/null || echo 0)
+          # Count docstrings (simplified check)
+          docstrings=$(grep -c '"""' "$file" 2>/dev/null || echo 0)
+          
+          total_functions=$((total_functions + functions))
+          documented_functions=$((documented_functions + docstrings / 2))  # Approximate
+        done
+        
+        if [ "$total_functions" -gt 0 ]; then
+          doc_percentage=$(echo "scale=1; ($documented_functions * 100) / $total_functions" | bc)
+          echo "- **Total functions/classes**: $total_functions" >> $GITHUB_STEP_SUMMARY
+          echo "- **Documented**: ~$documented_functions (~${doc_percentage}%)" >> $GITHUB_STEP_SUMMARY
+          
+          if (( $(echo "$doc_percentage > 80" | bc -l) )); then
+            echo "✅ **Good documentation coverage**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "📋 **Documentation could be improved**" >> $GITHUB_STEP_SUMMARY
+          fi
+        fi
+
+    - name: Generate API documentation
+      run: |
+        echo "## 🔧 API Documentation Generation" >> $GITHUB_STEP_SUMMARY
+        
+        # Generate basic API docs for key modules
+        mkdir -p generated-docs
+        
+        # Document main components
+        for module in base_agent sqlite_adapter loregen orchestrator; do
+          if find src -name "*${module}*" -name "*.py" | head -1 | read file; then
+            echo "### $module" >> generated-docs/api-overview.md
+            echo '```python' >> generated-docs/api-overview.md
+            grep -E "^class |^def |^async def " "$file" | head -10 >> generated-docs/api-overview.md || true
+            echo '```' >> generated-docs/api-overview.md
+            echo "" >> generated-docs/api-overview.md
+          fi
+        done
+        
+        if [ -f generated-docs/api-overview.md ]; then
+          echo "✅ **API documentation generated**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ **API documentation generation failed**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Check for architectural documentation
+      run: |
+        echo "## 🏗️ Architecture Documentation" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Check for various documentation files
+        doc_files=(
+          "ARCHITECTURE.md"
+          "CONTRIBUTING.md"
+          "DEPLOYMENT.md"
+          "API.md"
+          "docs/README.md"
+        )
+        
+        found_docs=0
+        for doc in "${doc_files[@]}"; do
+          if [ -f "$doc" ]; then
+            echo "✅ **$doc** exists" >> $GITHUB_STEP_SUMMARY
+            found_docs=$((found_docs + 1))
+          else
+            echo "📋 **$doc** missing (optional)" >> $GITHUB_STEP_SUMMARY
+          fi
+        done
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Documentation files found**: $found_docs/${#doc_files[@]}" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "$found_docs" -gt 2 ]; then
+          echo "✅ **Good documentation structure**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "📋 **Consider adding more documentation files**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Validate links in documentation
+      run: |
+        echo "## 🔗 Link Validation" >> $GITHUB_STEP_SUMMARY
+        
+        # Simple link validation for markdown files
+        broken_links=0
+        
+        for md_file in $(find . -name "*.md"); do
+          # Extract markdown links [text](url)
+          if grep -oE '\[.*\]\([^)]+\)' "$md_file" > /dev/null 2>&1; then
+            echo "📄 **$md_file**: Contains links" >> $GITHUB_STEP_SUMMARY
+            
+            # Check for common broken link patterns
+            if grep -E '\]\(http.*github\.com.*404\)|\]\(#.*\)' "$md_file" > /dev/null 2>&1; then
+              broken_links=$((broken_links + 1))
+              echo "⚠️ Potentially broken links detected in $md_file" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+        done
+        
+        if [ "$broken_links" -eq 0 ]; then
+          echo "✅ **No obviously broken links detected**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ **$broken_links files may have broken links**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Upload generated documentation
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: generated-docs
+        path: generated-docs/

@@ -1,0 +1,169 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  pr-validation:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch full history for better diff analysis
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov radon
+
+    - name: Check PR title and description
+      run: |
+        # Validate PR title format
+        PR_TITLE="${{ github.event.pull_request.title }}"
+        if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+ ]]; then
+          echo "::warning::PR title should follow conventional commits format: type(scope): description"
+        fi
+        
+        # Check if PR has description
+        PR_BODY="${{ github.event.pull_request.body }}"
+        if [ -z "$PR_BODY" ] || [ ${#PR_BODY} -lt 20 ]; then
+          echo "::warning::PR should have a detailed description"
+        fi
+
+    - name: Analyze code complexity
+      run: |
+        # Check cyclomatic complexity of changed files
+        echo "## Code Complexity Analysis" >> $GITHUB_STEP_SUMMARY
+        
+        # Get list of changed Python files
+        git diff --name-only origin/master...HEAD | grep "\.py$" > changed_files.txt || true
+        
+        if [ -s changed_files.txt ]; then
+          echo "### Changed Files Complexity:" >> $GITHUB_STEP_SUMMARY
+          while read -r file; do
+            if [ -f "$file" ]; then
+              complexity=$(radon cc "$file" -a -s | tail -n 1 | cut -d' ' -f4 | cut -d'(' -f1)
+              lines=$(wc -l < "$file")
+              echo "- **$file**: $lines lines, complexity: $complexity" >> $GITHUB_STEP_SUMMARY
+              
+              # Warn about high complexity
+              if (( $(echo "$complexity > 10" | bc -l) )); then
+                echo "::warning file=$file::High complexity detected: $complexity"
+              fi
+              
+              # Warn about large files (our refactoring target)
+              if [ "$lines" -gt 400 ]; then
+                echo "::warning file=$file::Large file detected: $lines lines (target: <400)"
+              fi
+            fi
+          done < changed_files.txt
+        else
+          echo "No Python files changed in this PR" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Check test coverage for changed files
+      run: |
+        # Run tests only for changed files if possible
+        git diff --name-only origin/master...HEAD | grep "^src/" | grep "\.py$" > src_changes.txt || true
+        
+        if [ -s src_changes.txt ]; then
+          echo "## Test Coverage for Changed Files" >> $GITHUB_STEP_SUMMARY
+          
+          # Run pytest with coverage for the entire project
+          pytest --cov=src --cov-report=term-missing --cov-report=json tests/ || true
+          
+          # Check if coverage.json exists and analyze
+          if [ -f coverage.json ]; then
+            python -c "
+import json, sys
+with open('coverage.json') as f:
+    data = json.load(f)
+
+print('### Coverage Summary:')
+total_coverage = data['totals']['percent_covered']
+print(f'- **Total Coverage**: {total_coverage:.1f}%')
+
+if total_coverage < 80:
+    print('::warning::Total test coverage is below 80%')
+elif total_coverage > 90:
+    print('✅ Excellent test coverage!')
+            " >> $GITHUB_STEP_SUMMARY
+          fi
+        fi
+
+    - name: Validate refactoring patterns
+      run: |
+        # Check if this PR follows our refactoring patterns from issue #4
+        echo "## Refactoring Pattern Validation" >> $GITHUB_STEP_SUMMARY
+        
+        # Look for new modular structures
+        new_modules=$(git diff --name-only origin/master...HEAD | grep -E "(modules/|_manager\.py|_service\.py|_processor\.py)" | wc -l)
+        large_files=$(git diff --name-only origin/master...HEAD | xargs wc -l 2>/dev/null | awk '$1 > 400 {print $2, $1}' | grep -v total || true)
+        
+        echo "- **New modular files**: $new_modules" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -n "$large_files" ]; then
+          echo "- **⚠️ Large files still present**:" >> $GITHUB_STEP_SUMMARY
+          echo "$large_files" | while read file lines; do
+            echo "  - $file: $lines lines" >> $GITHUB_STEP_SUMMARY
+          done
+        else
+          echo "- **✅ No oversized files detected**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Check for breaking changes
+      run: |
+        # Look for potential breaking changes
+        echo "## Breaking Change Analysis" >> $GITHUB_STEP_SUMMARY
+        
+        # Check for removed public methods/classes
+        removed_publics=$(git diff origin/master...HEAD | grep -E "^-\s*(class|def)\s+[A-Z]" | wc -l)
+        
+        if [ "$removed_publics" -gt 0 ]; then
+          echo "⚠️ **Potential breaking changes detected**: $removed_publics public methods/classes removed" >> $GITHUB_STEP_SUMMARY
+          echo "::warning::This PR may contain breaking changes. Please review carefully."
+        else
+          echo "✅ **No obvious breaking changes detected**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+  performance-check:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'performance')
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest-benchmark
+
+    - name: Run performance benchmarks
+      run: |
+        # Run any benchmark tests if they exist
+        if find tests/ -name "*benchmark*" -o -name "*perf*" | grep -q .; then
+          pytest tests/ -k "benchmark or perf" --benchmark-only --benchmark-json=benchmark.json
+        else
+          echo "No benchmark tests found"
+        fi
+
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      if: success()
+      with:
+        name: benchmark-results
+        path: benchmark.json
