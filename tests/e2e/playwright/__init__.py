@@ -1,0 +1,1 @@
+# Playwright configuration package

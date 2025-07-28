@@ -5,6 +5,13 @@ on:
     branches: [ master, main ]
   pull_request:
     branches: [ master, main ]
+  workflow_call:
+    inputs:
+      run_e2e:
+        description: 'Run E2E tests'
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   test:
@@ -176,3 +183,12 @@ jobs:
         
         echo "- **Test files**: $(find tests/ -name "*.py" | wc -l)" >> $GITHUB_STEP_SUMMARY
         echo "- **Source files**: $(find src/ -name "*.py" | wc -l)" >> $GITHUB_STEP_SUMMARY
+
+  # Call E2E testing workflow
+  e2e-tests:
+    needs: [test, security]
+    if: inputs.run_e2e != false
+    uses: ./.github/workflows/e2e.yml
+    with:
+      test_suite: 'all'
+    secrets: inherit
