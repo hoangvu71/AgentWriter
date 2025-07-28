@@ -1,0 +1,177 @@
+name: PR Merge Policy Enforcement
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  merge-readiness-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Evaluate PR merge readiness
+      id: merge_check
+      run: |
+        echo "## 🎯 PR Merge Readiness Assessment" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Get PR info
+        PR_NUMBER="${{ github.event.pull_request.number }}"
+        PR_TITLE="${{ github.event.pull_request.title }}"
+        PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+        
+        echo "**PR #$PR_NUMBER**: $PR_TITLE" >> $GITHUB_STEP_SUMMARY
+        echo "**Author**: $PR_AUTHOR" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Check if this is a conventional commit
+        if [[ "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+ ]]; then
+          echo "✅ **PR title follows conventional commits**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "ℹ️ **PR title**: Consider using conventional commits format" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "merge_ready=pending" >> $GITHUB_OUTPUT
+
+    - name: Check CI status
+      run: |
+        echo "## 🧪 CI Status Assessment" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # This would typically check the status of other workflows
+        # For now, we'll provide guidance on what to check
+        
+        echo "### ✅ Required Checks:" >> $GITHUB_STEP_SUMMARY
+        echo "- **Validation**: Syntax and basic code checks" >> $GITHUB_STEP_SUMMARY
+        echo "- **Unit Tests**: Core functionality tests" >> $GITHUB_STEP_SUMMARY
+        echo "- **Quality Checks**: Linting and code quality" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### ⚠️ Advisory Checks:" >> $GITHUB_STEP_SUMMARY
+        echo "- **E2E Tests**: Full integration testing (can be flaky)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Performance Tests**: May need reviewer judgment" >> $GITHUB_STEP_SUMMARY
+        echo "- **Browser Tests**: UI/UX validation" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+    - name: Generate merge guidance
+      run: |
+        echo "## 🚦 Merge Decision Guidelines" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### 🟢 **READY TO MERGE** when:" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ All required CI checks pass" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ At least one approving review" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ No requested changes from reviewers" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Branch is up to date with master" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### 🟡 **REVIEWER DISCRETION** when:" >> $GITHUB_STEP_SUMMARY
+        echo "- ⚠️ Some advisory tests fail (E2E, performance)" >> $GITHUB_STEP_SUMMARY
+        echo "- ⚠️ Flaky tests showing intermittent failures" >> $GITHUB_STEP_SUMMARY
+        echo "- ⚠️ Minor code quality issues that don't affect functionality" >> $GITHUB_STEP_SUMMARY
+        echo "- ⚠️ Documentation tests fail but core code is good" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### 🔴 **DO NOT MERGE** when:" >> $GITHUB_STEP_SUMMARY
+        echo "- ❌ Required validation or unit tests fail" >> $GITHUB_STEP_SUMMARY
+        echo "- ❌ Syntax errors or import failures" >> $GITHUB_STEP_SUMMARY  
+        echo "- ❌ Security vulnerabilities introduced" >> $GITHUB_STEP_SUMMARY
+        echo "- ❌ Breaking changes without proper migration" >> $GITHUB_STEP_SUMMARY
+        echo "- ❌ No reviewer approval on significant changes" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "## 👥 Responsibility Matrix" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### 🧑‍💻 **PR Author Responsibilities:**" >> $GITHUB_STEP_SUMMARY
+        echo "1. **Fix failing required tests** before requesting review" >> $GITHUB_STEP_SUMMARY
+        echo "2. **Investigate test failures** to determine if they're related to changes" >> $GITHUB_STEP_SUMMARY
+        echo "3. **Update tests** when intentionally changing behavior" >> $GITHUB_STEP_SUMMARY
+        echo "4. **Respond to review feedback** and CI failures promptly" >> $GITHUB_STEP_SUMMARY
+        echo "5. **Ask for help** when unsure about test failures" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### 👨‍💼 **Reviewer Responsibilities:**" >> $GITHUB_STEP_SUMMARY
+        echo "1. **Review failing tests** to determine legitimacy" >> $GITHUB_STEP_SUMMARY
+        echo "2. **Provide guidance** on complex test failures" >> $GITHUB_STEP_SUMMARY
+        echo "3. **Make judgment calls** on flaky or advisory test failures" >> $GITHUB_STEP_SUMMARY
+        echo "4. **Ensure core functionality** is not broken" >> $GITHUB_STEP_SUMMARY
+        echo "5. **Create follow-up issues** for acceptable but failing tests" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "## 🔧 Quick Fix Commands" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**For PR authors with failing tests:**" >> $GITHUB_STEP_SUMMARY
+        echo "```bash" >> $GITHUB_STEP_SUMMARY
+        echo "# Run tests locally" >> $GITHUB_STEP_SUMMARY
+        echo "pytest tests/ -v" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# Run specific failing test" >> $GITHUB_STEP_SUMMARY
+        echo "pytest tests/test_specific_failure.py -v" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# Check code quality" >> $GITHUB_STEP_SUMMARY
+        echo "flake8 src/" >> $GITHUB_STEP_SUMMARY
+        echo "black --check src/" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# Test imports" >> $GITHUB_STEP_SUMMARY
+        echo "python -c \"import src.core.base_agent; print('OK')\"" >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
+
+  # Comment on PR with guidance if needed
+  pr-guidance:
+    runs-on: ubuntu-latest
+    needs: merge-readiness-check
+    if: github.event.action == 'opened'
+    
+    steps:
+    - name: Welcome new PR
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { data: pr } = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number
+          });
+          
+          const welcomeMessage = `## 👋 Welcome to AgentWriter!
+
+Thanks for your contribution, @${pr.user.login}! Here's what happens next:
+
+### 🤖 Automated Checks
+Our CI/CD pipeline will run several checks:
+- ✅ **Validation**: Code syntax and formatting
+- 🧪 **Unit Tests**: Core functionality verification  
+- 🔍 **Quality**: Code quality and security scans
+- 🎭 **E2E Tests**: End-to-end integration testing
+
+### 📋 Your Action Items
+If any tests fail:
+1. **Check the "Actions" tab** for detailed failure information
+2. **Run tests locally** to reproduce issues: \`pytest tests/\`
+3. **Fix the underlying problems** or ask for help in comments
+4. **Push your fixes** - CI will re-run automatically
+
+### 👥 Review Process
+- A maintainer will review your changes
+- They can help with test failures or merge despite flaky tests
+- Feel free to ask questions in the comments!
+
+### 🎯 Merge Criteria
+Your PR can be merged when:
+- ✅ Required tests pass (validation, unit tests)
+- ✅ You have an approving review
+- ⚠️ Advisory tests (E2E, performance) may be overridden if flaky
+
+**Remember**: We're here to help! Don't hesitate to ask questions. 🚀`;
+
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: welcomeMessage
+          });
