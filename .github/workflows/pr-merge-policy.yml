@@ -138,7 +138,7 @@ jobs:
             pull_number: context.issue.number
           });
           
-          const welcomeMessage = `## 👋 Welcome to AgentWriter!
+          const welcomeMessage = \`## 👋 Welcome to AgentWriter!
 
 Thanks for your contribution, @${pr.user.login}! Here's what happens next:
 
@@ -152,7 +152,7 @@ Our CI/CD pipeline will run several checks:
 ### 📋 Your Action Items
 If any tests fail:
 1. **Check the "Actions" tab** for detailed failure information
-2. **Run tests locally** to reproduce issues: \`pytest tests/\`
+2. **Run tests locally** to reproduce issues: 'pytest tests/'
 3. **Fix the underlying problems** or ask for help in comments
 4. **Push your fixes** - CI will re-run automatically
 
@@ -167,7 +167,7 @@ Your PR can be merged when:
 - ✅ You have an approving review
 - ⚠️ Advisory tests (E2E, performance) may be overridden if flaky
 
-**Remember**: We're here to help! Don't hesitate to ask questions. 🚀`;
+**Remember**: We're here to help! Don't hesitate to ask questions. 🚀\`;
 
           await github.rest.issues.createComment({
             issue_number: context.issue.number,

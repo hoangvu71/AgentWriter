@@ -177,43 +177,13 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         
         if [ -f coverage.json ]; then
-          # Extract coverage data
-          python -c "
-import json
-with open('coverage.json') as f:
-    data = json.load(f)
-
-total_coverage = data['totals']['percent_covered']
-total_lines = data['totals']['num_statements']
-covered_lines = data['totals']['covered_lines']
-
-print(f'### Overall Coverage: {total_coverage:.1f}%')
-print(f'- **Total lines**: {total_lines}')
-print(f'- **Covered lines**: {covered_lines}')
-print(f'- **Missing lines**: {total_lines - covered_lines}')
-print()
-
-if total_coverage >= 90:
-    print('🎉 **Excellent test coverage!**')
-elif total_coverage >= 80:
-    print('✅ **Good test coverage**')
-elif total_coverage >= 70:
-    print('⚠️ **Moderate test coverage - could be improved**')
-else:
-    print('❌ **Low test coverage - needs significant improvement**')
-
-print()
-print('### Files with Low Coverage (<80%):')
-print('| File | Coverage | Missing Lines |')
-print('|------|----------|---------------|')
-
-for file_path, file_data in data['files'].items():
-    coverage = file_data['summary']['percent_covered']
-    missing = len(file_data['missing_lines'])
-    
-    if coverage < 80:
-        print(f'| {file_path} | {coverage:.1f}% | {missing} |')
-          " >> $GITHUB_STEP_SUMMARY
+          echo "### Coverage Analysis:" >> $GITHUB_STEP_SUMMARY
+          if command -v python3 >/dev/null 2>&1; then
+            coverage_pct=$(python3 -c "import json; data=json.load(open('coverage.json')); print(f'{data[\"totals\"][\"percent_covered\"]:.1f}')" 2>/dev/null || echo "N/A")
+            echo "- **Total Coverage**: ${coverage_pct}%" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Total Coverage**: Unable to parse" >> $GITHUB_STEP_SUMMARY
+          fi
         fi
 
   refactoring-progress:

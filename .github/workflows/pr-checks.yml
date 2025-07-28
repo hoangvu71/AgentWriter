@@ -82,20 +82,13 @@ jobs:
           
           # Check if coverage.json exists and analyze
           if [ -f coverage.json ]; then
-            python -c "
-import json, sys
-with open('coverage.json') as f:
-    data = json.load(f)
-
-print('### Coverage Summary:')
-total_coverage = data['totals']['percent_covered']
-print(f'- **Total Coverage**: {total_coverage:.1f}%')
-
-if total_coverage < 80:
-    print('::warning::Total test coverage is below 80%')
-elif total_coverage > 90:
-    print('✅ Excellent test coverage!')
-            " >> $GITHUB_STEP_SUMMARY
+            echo "### Coverage Summary:" >> $GITHUB_STEP_SUMMARY
+            if command -v python3 >/dev/null 2>&1; then
+              coverage_pct=$(python3 -c "import json; data=json.load(open('coverage.json')); print(f'{data[\"totals\"][\"percent_covered\"]:.1f}')" 2>/dev/null || echo "N/A")
+              echo "- **Total Coverage**: ${coverage_pct}%" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- **Total Coverage**: Unable to parse" >> $GITHUB_STEP_SUMMARY
+            fi
           fi
         fi
 
