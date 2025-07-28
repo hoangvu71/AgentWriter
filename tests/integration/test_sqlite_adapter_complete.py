@@ -11,7 +11,7 @@ import json
 from typing import Dict, Any, List
 from uuid import uuid4
 
-from src.database.sqlite_adapter import SQLiteAdapter
+from src.database.sqlite.adapter import SQLiteAdapter
 
 
 class TestSQLiteAdapterComplete:
@@ -100,12 +100,15 @@ class TestSQLiteAdapterComplete:
     @pytest.mark.asyncio
     async def test_update_functionality(self, adapter):
         """Test update operations"""
+        # Create required user first to satisfy foreign key constraint
+        user_id = await self.create_test_user(adapter)
+        
         # Insert test data
         plot_data = {
             "title": "Original Title",
             "genre": "Fantasy",
             "plot_summary": "Original summary",
-            "user_id": str(uuid4())
+            "user_id": user_id
         }
         
         plot_id = await adapter.insert("plots", plot_data)
@@ -122,12 +125,15 @@ class TestSQLiteAdapterComplete:
     @pytest.mark.asyncio
     async def test_delete_functionality(self, adapter):
         """Test delete operations"""
+        # Create required user first to satisfy foreign key constraint  
+        user_id = await self.create_test_user(adapter)
+        
         # Insert test data
         plot_data = {
             "title": "To Delete",
             "genre": "Horror",
             "plot_summary": "Will be deleted",
-            "user_id": str(uuid4())
+            "user_id": user_id
         }
         
         plot_id = await adapter.insert("plots", plot_data)
@@ -147,8 +153,10 @@ class TestSQLiteAdapterComplete:
     @pytest.mark.asyncio
     async def test_count_functionality(self, adapter):
         """Test count operations"""
+        # Create required user first to satisfy foreign key constraint
+        user_id = await self.create_test_user(adapter)
+        
         # Insert multiple records
-        user_id = str(uuid4())
         for i in range(3):
             plot_data = {
                 "title": f"Count Test {i}",
@@ -169,8 +177,8 @@ class TestSQLiteAdapterComplete:
     @pytest.mark.asyncio
     async def test_search_functionality(self, adapter):
         """Test search operations"""
-        # Insert searchable data
-        user_id = str(uuid4())
+        # Create required user first to satisfy foreign key constraint
+        user_id = await self.create_test_user(adapter)
         plot_data = {
             "title": "Searchable Plot",
             "genre": "Adventure",
@@ -188,8 +196,8 @@ class TestSQLiteAdapterComplete:
     @pytest.mark.asyncio
     async def test_get_all_functionality(self, adapter):
         """Test get_all with pagination"""
-        # Insert multiple records
-        user_id = str(uuid4())
+        # Create required user first to satisfy foreign key constraint
+        user_id = await self.create_test_user(adapter)
         inserted_ids = []
         for i in range(5):
             plot_data = {
@@ -212,7 +220,8 @@ class TestSQLiteAdapterComplete:
     @pytest.mark.asyncio
     async def test_specialized_methods(self, adapter):
         """Test plot and author specific methods"""
-        user_id = str(uuid4())
+        # Create required user first to satisfy foreign key constraint
+        user_id = await self.create_test_user(adapter)
         
         # Test save_plot
         plot_data = {
@@ -257,7 +266,8 @@ class TestSQLiteAdapterComplete:
     @pytest.mark.asyncio
     async def test_batch_operations(self, adapter):
         """Test batch insert, select, and update operations"""
-        user_id = str(uuid4())
+        # Create required user first to satisfy foreign key constraint
+        user_id = await self.create_test_user(adapter)
         
         # Test batch insert
         records = []
@@ -296,7 +306,8 @@ class TestSQLiteAdapterComplete:
     @pytest.mark.asyncio
     async def test_content_search(self, adapter):
         """Test the content search functionality"""
-        user_id = str(uuid4())
+        # Create required user first to satisfy foreign key constraint
+        user_id = await self.create_test_user(adapter)
         
         # Insert searchable content
         plot_data = {
@@ -327,31 +338,50 @@ class TestSQLiteAdapterComplete:
     
     @pytest.mark.asyncio
     async def test_json_serialization(self, adapter):
-        """Test JSON serialization/deserialization"""
-        # Test with complex JSON data
+        """Test JSON serialization/deserialization using world_building table which has JSON fields"""
+        # Test with complex JSON data using world_building table which supports JSON fields
+        # Create required user first to satisfy foreign key constraint
+        user_id = await self.create_test_user(adapter)
+        
+        # Create a plot first since world_building references it
+        plot_data = {
+            "title": "Test Plot for JSON",
+            "genre": "Fantasy",
+            "plot_summary": "A plot for testing JSON serialization",
+            "user_id": user_id
+        }
+        plot_id = await adapter.insert("plots", plot_data)
+        
+        # Now test JSON serialization with world_building which has JSON fields
         complex_data = {
-            "title": "JSON Test",
-            "genre": "Tech",
-            "plot_summary": "Test summary",
-            "metadata": {
-                "tags": ["test", "json"],
-                "settings": {"draft": True},
-                "characters": ["Alice", "Bob"]
+            "world_name": "JSON Test World",
+            "world_type": "fantasy",
+            "overview": "A world for testing JSON serialization",
+            "geography": {
+                "continents": ["North", "South"],
+                "oceans": ["Pacific", "Atlantic"]
             },
-            "user_id": str(uuid4())
+            "cultural_systems": {
+                "languages": ["Common", "Elvish"],
+                "customs": {"greeting": "bow"}
+            },
+            "user_id": user_id,
+            "plot_id": plot_id
         }
         
-        plot_id = await adapter.insert("plots", complex_data)
-        retrieved = await adapter.get_by_id("plots", plot_id)
+        world_id = await adapter.insert("world_building", complex_data)
+        retrieved = await adapter.get_by_id("world_building", world_id)
         
         assert retrieved is not None
-        assert retrieved["metadata"]["tags"] == ["test", "json"]
-        assert retrieved["metadata"]["settings"]["draft"] is True
+        assert retrieved["geography"]["continents"] == ["North", "South"]
+        assert retrieved["cultural_systems"]["languages"] == ["Common", "Elvish"]
+        assert retrieved["cultural_systems"]["customs"]["greeting"] == "bow"
     
     @pytest.mark.asyncio
     async def test_plot_with_author_relationship(self, adapter):
         """Test get_plot_with_author relationship functionality"""
-        user_id = str(uuid4())
+        # Create required user first to satisfy foreign key constraint
+        user_id = await self.create_test_user(adapter)
         
         # Create author first
         author_data = {
@@ -398,12 +428,15 @@ class TestSQLiteAdapterComplete:
     @pytest.mark.asyncio
     async def test_close_functionality(self, adapter):
         """Test adapter close functionality"""
+        # Create required user first to satisfy foreign key constraint
+        user_id = await self.create_test_user(adapter)
+        
         # Perform some operations first
         plot_data = {
             "title": "Close Test",
             "genre": "Test",
             "plot_summary": "Test before close",
-            "user_id": str(uuid4())
+            "user_id": user_id
         }
         await adapter.insert("plots", plot_data)
         

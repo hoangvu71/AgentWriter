@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 from ..core.logging import get_logger
-from .sqlite_adapter import SQLiteAdapter
+from .sqlite.adapter import SQLiteAdapter
 from .schema_synchronizer import SchemaSynchronizer
 from .migration_manager import MigrationManager
 

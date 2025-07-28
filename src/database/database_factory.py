@@ -7,7 +7,7 @@ import os
 import asyncio
 from typing import Union, Optional
 from .supabase_adapter import SupabaseAdapter
-from .sqlite_adapter import SQLiteAdapter
+from .sqlite.adapter import SQLiteAdapter
 from ..core.configuration import config
 from ..core.logging import get_logger
 import httpx

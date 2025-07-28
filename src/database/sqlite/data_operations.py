@@ -6,6 +6,7 @@ Extracted from SQLiteAdapter for better modularity.
 import asyncio
 import json
 import uuid
+from datetime import datetime
 from typing import Dict, Any, List, Optional
 
 from ...core.logging import get_logger
@@ -47,10 +48,37 @@ class SQLiteDataOperations:
             if 'id' not in data:
                 data['id'] = str(uuid.uuid4())
             
+            # Add timestamp if not provided and table has created_at column
+            table_schemas = {
+                'users': True, 'authors': True, 'plots': True, 'world_building': True, 
+                'characters': True, 'orchestrator_decisions': True, 'genres': True, 
+                'target_audiences': True, 'sessions': False,  # sessions uses start_time not created_at
+                'subgenres': True, 'microgenres': True, 'tropes': True, 'tones': True,
+                'improvement_sessions': True, 'iterations': True, 'critiques': True,
+                'enhancements': True, 'scores': True, 'agent_invocations': True,
+                'performance_metrics': False, 'trace_events': True,  # performance_metrics uses timestamp
+                'content_ratings': True, 'lore_documents': True, 'lore_clusters': True
+            }
+            
+            if table in table_schemas and table_schemas[table] and 'created_at' not in data:
+                data['created_at'] = datetime.utcnow().isoformat()
+            elif table == 'sessions' and 'start_time' not in data:
+                data['start_time'] = datetime.utcnow().isoformat()
+            elif table == 'performance_metrics' and 'timestamp' not in data:
+                data['timestamp'] = datetime.utcnow().isoformat()
+            
             # Serialize JSON fields
+            json_fields = [
+                'messages', 'agents_selected', 'characters', 'relationship_networks', 'character_dynamics',
+                'geography', 'political_landscape', 'cultural_systems', 'economic_framework', 
+                'historical_timeline', 'power_systems', 'languages_and_communication',
+                'religious_and_belief_systems', 'unique_elements', 'interests', 'critique_json',
+                'changes_made', 'category_scores', 'request_context', 'tool_calls', 'tool_results',
+                'parsed_json', 'tags', 'attributes', 'events', 'resource_attributes', 'metadata', 'embedding'
+            ]
             serialized_data = {}
             for key, value in data.items():
-                if isinstance(value, (dict, list)):
+                if key in json_fields and isinstance(value, (dict, list)):
                     serialized_data[key] = self._serialize_json(value)
                 else:
                     serialized_data[key] = value
@@ -118,9 +146,17 @@ class SQLiteDataOperations:
         """Update a record in the specified table"""
         try:
             # Serialize JSON fields
+            json_fields = [
+                'messages', 'agents_selected', 'characters', 'relationship_networks', 'character_dynamics',
+                'geography', 'political_landscape', 'cultural_systems', 'economic_framework', 
+                'historical_timeline', 'power_systems', 'languages_and_communication',
+                'religious_and_belief_systems', 'unique_elements', 'interests', 'critique_json',
+                'changes_made', 'category_scores', 'request_context', 'tool_calls', 'tool_results',
+                'parsed_json', 'tags', 'attributes', 'events', 'resource_attributes', 'metadata', 'embedding'
+            ]
             serialized_data = {}
             for key, value in data.items():
-                if isinstance(value, (dict, list)):
+                if key in json_fields and isinstance(value, (dict, list)):
                     serialized_data[key] = self._serialize_json(value)
                 else:
                     serialized_data[key] = value
@@ -128,16 +164,16 @@ class SQLiteDataOperations:
             # Build query
             query, params = self.query_builder.build_update(table, record_id, serialized_data)
             
-            # Execute in thread pool to avoid blocking
+            # Execute in thread pool to avoid blocking and get row count
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(
+            rows_affected = await loop.run_in_executor(
                 None,
-                self.connection_manager.execute_query,
+                self.connection_manager.execute_query_with_rowcount,
                 query,
                 params
             )
             
-            return True
+            return rows_affected > 0
             
         except Exception as e:
             self.logger.error(f"Error updating {table} record {record_id}: {e}")
@@ -149,16 +185,16 @@ class SQLiteDataOperations:
             # Build query
             query, params = self.query_builder.build_delete(table, record_id)
             
-            # Execute in thread pool to avoid blocking
+            # Execute in thread pool to avoid blocking and get row count
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(
+            rows_affected = await loop.run_in_executor(
                 None,
-                self.connection_manager.execute_query,
+                self.connection_manager.execute_query_with_rowcount,
                 query,
                 params
             )
             
-            return True
+            return rows_affected > 0
             
         except Exception as e:
             self.logger.error(f"Error deleting from {table}: {e}")
