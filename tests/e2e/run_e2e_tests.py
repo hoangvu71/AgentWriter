@@ -11,9 +11,13 @@ from typing import Dict, Any, List
 from datetime import datetime
 
 # Import test suites
-from .test_core_functionality import TestCoreFunctionality
-from .test_agent_workflows import TestAgentWorkflows
-from .test_browser_interactions import TestBrowserInteractions
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from test_core_functionality import TestCoreFunctionality
+from test_agent_workflows import TestAgentWorkflows
+from test_browser_interactions import TestBrowserInteractions
 
 
 class E2ETestRunner:

@@ -1,0 +1,29 @@
+
+🎯 AgentWriter E2E Test Results Summary
+==================================================
+
+Environment: local
+Duration: 10.2 seconds
+Test Run ID: e2e_1753757627
+
+📊 Overall Results:
+   Total Suites: 3
+   Total Tests: 13
+   ✅ Passed: 8
+   ⚠️ Partial: 0
+   ⏭️ Skipped: 0
+   ❌ Failed: 5
+
+Success Rate: 61.5%
+
+🔍 Suite Breakdown:
+   ⚠️ Core Functionality: 3/4 passed, 1 failed
+   ❌ Agent Workflows: 0/4 passed, 4 failed
+   ✅ Browser Interactions: 5/5 passed
+
+⚡ Performance Insights:
+   Average Response Time: 294ms
+   Maximum Response Time: 1103ms
+
+🔑 Key Findings:
+   ⚠️ 5 test(s) failed - review details for issues.

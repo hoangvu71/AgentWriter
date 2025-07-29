@@ -1,0 +1,260 @@
+{
+  "test_run_id": "e2e_1753757722",
+  "environment": "local",
+  "start_time": "2025-07-28T19:55:22.708422",
+  "end_time": "2025-07-28T19:55:33.497060",
+  "duration_ms": 10788,
+  "summary": {
+    "total_suites": 3,
+    "total_tests": 13,
+    "passed": 13,
+    "failed": 0,
+    "partial": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "suite_name": "Core Functionality",
+      "total_tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "tests": [
+        {
+          "test_name": "Application Startup",
+          "status": "passed",
+          "details": [
+            "\u2705 Health endpoint responsive",
+            "\u2705 Models endpoint responsive",
+            "\u2705 OpenAI compatibility endpoint working"
+          ],
+          "performance": {
+            "health_check": 15.674114227294922,
+            "models_check": 5.440950393676758,
+            "openai_check": 6.392002105712891
+          }
+        },
+        {
+          "test_name": "WebSocket Connection",
+          "status": "passed",
+          "details": [
+            "\u2705 WebSocket connection established",
+            "\u2705 Message sent successfully",
+            "\u2705 Response received from server",
+            "\u2705 Valid JSON response: <class 'dict'>"
+          ],
+          "performance": {
+            "connection_time": 29.923677444458008
+          }
+        },
+        {
+          "test_name": "Database Connectivity",
+          "status": "passed",
+          "details": [
+            "\u2705 API endpoints accessible (implies DB connectivity)",
+            "\u2705 Models endpoint working (database operations successful)"
+          ],
+          "performance": {
+            "db_health_check": 5.457878112792969
+          }
+        },
+        {
+          "test_name": "Static File Serving",
+          "status": "passed",
+          "details": [
+            "\u2139\ufe0f /static/index.html not found (may not exist)",
+            "\u2139\ufe0f /static/css/style.css not found (may not exist)",
+            "\u2139\ufe0f /static/js/app.js not found (may not exist)",
+            "\u2139\ufe0f /favicon.ico not found (may not exist)",
+            "\u2139\ufe0f No static files found (may not be configured)"
+          ],
+          "performance": {}
+        }
+      ]
+    },
+    {
+      "suite_name": "Agent Workflows",
+      "total_tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "partial": 0,
+      "tests": [
+        {
+          "test_name": "Plot Generation Workflow",
+          "status": "passed",
+          "details": [
+            "\u2705 WebSocket connection established",
+            "\u2705 Plot generation request sent",
+            "\u2705 Plot generation response received",
+            "\u23f1\ufe0f Generation time: 103ms",
+            "\u2705 Generated plot has substantial content",
+            "\u2705 Received 1 response(s)"
+          ],
+          "performance": {
+            "plot_generation_time": 103.06310653686523
+          },
+          "artifacts": [
+            {
+              "type": "generated_plot",
+              "content": "Mock plot_generator response for: Create a Science Fiction plot about AI and humanity for a short story"
+            }
+          ]
+        },
+        {
+          "test_name": "Character Creation Workflow",
+          "status": "passed",
+          "details": [
+            "\u2705 WebSocket connection established",
+            "\u2705 Character creation request sent",
+            "\u2705 Character creation response received",
+            "\u23f1\ufe0f Generation time: 104ms",
+            "\u2705 Generated character has detailed content"
+          ],
+          "performance": {
+            "character_generation_time": 104.11691665649414
+          },
+          "artifacts": [
+            {
+              "type": "generated_character",
+              "content": "{\"type\": \"agent_response\", \"agent_type\": \"characters\", \"content\": \"Mock characters response for: Create a character named Test Hero, age 25, with background: A brave adventurer from a small village\", ..."
+            }
+          ]
+        },
+        {
+          "test_name": "Orchestrator Workflow",
+          "status": "passed",
+          "details": [
+            "\u2705 WebSocket connection established",
+            "\u2705 Orchestrator request sent",
+            "\u2705 Received 1 orchestration responses",
+            "\u23f1\ufe0f Orchestration time: 104ms",
+            "\u2705 Orchestrator workflow executed"
+          ],
+          "performance": {
+            "orchestration_time": 103.94978523254395
+          },
+          "artifacts": [
+            {
+              "type": "orchestration_log",
+              "response_count": 1,
+              "sample_responses": [
+                "{\"type\": \"agent_response\", \"agent_type\": \"orchestrator\", \"content\": \"Mock orchestrator response for: Create a complete book concept with plot, main character, and world setting for a fantasy adventure\", \"success\": true, \"timestamp\": 1753757723.1405702}"
+              ]
+            }
+          ]
+        },
+        {
+          "test_name": "Agent Factory Functionality",
+          "status": "passed",
+          "details": [
+            "\u2705 Models endpoint accessible (agent factory available)",
+            "\u2705 Models data structure valid",
+            "\u2705 WebSocket connection for factory testing",
+            "\u2705 orchestrator agent responsive",
+            "\u2705 plot_generator agent responsive",
+            "\u2705 characters agent responsive",
+            "\u2705 Tested 4 agent types"
+          ],
+          "performance": {}
+        }
+      ]
+    },
+    {
+      "suite_name": "Browser Interactions",
+      "total_tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "partial": 0,
+      "skipped": 0,
+      "tests": [
+        {
+          "test_name": "Main Application UI",
+          "status": "passed",
+          "details": [
+            "\u2705 Main page loaded successfully",
+            "\u2705 Page load time acceptable: 6ms",
+            "\u2705 Chat input field found",
+            "\u2705 Send button found",
+            "\u2705 Plots navigation found",
+            "\u2705 Characters navigation found",
+            "\u2705 Found 4/4 expected UI elements"
+          ],
+          "performance": {
+            "page_load_time": 6.368160247802734
+          },
+          "screenshots": [
+            "screenshots/main_ui_1753757725.png"
+          ]
+        },
+        {
+          "test_name": "Chat Interface",
+          "status": "passed",
+          "details": [
+            "\u2705 Chat input field functional",
+            "\u2705 Send button clicked",
+            "\u2705 Loading indicator appeared",
+            "\u2705 Chat response received in 1102ms"
+          ],
+          "performance": {
+            "chat_response_time": 1101.5369892120361
+          },
+          "screenshots": [
+            "screenshots/chat_interface_1753757726.png"
+          ]
+        },
+        {
+          "test_name": "Plot Generation UI",
+          "status": "passed",
+          "details": [
+            "\u2705 Navigated to plots section",
+            "\u2705 Plot form loaded",
+            "\u2705 Filled genre_input with 'Science Fiction'",
+            "\u2705 Filled theme_input with 'AI and humanity'",
+            "\u2705 Filled length_input with 'short story'",
+            "\u2705 Plot generation submitted",
+            "\u2705 Plot generated in UI: 603ms"
+          ],
+          "performance": {
+            "plot_generation_ui_time": 603.4278869628906
+          },
+          "screenshots": [
+            "screenshots/plot_generation_1753757728.png"
+          ]
+        },
+        {
+          "test_name": "Open-WebUI Integration",
+          "status": "passed",
+          "details": [
+            "\u2705 Open-WebUI loaded",
+            "\u2705 Message entered in Open-WebUI",
+            "\u2705 Message sent through Open-WebUI",
+            "\u2705 Open-WebUI response: 603ms"
+          ],
+          "performance": {
+            "openwebui_response_time": 602.9860973358154
+          },
+          "screenshots": [
+            "screenshots/openwebui_1753757728.png"
+          ]
+        },
+        {
+          "test_name": "Responsive Design",
+          "status": "passed",
+          "details": [
+            "\u2705 Desktop viewport (1920x1080) loaded",
+            "\u2705 3/3 elements accessible in Desktop",
+            "\u2705 Tablet viewport (1024x768) loaded",
+            "\u2705 3/3 elements accessible in Tablet",
+            "\u2705 Mobile viewport (375x667) loaded",
+            "\u2705 3/3 elements accessible in Mobile"
+          ],
+          "performance": {},
+          "screenshots": [
+            "screenshots/responsive_desktop_1753757730.png",
+            "screenshots/responsive_tablet_1753757731.png",
+            "screenshots/responsive_mobile_1753757733.png"
+          ]
+        }
+      ]
+    }
+  ]
+}

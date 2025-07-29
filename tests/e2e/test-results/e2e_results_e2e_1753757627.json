@@ -1,0 +1,214 @@
+{
+  "test_run_id": "e2e_1753757627",
+  "environment": "local",
+  "start_time": "2025-07-28T19:53:47.536385",
+  "end_time": "2025-07-28T19:53:57.769086",
+  "duration_ms": 10232,
+  "summary": {
+    "total_suites": 3,
+    "total_tests": 13,
+    "passed": 8,
+    "failed": 5,
+    "partial": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "suite_name": "Core Functionality",
+      "total_tests": 4,
+      "passed": 3,
+      "failed": 1,
+      "tests": [
+        {
+          "test_name": "Application Startup",
+          "status": "passed",
+          "details": [
+            "\u2705 Health endpoint responsive",
+            "\u2705 Models endpoint responsive",
+            "\u2705 OpenAI compatibility endpoint working"
+          ],
+          "performance": {
+            "health_check": 16.25800132751465,
+            "models_check": 9.988069534301758,
+            "openai_check": 7.282018661499023
+          }
+        },
+        {
+          "test_name": "WebSocket Connection",
+          "status": "failed",
+          "details": [
+            "\u274c WebSocket test failed: server rejected WebSocket connection: HTTP 500"
+          ],
+          "performance": {}
+        },
+        {
+          "test_name": "Database Connectivity",
+          "status": "passed",
+          "details": [
+            "\u2705 API endpoints accessible (implies DB connectivity)",
+            "\u2705 Models endpoint working (database operations successful)"
+          ],
+          "performance": {
+            "db_health_check": 6.825923919677734
+          }
+        },
+        {
+          "test_name": "Static File Serving",
+          "status": "passed",
+          "details": [
+            "\u2139\ufe0f /static/index.html not found (may not exist)",
+            "\u2139\ufe0f /static/css/style.css not found (may not exist)",
+            "\u2139\ufe0f /static/js/app.js not found (may not exist)",
+            "\u2139\ufe0f /favicon.ico not found (may not exist)",
+            "\u2139\ufe0f No static files found (may not be configured)"
+          ],
+          "performance": {}
+        }
+      ]
+    },
+    {
+      "suite_name": "Agent Workflows",
+      "total_tests": 4,
+      "passed": 0,
+      "failed": 4,
+      "partial": 0,
+      "tests": [
+        {
+          "test_name": "Plot Generation Workflow",
+          "status": "failed",
+          "details": [
+            "\u274c Plot generation workflow failed: server rejected WebSocket connection: HTTP 500"
+          ],
+          "performance": {},
+          "artifacts": []
+        },
+        {
+          "test_name": "Character Creation Workflow",
+          "status": "failed",
+          "details": [
+            "\u274c Character creation workflow failed: server rejected WebSocket connection: HTTP 500"
+          ],
+          "performance": {},
+          "artifacts": []
+        },
+        {
+          "test_name": "Orchestrator Workflow",
+          "status": "failed",
+          "details": [
+            "\u274c Orchestrator workflow failed: server rejected WebSocket connection: HTTP 500"
+          ],
+          "performance": {},
+          "artifacts": []
+        },
+        {
+          "test_name": "Agent Factory Functionality",
+          "status": "failed",
+          "details": [
+            "\u2705 Models endpoint accessible (agent factory available)",
+            "\u2705 Models data structure valid",
+            "\u274c Agent factory test failed: server rejected WebSocket connection: HTTP 500"
+          ],
+          "performance": {}
+        }
+      ]
+    },
+    {
+      "suite_name": "Browser Interactions",
+      "total_tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "partial": 0,
+      "skipped": 0,
+      "tests": [
+        {
+          "test_name": "Main Application UI",
+          "status": "passed",
+          "details": [
+            "\u2705 Main page loaded successfully",
+            "\u2705 Page load time acceptable: 5ms",
+            "\u2705 Chat input field found",
+            "\u2705 Send button found",
+            "\u2705 Plots navigation found",
+            "\u2705 Characters navigation found",
+            "\u2705 Found 4/4 expected UI elements"
+          ],
+          "performance": {
+            "page_load_time": 5.317211151123047
+          },
+          "screenshots": [
+            "screenshots/main_ui_1753757629.png"
+          ]
+        },
+        {
+          "test_name": "Chat Interface",
+          "status": "passed",
+          "details": [
+            "\u2705 Chat input field functional",
+            "\u2705 Send button clicked",
+            "\u2705 Loading indicator appeared",
+            "\u2705 Chat response received in 1103ms"
+          ],
+          "performance": {
+            "chat_response_time": 1102.5731563568115
+          },
+          "screenshots": [
+            "screenshots/chat_interface_1753757630.png"
+          ]
+        },
+        {
+          "test_name": "Plot Generation UI",
+          "status": "passed",
+          "details": [
+            "\u2705 Navigated to plots section",
+            "\u2705 Plot form loaded",
+            "\u2705 Filled genre_input with 'Science Fiction'",
+            "\u2705 Filled theme_input with 'AI and humanity'",
+            "\u2705 Filled length_input with 'short story'",
+            "\u2705 Plot generation submitted",
+            "\u2705 Plot generated in UI: 603ms"
+          ],
+          "performance": {
+            "plot_generation_ui_time": 602.6370525360107
+          },
+          "screenshots": [
+            "screenshots/plot_generation_1753757632.png"
+          ]
+        },
+        {
+          "test_name": "Open-WebUI Integration",
+          "status": "passed",
+          "details": [
+            "\u2705 Open-WebUI loaded",
+            "\u2705 Message entered in Open-WebUI",
+            "\u2705 Message sent through Open-WebUI",
+            "\u2705 Open-WebUI response: 602ms"
+          ],
+          "performance": {
+            "openwebui_response_time": 602.0081043243408
+          },
+          "screenshots": [
+            "screenshots/openwebui_1753757633.png"
+          ]
+        },
+        {
+          "test_name": "Responsive Design",
+          "status": "passed",
+          "details": [
+            "\u2705 Desktop viewport (1920x1080) loaded",
+            "\u2705 3/3 elements accessible in Desktop",
+            "\u2705 Tablet viewport (1024x768) loaded",
+            "\u2705 3/3 elements accessible in Tablet",
+            "\u2705 Mobile viewport (375x667) loaded",
+            "\u2705 3/3 elements accessible in Mobile"
+          ],
+          "performance": {},
+          "screenshots": [
+            "screenshots/responsive_desktop_1753757634.png",
+            "screenshots/responsive_tablet_1753757636.png",
+            "screenshots/responsive_mobile_1753757637.png"
+          ]
+        }
+      ]
+    }
+  ]
+}

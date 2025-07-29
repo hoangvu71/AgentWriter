@@ -104,7 +104,7 @@ jobs:
   e2e-core-tests:
     runs-on: ubuntu-latest
     needs: e2e-setup
-    if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == 'core' || github.event.inputs.test_suite == ''
+    if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == 'core' || github.event.inputs.test_suite == '' || github.event.inputs.test_suite == null
     
     steps:
     - uses: actions/checkout@v4
@@ -179,7 +179,7 @@ except Exception as e:
   e2e-agent-tests:
     runs-on: ubuntu-latest
     needs: e2e-setup
-    if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == 'agents' || github.event.inputs.test_suite == ''
+    if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == 'agents' || github.event.inputs.test_suite == '' || github.event.inputs.test_suite == null
     
     steps:
     - uses: actions/checkout@v4
@@ -253,7 +253,7 @@ asyncio.run(test_agents())
   e2e-websocket-tests:
     runs-on: ubuntu-latest
     needs: e2e-setup
-    if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == 'websockets' || github.event.inputs.test_suite == ''
+    if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == 'websockets' || github.event.inputs.test_suite == '' || github.event.inputs.test_suite == null
     
     steps:
     - uses: actions/checkout@v4
@@ -341,7 +341,7 @@ asyncio.run(test_websocket())
   e2e-playwright-browser:
     runs-on: ubuntu-latest
     needs: e2e-setup
-    if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == 'openwebui' || github.event.inputs.test_suite == ''
+    if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == 'openwebui' || github.event.inputs.test_suite == '' || github.event.inputs.test_suite == null
     
     steps:
     - uses: actions/checkout@v4
