@@ -213,10 +213,12 @@ class ContentSavingService:
         
         return None
     
-    # Legacy methods for backwards compatibility - delegate to tool functions
+    # DEPRECATED: Legacy methods for backwards compatibility - delegate to tool functions
+    # These methods are maintained for WebSocket handler compatibility but should not be used in new code
     async def save_plot_data(self, session_id: str, user_id: str, plot_data: Dict[str, Any], 
                            orchestrator_params: Dict[str, Any] = None, author_id: str = None) -> Dict[str, Any]:
-        """Legacy method - delegates to tool function"""
+        """DEPRECATED: Legacy method - delegates to tool function. Use tools directly."""
+        self.logger.warning("save_plot_data is deprecated - use plot tools directly")
         if orchestrator_params is None:
             orchestrator_params = {}
         if author_id:
@@ -224,12 +226,14 @@ class ContentSavingService:
         return await self._save_plot_via_tool(plot_data, session_id, user_id, orchestrator_params)
     
     async def save_author_data(self, session_id: str, user_id: str, author_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Legacy method - delegates to tool function"""
+        """DEPRECATED: Legacy method - delegates to tool function. Use tools directly."""
+        self.logger.warning("save_author_data is deprecated - use author tools directly")
         return await self._save_author_via_tool(author_data, session_id, user_id)
     
     async def save_world_building_data(self, session_id: str, user_id: str, world_data: Dict[str, Any], 
                                      orchestrator_params: Dict[str, Any] = None, plot_id: str = None) -> Dict[str, Any]:
-        """Legacy method - delegates to tool function"""
+        """DEPRECATED: Legacy method - delegates to tool function. Use tools directly."""
+        self.logger.warning("save_world_building_data is deprecated - use world building tools directly")
         if orchestrator_params is None:
             orchestrator_params = {}
         if plot_id:
@@ -238,7 +242,8 @@ class ContentSavingService:
     
     async def save_characters_data(self, session_id: str, user_id: str, characters_data: Dict[str, Any], 
                                  orchestrator_params: Dict[str, Any] = None, plot_id: str = None, world_id: str = None) -> Dict[str, Any]:
-        """Legacy method - delegates to tool function"""
+        """DEPRECATED: Legacy method - delegates to tool function. Use tools directly."""
+        self.logger.warning("save_characters_data is deprecated - use character tools directly")
         if orchestrator_params is None:
             orchestrator_params = {}
         if plot_id:
@@ -248,14 +253,16 @@ class ContentSavingService:
         return await self._save_characters_via_tool(characters_data, session_id, user_id, orchestrator_params)
     
     async def save_critique_data(self, iteration_id: str, critique_json: Dict[str, Any], agent_response: str) -> None:
-        """Legacy method - delegates to repository"""
+        """DEPRECATED: Legacy method - delegates to repository. Use iterative repositories directly."""
+        self.logger.warning("save_critique_data is deprecated - use iterative repositories directly")
         orchestrator_params = {"iteration_id": iteration_id}
         response_data = {"critique": critique_json, "full_response": agent_response}
         return await self._save_iterative_content("critique", response_data, orchestrator_params)
     
     async def save_enhancement_data(self, iteration_id: str, enhanced_content: str, changes_made: Dict[str, Any], 
                                   rationale: str, confidence_score: float) -> None:
-        """Legacy method - delegates to repository"""
+        """DEPRECATED: Legacy method - delegates to repository. Use iterative repositories directly."""
+        self.logger.warning("save_enhancement_data is deprecated - use iterative repositories directly")
         orchestrator_params = {"iteration_id": iteration_id}
         response_data = {
             "enhanced_content": enhanced_content,
@@ -267,7 +274,8 @@ class ContentSavingService:
     
     async def save_score_data(self, iteration_id: str, overall_score: float, category_scores: Dict[str, Any], 
                             score_rationale: str, improvement_trajectory: str, recommendations: str) -> None:
-        """Legacy method - delegates to repository"""
+        """DEPRECATED: Legacy method - delegates to repository. Use iterative repositories directly."""
+        self.logger.warning("save_score_data is deprecated - use iterative repositories directly")
         orchestrator_params = {"iteration_id": iteration_id}
         response_data = {
             "overall_score": overall_score,

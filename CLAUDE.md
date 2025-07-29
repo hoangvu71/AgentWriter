@@ -71,6 +71,14 @@
 3. **Database Schema Consistency** - SQLite and Supabase schemas are synchronized
 4. **Foreign Key Handling** - Proper UUID format and relationship management
 5. **Service Parameter Validation** - ContentSavingService validates all inputs
+6. **Legacy Code Cleanup (Issue #5)** - Removed deprecated code and TODO markers:
+   - Removed deprecated `run_async_in_sync` function, replaced with `run_async_safe`
+   - Removed unused `_handle_legacy_agent_processing` method from WebSocket handler
+   - Removed deprecated `_extract_context` method from orchestrator agent
+   - Added deprecation warnings to legacy context service methods
+   - Added deprecation warnings to legacy content saving service methods
+   - Marked legacy Gemini models (1.5-pro, 1.5-flash) as deprecated with replacement recommendations
+   - Resolved all TODO/FIXME comments with proper solutions or documentation
 
 ## Environment Setup
 
@@ -212,7 +220,7 @@ The project includes **Model Context Protocol (MCP)** integration for direct Sup
 - `manage_functions` - Handle edge functions
 - Additional tools for comprehensive database management
 
-**Note**: MCP integration is pre-1.0 and may have breaking changes. See detailed documentation in `MCP_SUPABASE_INTEGRATION.md` (when available).
+**Note**: MCP integration is pre-1.0 and may have breaking changes. See detailed documentation in `docs/integrations/mcp-supabase.md`.
 
 ## Open-WebUI Integration
 
@@ -269,7 +277,7 @@ python scripts/migrate_db.py
 
 - **Project Type**: Multi-agent book writing system
 - **Primary Models**: Gemini 2.0 Flash Exp, Gemini 1.5 Flash
-- **Documentation**: See `docs` directory
+- **Documentation**: See **[docs/index.md](docs/index.md)** for organized documentation hub
 - **Tests**: Comprehensive TDD test suite in `tests`
 
 ## For Future Claude Instances

@@ -356,10 +356,6 @@ class WebSocketHandler:
             # Clear session context
             container.clear_session_context()
             
-            # Legacy agent processing for backward compatibility
-            # TODO: Remove this once all agents are migrated to tools
-            # await self._handle_legacy_agent_processing(client_id, session_id, user_id, content, context)
-            
         except Exception as e:
             self.logger.error(f"Error in tool-based agent processing: {e}", error=e)
             await self.connection_manager.send_json({
@@ -375,11 +371,6 @@ class WebSocketHandler:
             except:
                 pass
     
-    async def _handle_legacy_agent_processing(self, client_id: str, session_id: str, user_id: str, content: str, context: Dict[str, Any] = None):
-        """Legacy agent processing method - to be removed after full migration"""
-        # This method would contain the old loop-based agent processing
-        # For now, we'll skip it since the new tool-based approach should handle everything
-        pass
     
     async def _handle_search_message(self, client_id: str, session_id: str, user_id: str, content: str):
         """Handle a search request"""

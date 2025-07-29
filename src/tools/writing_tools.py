@@ -17,13 +17,6 @@ from ..core.safe_async_runner import run_async_safe
 logger = logging.getLogger(__name__)
 
 
-# Legacy function replaced with safe async runner - kept for backward compatibility
-def run_async_in_sync(coro):
-    """Helper to run async operations synchronously for ADK compatibility (DEPRECATED)"""
-    logger.warning("run_async_in_sync is deprecated, use run_async_safe instead")
-    return run_async_safe(coro, timeout=10.0)
-
-
 def save_plot(
     title: str,
     plot_summary: str,
@@ -198,7 +191,7 @@ def save_author(
         if genres:
             author_entity.metadata = {"genres": genres}
         
-        author_id = run_async_in_sync(author_repository.create(author_entity))
+        author_id = run_async_safe(author_repository.create(author_entity), timeout=10.0)
         
         logger.info(f"Saved author '{author_name}' with ID: {author_id}")
         
@@ -284,7 +277,7 @@ def save_world_building(
             world_content=world_content
         )
         
-        world_id = run_async_in_sync(world_repository.create(world_entity))
+        world_id = run_async_safe(world_repository.create(world_entity), timeout=10.0)
         
         logger.info(f"Saved world '{world_name}' with ID: {world_id}")
         
@@ -343,7 +336,7 @@ def save_characters(
             characters=characters
         )
         
-        characters_id = run_async_in_sync(characters_repository.create(characters_entity))
+        characters_id = run_async_safe(characters_repository.create(characters_entity), timeout=10.0)
         
         logger.info(f"Saved {len(characters)} characters with ID: {characters_id}")
         
@@ -377,7 +370,7 @@ def get_plot(plot_id: str) -> Dict[str, Any]:
         container = get_container()
         plot_repository = container.plot_repository()
         
-        plot = run_async_in_sync(plot_repository.get_by_id(plot_id))
+        plot = run_async_safe(plot_repository.get_by_id(plot_id), timeout=10.0)
         
         if plot:
             return {
@@ -413,7 +406,7 @@ def get_author(author_id: str) -> Dict[str, Any]:
         container = get_container()
         author_repository = container.author_repository()
         
-        author = run_async_in_sync(author_repository.get_by_id(author_id))
+        author = run_async_safe(author_repository.get_by_id(author_id), timeout=10.0)
         
         if author:
             return {
@@ -456,7 +449,7 @@ def list_plots(
         if not session_id:
             session_id = container.get_current_session_id()
         
-        plots = run_async_in_sync(plot_repository.get_by_session(session_id, limit=limit))
+        plots = run_async_safe(plot_repository.get_by_session(session_id, limit=limit), timeout=10.0)
         
         return {
             "success": True,
@@ -494,7 +487,7 @@ def list_authors(
         if not session_id:
             session_id = container.get_current_session_id()
         
-        authors = run_async_in_sync(author_repository.get_by_session(session_id, limit=limit))
+        authors = run_async_safe(author_repository.get_by_session(session_id, limit=limit), timeout=10.0)
         
         return {
             "success": True,

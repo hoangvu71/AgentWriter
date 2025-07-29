@@ -327,8 +327,9 @@ class SQLiteDataOperations:
         try:
             updated_count = 0
             
-            # Process each update individually for now
-            # TODO: Could be optimized with a single query
+            # Process each update individually
+            # Note: Could be optimized with a single SQL query using CASE statements
+            # or temp tables, but current approach ensures better error isolation
             for update_data in updates:
                 record_id = update_data.pop('id')  # Remove ID from update data
                 success = await self.update(table, record_id, update_data)

@@ -69,23 +69,27 @@ AVAILABLE_MODELS = {
         "provider": "Google"
     },
     
-    # Legacy Gemini Models (Limited availability for new projects after April 2025)
+    # DEPRECATED: Legacy Gemini Models - Use newer variants for new projects
     "gemini-1.5-pro": {
-        "name": "Gemini 1.5 Pro", 
-        "description": "Powerful model for complex tasks (legacy)",
-        "best_for": "Long-form content, detailed analysis, research",
+        "name": "Gemini 1.5 Pro (DEPRECATED)", 
+        "description": "DEPRECATED: Use gemini-2.0-flash-exp for new projects",
+        "best_for": "Legacy compatibility only",
         "context_window": "2M tokens",
         "speed": "Medium",
         "provider": "Google",
+        "deprecated": True,
+        "replacement": "gemini-2.0-flash-exp",
         "note": "Limited availability for new projects after April 2025"
     },
     "gemini-1.5-flash": {
-        "name": "Gemini 1.5 Flash",
-        "description": "Optimized for speed and efficiency (legacy)",
-        "best_for": "Quick responses, simple tasks, real-time chat",
+        "name": "Gemini 1.5 Flash (DEPRECATED)",
+        "description": "DEPRECATED: Use gemini-1.5-flash-002 for new projects",
+        "best_for": "Legacy compatibility only",
         "context_window": "1M tokens", 
         "speed": "Very Fast",
         "provider": "Google",
+        "deprecated": True,
+        "replacement": "gemini-1.5-flash-002",
         "note": "Limited availability for new projects after April 2025"
     },
     

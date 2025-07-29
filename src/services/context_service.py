@@ -216,9 +216,18 @@ class ContextInjectionService:
     
     def create_structured_context(self, legacy_content: str) -> Dict[str, Any]:
         """
-        Extract structured context from legacy text-injection format.
-        Used for backward compatibility during migration.
+        DEPRECATED: Extract structured context from legacy text-injection format.
+        
+        This method provides backward compatibility for old message formats.
+        New clients should use structured context directly in AgentRequest.context.
+        
+        Args:
+            legacy_content: Message content with embedded legacy context format
+            
+        Returns:
+            Structured context dictionary
         """
+        self.logger.warning("Using deprecated create_structured_context - migrate to structured context format")
         context = {}
         
         try:
@@ -270,7 +279,10 @@ class ContextInjectionService:
     
     def remove_legacy_context_injection(self, content: str) -> str:
         """
-        Remove legacy context injection from message content.
+        DEPRECATED: Remove legacy context injection from message content.
+        
+        This method provides backward compatibility for old message formats.
+        New clients should send clean messages with structured context separately.
         
         Args:
             content: Message content that may contain injected context
@@ -278,6 +290,7 @@ class ContextInjectionService:
         Returns:
             Clean user message with context injection removed
         """
+        self.logger.warning("Using deprecated remove_legacy_context_injection - send clean messages with structured context")
         # Find the start of context injection
         context_start = content.find("========== DETAILED CONTENT SPECIFICATIONS ==========")
         

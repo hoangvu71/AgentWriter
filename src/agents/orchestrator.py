@@ -67,7 +67,7 @@ IMPORTANT: Always use the invoke_agent tool for coordination. Never generate cod
             # Check for LoreGen request first
             if await self._is_loregen_request(request.content):
                 # Extract context and add to request for LoreGen processing
-                extracted_context = self._extract_context(request.content)
+                extracted_context = self.analyze_request_context(request)
                 if request.context:
                     request.context.update(extracted_context)
                 else:
@@ -279,20 +279,6 @@ IMPORTANT: Always use the invoke_agent tool for coordination. Never generate cod
                 context["has_audience_context"] = True
         
         return context
-    
-    def _extract_context(self, content: str) -> Dict[str, Any]:
-        """
-        DEPRECATED: Legacy method for backward compatibility.
-        Use analyze_request_context() for new structured context analysis.
-        """
-        # Create a temporary request for legacy analysis
-        from ..core.interfaces import AgentRequest
-        temp_request = AgentRequest(
-            content=content,
-            user_id="legacy",
-            session_id="legacy"
-        )
-        return self.analyze_request_context(temp_request)
     
     def determine_agents_from_context(self, context: Dict[str, Any]) -> List[str]:
         """
