@@ -9,7 +9,7 @@ import time
 from typing import Dict, Any
 import websockets
 import requests
-from playwright.config import get_environment_config, PERFORMANCE_THRESHOLDS
+from .playwright.config import get_environment_config, PERFORMANCE_THRESHOLDS
 
 
 class TestCoreFunctionality:

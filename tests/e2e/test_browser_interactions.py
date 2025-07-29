@@ -9,7 +9,7 @@ import json
 import time
 from typing import Dict, Any, List
 import requests
-from playwright.config import (
+from .playwright.config import (
     get_environment_config, 
     get_selector, 
     get_test_data,

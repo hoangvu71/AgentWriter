@@ -9,7 +9,7 @@ import time
 from typing import Dict, Any, List
 import websockets
 import requests
-from playwright.config import get_environment_config, get_websocket_message, get_test_data
+from .playwright.config import get_environment_config, get_websocket_message, get_test_data
 
 
 class TestAgentWorkflows:
