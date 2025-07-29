@@ -105,7 +105,7 @@ class AgentErrorHandler:
     
     def handle_vertex_ai_error(self, error: Exception) -> str:
         """
-        Handle Vertex AI/ADK communication errors.
+        Handle Vertex AI/ADK communication errors with robust error string conversion.
         
         Args:
             error: The Vertex AI error
@@ -113,25 +113,62 @@ class AgentErrorHandler:
         Returns:
             Error message for the response
         """
-        self.logger.error(f"Vertex AI error: {error}")
+        # Safe error message extraction with multiple fallbacks
+        def safe_error_str(error_obj) -> str:
+            """Safely convert error object to string with fallbacks"""
+            if error_obj is None:
+                return "Unknown error"
+            
+            # Try multiple approaches to get a meaningful string representation
+            try:
+                return str(error_obj)
+            except (AttributeError, TypeError, Exception):
+                try:
+                    # Fallback 1: Try to get the exception message directly
+                    if hasattr(error_obj, 'args') and error_obj.args:
+                        return str(error_obj.args[0])
+                except (AttributeError, TypeError, Exception):
+                    try:
+                        # Fallback 2: Use the exception class name
+                        return f"{type(error_obj).__name__} error"
+                    except (AttributeError, TypeError, Exception):
+                        # Final fallback: Generic error message
+                        return "Error object could not be converted to string"
         
-        # Classify error types and provide appropriate responses
-        error_str = str(error).lower()
+        # Safe logging with error handling
+        try:
+            error_message = safe_error_str(error)
+            self.logger.error(f"Vertex AI error: {error_message}")
+        except Exception as log_error:
+            try:
+                # Try to log with type information
+                error_type = type(error).__name__ if error else "NoneType"
+                self.logger.error(f"Vertex AI error (logging issue): {log_error} - Original error type: {error_type}")
+            except Exception:
+                # Ultimate fallback for logging
+                self.logger.error(f"Vertex AI error (critical logging failure) - Error details unavailable")
         
-        if "session" in error_str:
-            return f"Session management error occurred. Please try again with a new session."
-        elif "timeout" in error_str:
-            return f"Request timed out. The operation may be too complex. Please try a simpler request."
-        elif "quota" in error_str or "limit" in error_str:
-            return f"Service quota exceeded. Please wait a moment and try again."
-        elif "authentication" in error_str or "permission" in error_str:
-            return f"Authentication error. Please check your credentials and try again."
-        else:
-            return f"Error generating response: {str(error)}"
+        # Classify error types and provide appropriate responses with safe string conversion
+        try:
+            error_str = safe_error_str(error).lower()
+            
+            if "session" in error_str:
+                return f"Session management error occurred. Please try again with a new session."
+            elif "timeout" in error_str:
+                return f"Request timed out. The operation may be too complex. Please try a simpler request."
+            elif "quota" in error_str or "limit" in error_str:
+                return f"Service quota exceeded. Please wait a moment and try again."
+            elif "authentication" in error_str or "permission" in error_str:
+                return f"Authentication error. Please check your credentials and try again."
+            else:
+                return f"Error generating response: {safe_error_str(error)}"
+        except Exception:
+            # Final safety net - return a generic but informative error message
+            return f"Error generating response: An error occurred but details could not be extracted safely."
     
     def handle_general_error(self, error: Exception, context: Optional[str] = None) -> str:
         """
-        Handle general errors with context.
+        Handle general errors with context using robust error string conversion.
         
         Args:
             error: The error that occurred
@@ -140,10 +177,37 @@ class AgentErrorHandler:
         Returns:
             Error message for the response
         """
-        context_str = f" during {context}" if context else ""
-        self.logger.error(f"Error{context_str}: {error}")
+        # Reuse the safe error string conversion logic
+        def safe_error_str(error_obj) -> str:
+            """Safely convert error object to string with fallbacks"""
+            if error_obj is None:
+                return "Unknown error"
+            
+            try:
+                return str(error_obj)
+            except (AttributeError, TypeError, Exception):
+                try:
+                    if hasattr(error_obj, 'args') and error_obj.args:
+                        return str(error_obj.args[0])
+                except (AttributeError, TypeError, Exception):
+                    try:
+                        return f"{type(error_obj).__name__} error"
+                    except (AttributeError, TypeError, Exception):
+                        return "Error object could not be converted to string"
         
-        return f"An error occurred{context_str}: {str(error)}"
+        context_str = f" during {context}" if context else ""
+        
+        try:
+            error_message = safe_error_str(error)
+            self.logger.error(f"Error{context_str}: {error_message}")
+        except Exception as log_error:
+            try:
+                error_type = type(error).__name__ if error else "NoneType"
+                self.logger.error(f"Error{context_str} (logging issue): {log_error} - Original error type: {error_type}")
+            except Exception:
+                self.logger.error(f"Error{context_str} (critical logging failure) - Error details unavailable")
+        
+        return f"An error occurred{context_str}: {safe_error_str(error)}"
     
     def log_successful_operation(self, operation: str, details: Optional[Dict[str, Any]] = None) -> None:
         """
