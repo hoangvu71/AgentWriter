@@ -5,6 +5,7 @@ uvicorn[standard]==0.27.0
 websockets==15.0.1
 python-multipart==0.0.6
 httpx==0.28.1
+urllib3<2.0  # Pin to v1.x for LibreSSL compatibility on macOS
 
 # Google ADK and Vertex AI
 google-adk @ git+https://github.com/google/adk-python.git@main
