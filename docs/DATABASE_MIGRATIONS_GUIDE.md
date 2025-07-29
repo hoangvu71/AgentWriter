@@ -1,5 +1,15 @@
 # Database Migrations Guide
 
+> **This file has been moved and reorganized.**
+> 
+> Please see the new location: **[docs/guides/database-migrations.md](guides/database-migrations.md)**
+> 
+> The content has been updated and integrated into the new documentation structure.
+
+---
+
+# Database Migrations Guide
+
 ## How Claude Applies Migrations
 
 Claude can directly apply database migrations using the Supabase CLI. This document explains the exact process and requirements.

@@ -1,20 +1,8 @@
-# MCP Supabase Integration Documentation
+# MCP Supabase Integration
 
-> **This file has been moved and reorganized.**
-> 
-> Please see the new location: **[docs/integrations/mcp-supabase.md](integrations/mcp-supabase.md)**
-> 
-> The content has been updated and integrated into the new documentation structure.
+The BooksWriter project integrates with Supabase through the Model Context Protocol (MCP), providing Claude instances with direct database access capabilities. This enables real-time database operations, content queries, and system analysis without requiring API endpoints.
 
----
-
-# MCP Supabase Integration Documentation
-
-## Overview
-
-The BooksWriter project integrates with Supabase through the Model Context Protocol (MCP), providing Claude instances with direct database access capabilities. This integration enables real-time database operations, content queries, and system analysis without requiring API endpoints.
-
-## Table of Contents
+## 📋 Table of Contents
 1. [MCP Setup and Configuration](#mcp-setup-and-configuration)
 2. [Database Structure](#database-structure)
 3. [Available MCP Operations](#available-mcp-operations)
@@ -24,7 +12,7 @@ The BooksWriter project integrates with Supabase through the Model Context Proto
 7. [Troubleshooting](#troubleshooting)
 8. [Security Considerations](#security-considerations)
 
-## MCP Setup and Configuration
+## 🔧 MCP Setup and Configuration
 
 ### 1. MCP Configuration File
 
@@ -54,8 +42,8 @@ Required environment variables in `.env`:
 # Supabase Configuration
 SUPABASE_URL=https://cfqgzbudjnvtyxrrvvmo.supabase.co
 SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_DB_PASSWORD=BTTmSilqcNn9Ynj5
-SUPABASE_ACCESS_TOKEN=sbp_52daeb2d737663036052abc28d90aa4cefdb3e4d
+SUPABASE_DB_PASSWORD=your-database-password
+SUPABASE_ACCESS_TOKEN=sbp_your-personal-access-token
 
 # Database Mode Selection
 DATABASE_MODE=supabase  # Options: supabase, sqlite
@@ -68,7 +56,7 @@ DATABASE_MODE=supabase  # Options: supabase, sqlite
 - Claude Desktop or compatible MCP client
 - Network access to Supabase instance
 
-## Database Structure
+## 📊 Database Structure
 
 ### Current Database Status (Live Data)
 
@@ -87,101 +75,11 @@ Based on recent analysis, the database contains **18 tables** with the following
 | **performance_metrics** | 0 | System performance monitoring |
 | **trace_events** | 0 | OpenTelemetry distributed tracing |
 
-### Core Content Tables
+### Core Content Tables Schema
 
-#### 1. users
-```sql
-CREATE TABLE users (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id VARCHAR(255) UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-```
+See [Database Architecture](../architecture/database.md) for complete schema details.
 
-#### 2. sessions
-```sql
-CREATE TABLE sessions (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    session_id VARCHAR(255) UNIQUE NOT NULL,
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-#### 3. plots
-```sql
-CREATE TABLE plots (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    session_id UUID REFERENCES sessions(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    plot_summary TEXT NOT NULL,
-    genre VARCHAR(100),
-    subgenre VARCHAR(100),
-    microgenre VARCHAR(100),
-    trope VARCHAR(255),
-    tone VARCHAR(255),
-    target_audience JSONB,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-#### 4. authors
-```sql
-CREATE TABLE authors (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    session_id UUID REFERENCES sessions(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    plot_id UUID REFERENCES plots(id) ON DELETE CASCADE,
-    author_name VARCHAR(255) NOT NULL,
-    pen_name VARCHAR(255),
-    biography TEXT NOT NULL,
-    writing_style TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-#### 5. world_building
-```sql
-CREATE TABLE world_building (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    session_id UUID REFERENCES sessions(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    plot_id UUID REFERENCES plots(id) ON DELETE SET NULL,
-    world_name TEXT NOT NULL,
-    world_type TEXT NOT NULL,
-    overview TEXT NOT NULL,
-    geography JSONB NOT NULL DEFAULT '{}',
-    political_landscape JSONB NOT NULL DEFAULT '{}',
-    cultural_systems JSONB NOT NULL DEFAULT '{}',
-    economic_framework JSONB NOT NULL DEFAULT '{}',
-    historical_timeline JSONB NOT NULL DEFAULT '{}',
-    power_systems JSONB NOT NULL DEFAULT '{}',
-    languages_and_communication JSONB NOT NULL DEFAULT '{}',
-    religious_and_belief_systems JSONB NOT NULL DEFAULT '{}',
-    unique_elements JSONB NOT NULL DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
-
-### Analytics Tables
-
-#### 6. orchestrator_decisions
-Tracks AI routing decisions for system optimization.
-
-#### 7. agent_invocations
-Comprehensive agent execution tracking with performance metrics.
-
-#### 8. performance_metrics
-Time-series data for system monitoring.
-
-#### 9. trace_events
-OpenTelemetry integration for distributed tracing.
-
-## Available MCP Operations
+## 🛠️ Available MCP Operations
 
 ### 1. Database Discovery
 
@@ -255,7 +153,7 @@ ORDER BY avg_duration DESC;
 - GROUP BY with complex expressions
 - Window functions for advanced analytics
 
-## Agent Integration Patterns
+## 🤖 Agent Integration Patterns
 
 ### 1. Content Retrieval Pattern
 
@@ -318,7 +216,7 @@ def get_successful_patterns(self, content_type):
     return patterns
 ```
 
-## Multi-Agent System Integration
+## 🔄 Multi-Agent System Integration
 
 ### 1. Orchestrator Decision Tracking
 
@@ -369,7 +267,7 @@ def get_plot_requirements(self, plot_id):
     return plot_details
 ```
 
-## Usage Examples
+## 💻 Usage Examples
 
 ### 1. System Health Check
 
@@ -441,7 +339,7 @@ WHERE s.user_id = 'specific-user-uuid'
 ORDER BY s.created_at DESC;
 ```
 
-## Troubleshooting
+## 🚨 Troubleshooting
 
 ### Common Issues
 
@@ -524,7 +422,7 @@ Error: "invalid input syntax for type json"
 Solution: Validate JSON structure before insertion
 ```
 
-## Security Considerations
+## 🔒 Security Considerations
 
 ### 1. Access Control
 
@@ -568,7 +466,7 @@ USING (auth.uid() = user_id);
 -- ... (create policies for all tables)
 ```
 
-## Integration with Existing Architecture
+## 🔄 Integration with Existing Architecture
 
 ### 1. Service Layer Compatibility
 
@@ -623,9 +521,7 @@ def search_content(query: str, content_type: str):
     return search_results
 ```
 
-This MCP Supabase integration provides Claude instances with powerful, direct database access while maintaining the existing multi-agent architecture. The integration enables real-time analytics, cross-agent content sharing, and system optimization through comprehensive data access.
-
-## Future Enhancements
+## 🔮 Future Enhancements
 
 ### 1. Real-Time Notifications
 
@@ -648,4 +544,13 @@ Database schema extensions for:
 - A/B testing of generated content
 - Rollback capabilities for content modifications
 
-This documentation serves as a comprehensive guide for Claude instances working with the BooksWriter project's MCP Supabase integration, enabling efficient database operations and system analysis.
+## 📚 Related Documentation
+
+- **[Claude Agents MCP Access](claude-agents-mcp.md)** - How Claude agents use MCP tools
+- **[Database Architecture](../architecture/database.md)** - Complete database design
+- **[MCP Tools Reference](../reference/mcp-tools.md)** - Quick reference guide
+- **[Troubleshooting Guide](../guides/troubleshooting.md)** - Additional troubleshooting
+
+---
+
+This MCP Supabase integration provides Claude instances with powerful, direct database access while maintaining the existing multi-agent architecture. The integration enables real-time analytics, cross-agent content sharing, and system optimization through comprehensive data access.

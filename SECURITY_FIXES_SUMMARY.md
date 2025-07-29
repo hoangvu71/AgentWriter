@@ -1,5 +1,15 @@
 # Security Fixes Summary
 
+> **This file has been moved and reorganized.**
+> 
+> Please see the new location: **[docs/guides/security.md](docs/guides/security.md)**
+> 
+> The content has been updated and integrated into the new documentation structure.
+
+---
+
+# Security Fixes Summary
+
 ## Fixed Issues
 
 ### 1. DOMPurify Integrity Hash Mismatch

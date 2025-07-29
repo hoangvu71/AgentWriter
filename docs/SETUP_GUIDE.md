@@ -1,5 +1,15 @@
 # BooksWriter - Complete Setup Guide
 
+> **This file has been moved and reorganized.**
+> 
+> Please see the new location: **[docs/setup/installation.md](setup/installation.md)**
+> 
+> The content has been updated and integrated into the new documentation structure.
+
+---
+
+# BooksWriter - Complete Setup Guide
+
 ## Overview
 
 BooksWriter is a sophisticated AI-powered book writing system using multiple specialized agents to generate plots, create author profiles, and manage book content. All data is persisted in a Supabase (PostgreSQL) database.

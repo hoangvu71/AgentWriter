@@ -1,5 +1,15 @@
 # Database Connection Pooling Implementation
 
+> **This file has been moved and reorganized.**
+> 
+> Please see the new location: **[docs/architecture/database.md](docs/architecture/database.md)**
+> 
+> The content has been updated and integrated into the new documentation structure.
+
+---
+
+# Database Connection Pooling Implementation
+
 ## Overview
 
 This implementation addresses performance issues in the BooksWriter project by introducing comprehensive database connection pooling for both SQLite and Supabase adapters. The solution eliminates the N+1 query problem, reduces connection overhead, and provides robust monitoring capabilities.

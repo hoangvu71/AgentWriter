@@ -93,7 +93,7 @@ A sophisticated multi-agent system for book writing powered by Google's Agent De
 - ✅ **Improvement iterations** with critique and enhancement cycles
 - ✅ **Searchable history** of all creations
 
-**📖 See `docs/database_documentation.md` for complete schema details.**
+**📖 See `docs/architecture/database.md` for complete schema details.**
 
 ## Features
 
@@ -277,8 +277,8 @@ BooksWriter/
 │   └── applied_migrations.json # Migration tracking
 ├── docs/                       # All documentation
 │   ├── CLAUDE.md               # AI development guidelines and TDD approach
-│   ├── DATABASE_MIGRATIONS_GUIDE.md  # Migration process documentation
-│   └── database_documentation.md     # Complete schema reference
+│   ├── [Moved to docs/guides/database-migrations.md]  # Migration process documentation
+│   └── [Moved to docs/architecture/database.md]  # Complete schema reference
 ├── config/                     # Configuration files
 │   ├── .env                    # Environment variables  
 │   └── service-account-key.json # Google Cloud credentials
@@ -376,9 +376,18 @@ The project follows Test-Driven Development (TDD) principles:
 
 ## 📚 Documentation
 
-- **📖 `docs/database_documentation.md`** - Complete database schema and API reference
-- **⚙️ `docs/SETUP_GUIDE.md`** - Detailed setup and configuration guide
-- **🔄 `migrations/README.md`** - Database migration system guide
+**Complete documentation is now organized in the `docs/` directory:**
+
+- **📖 [Documentation Hub](docs/index.md)** - Central navigation for all documentation
+- **🚀 [Quick Start Guide](docs/setup/quickstart.md)** - Get running in 5 minutes
+- **⚙️ [Complete Setup Guide](docs/setup/installation.md)** - Detailed installation and configuration
+- **🏗️ [Architecture Overview](docs/architecture/overview.md)** - System design and components
+- **🤖 [Multi-Agent System](docs/architecture/agents.md)** - Agent coordination and workflows
+- **💾 [Database Architecture](docs/architecture/database.md)** - Database design and connection pooling
+- **🔌 [MCP Integration](docs/integrations/mcp-supabase.md)** - Direct database access via MCP
+- **📋 [Development Workflow](docs/guides/development.md)** - TDD methodology and practices
+- **🔧 [Database Migrations](docs/guides/database-migrations.md)** - Migration procedures
+- **🚨 [Troubleshooting Guide](docs/guides/troubleshooting.md)** - Common issues and solutions
 
 ## Contributing
 

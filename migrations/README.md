@@ -1,5 +1,15 @@
 # Database Migrations
 
+> **This file has been moved and reorganized.**
+> 
+> Please see the new location: **[docs/guides/database-migrations.md](../docs/guides/database-migrations.md)**
+> 
+> The content has been updated and integrated into the new documentation structure.
+
+---
+
+# Database Migrations
+
 This directory contains all database schema changes for the Multi-Agent Book Writer system.
 
 ## How to Add a New Feature/Agent

@@ -1,5 +1,15 @@
 # MCP Supabase Troubleshooting Guide
 
+> **This file has been moved and reorganized.**
+> 
+> Please see the new location: **[docs/guides/troubleshooting.md#mcp-integration-issues](docs/guides/troubleshooting.md#mcp-integration-issues)**
+> 
+> The content has been updated and integrated into the new documentation structure.
+
+---
+
+# MCP Supabase Troubleshooting Guide
+
 ## Issue: MCP Supabase Tools Not Showing in Agent Editor
 
 ### Root Cause

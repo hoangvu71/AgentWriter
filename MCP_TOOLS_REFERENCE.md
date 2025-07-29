@@ -1,5 +1,15 @@
 # MCP Tools Quick Reference for Claude Agents
 
+> **This file has been moved and reorganized.**
+> 
+> Please see the new location: **[docs/reference/mcp-tools.md](docs/reference/mcp-tools.md)**
+> 
+> The content has been updated and integrated into the new documentation structure.
+
+---
+
+# MCP Tools Quick Reference for Claude Agents
+
 ## Available MCP Supabase Tools
 
 When using `/agents` or `Task` tool, Claude agents have access to these MCP tools:

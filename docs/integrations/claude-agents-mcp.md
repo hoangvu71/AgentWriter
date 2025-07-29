@@ -1,20 +1,12 @@
 # Claude Code Agents MCP Access Guide
 
-> **This file has been moved and reorganized.**
-> 
-> Please see the new location: **[docs/integrations/claude-agents-mcp.md](integrations/claude-agents-mcp.md)**
-> 
-> The content has been updated and integrated into the new documentation structure.
-
----
-
-# Claude Code Agents MCP Access Guide
-
-## Overview
-
 This guide documents how Claude Code's built-in agents (accessed via `/agents` command or `Task` tool) can directly access and use MCP Supabase tools when working on the BooksWriter project.
 
-## MCP Configuration for Claude Agents
+## 🎯 Overview
+
+Claude Code's agents can directly access BooksWriter's database through MCP (Model Context Protocol) integration, enabling real-time data analysis, content queries, and system analysis without requiring API endpoints.
+
+## ⚙️ MCP Configuration for Claude Agents
 
 ### Current Setup
 Your `.claude/mcp.json` configuration makes Supabase MCP tools available to all Claude agents:
@@ -43,7 +35,7 @@ SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 SUPABASE_ACCESS_TOKEN=sbp_52daeb2d737663036052abc28d90aa4cefdb3e4d
 ```
 
-## Available MCP Tools for Claude Agents
+## 🛠️ Available MCP Tools for Claude Agents
 
 When MCP Supabase is properly configured, Claude agents have access to these tools:
 
@@ -60,7 +52,7 @@ When MCP Supabase is properly configured, Claude agents have access to these too
 - `mcp__supabase__search` - Search across tables
 - `mcp__supabase__get_schema` - Get complete database schema
 
-## Agent Usage Patterns
+## 🤖 Agent Usage Patterns
 
 ### 1. Documentation Specialist Agent
 
@@ -123,7 +115,7 @@ The debug-master can:
 4. Provide specific debugging recommendations
 ```
 
-## Agent MCP Tool Discovery
+## 🔍 Agent MCP Tool Discovery
 
 ### How Agents Know MCP Tools Are Available
 
@@ -141,7 +133,7 @@ available_tools = get_available_tools()
 mcp_tools = [tool for tool in available_tools if tool.startswith('mcp__supabase__')]
 ```
 
-## Practical Examples
+## 💻 Practical Examples
 
 ### Example 1: Documentation Agent Using MCP
 
@@ -183,7 +175,7 @@ Agent Response:
 Architecture recommendations based on analysis..."
 ```
 
-## Database Context for Agents
+## 📊 Database Context for Agents
 
 ### Current BooksWriter Database Structure (Live Data)
 
@@ -213,7 +205,7 @@ Agents have access to these tables with current record counts:
 - `enhancements`: 0 records
 - `scores`: 0 records
 
-## Agent Capabilities Enhancement
+## 🚀 Agent Capabilities Enhancement
 
 ### What MCP Access Enables for Agents
 
@@ -235,7 +227,7 @@ Agents have access to these tables with current record counts:
 - Documentation always reflects real schema
 - Recommendations based on actual data patterns
 
-## Troubleshooting MCP Access for Agents
+## 🚨 Troubleshooting MCP Access for Agents
 
 ### Common Issues
 
@@ -287,7 +279,7 @@ Expected Agent Response:
 ✓ MCP tools ready for use"
 ```
 
-## Best Practices for Agents Using MCP
+## 📋 Best Practices for Agents Using MCP
 
 ### 1. Efficient Query Patterns
 ```python
@@ -312,7 +304,7 @@ except Exception as e:
 - Use parameterized queries when possible
 - Respect table access permissions
 
-## Integration with BooksWriter Development
+## 🔄 Integration with BooksWriter Development
 
 ### Agent-Enhanced Development Workflow
 
@@ -332,13 +324,13 @@ except Exception as e:
 4. debug-master: Identifies potential issues
 ```
 
-## Conclusion
+## 📚 Related Documentation
 
-With MCP Supabase access, Claude Code agents become significantly more effective at working with the BooksWriter project by:
+- **[MCP Supabase Integration](mcp-supabase.md)** - Complete MCP integration guide
+- **[MCP Tools Reference](../reference/mcp-tools.md)** - Quick reference for MCP tools
+- **[Database Architecture](../architecture/database.md)** - Database design and structure
+- **[Troubleshooting Guide](../guides/troubleshooting.md)** - Additional troubleshooting
 
-- **Operating on live data** instead of assumptions
-- **Providing accurate, up-to-date information**
-- **Making data-driven recommendations**
-- **Troubleshooting with actual database state**
+---
 
-This creates a powerful development environment where AI agents can work intelligently with your real project data and database structure.
+With MCP Supabase access, Claude Code agents become significantly more effective at working with the BooksWriter project by operating on live data instead of assumptions, providing accurate and up-to-date information, making data-driven recommendations, and troubleshooting with actual database state.
