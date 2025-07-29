@@ -20,9 +20,10 @@ class SQLiteAdapter:
     but uses focused modules for better separation of concerns.
     """
     
-    def __init__(self, db_path: str = "local_database.db"):
+    def __init__(self, db_path: str = "local_database.db", pool_config=None):
         """Initialize adapter with modular components"""
         self.db_path = db_path
+        self.pool_config = pool_config  # Store pool config for future use
         self.logger = get_logger("sqlite_adapter")
         
         # Initialize modular components
